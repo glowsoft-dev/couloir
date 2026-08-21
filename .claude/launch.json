@@ -1,0 +1,12 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "renderer",
+      "runtimeExecutable": "packages/renderer/node_modules/.bin/vite",
+      "runtimeArgs": ["--config", "packages/renderer/vite.config.ts"],
+      "port": 5173,
+      "url": "http://127.0.0.1:5173"
+    }
+  ]
+}

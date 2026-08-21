@@ -1,0 +1,10 @@
+{
+  "files": [],
+  "references": [
+    { "path": "packages/protocol" },
+    { "path": "packages/agent" },
+    { "path": "packages/renderer" },
+    { "path": "apps/server" },
+    { "path": "apps/player-linux" }
+  ]
+}

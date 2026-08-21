@@ -1,0 +1,31 @@
+# Infrastructure locale de développement.
+# Volontairement neutre : rien ici ne dépend d'un hébergeur particulier.
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: couloir
+      POSTGRES_PASSWORD: couloir
+      POSTGRES_DB: couloir
+    ports: ["5432:5432"]
+    volumes: ["./data/postgres:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U couloir"]
+      interval: 5s
+      retries: 10
+
+  # Stockage des médias, compatible S3.
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: couloir
+      MINIO_ROOT_PASSWORD: couloirsecret
+    ports: ["9000:9000", "9001:9001"]
+    volumes: ["./data/minio:/data"]
+
+  # Canal de commandes temps réel vers les écrans.
+  mosquitto:
+    image: eclipse-mosquitto:2
+    ports: ["1883:1883"]
+    command: mosquitto -c /mosquitto-no-auth.conf

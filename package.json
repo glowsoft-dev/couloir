@@ -1,0 +1,29 @@
+{
+  "name": "couloir",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.28.2",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "tsc --build",
+    "clean": "tsc --build --clean",
+    "typecheck": "tsc --build --force",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "dev:server": "pnpm --filter @couloir/server dev",
+    "dev:renderer": "pnpm --filter @couloir/renderer dev",
+    "infra:up": "docker compose up -d",
+    "infra:down": "docker compose down",
+    "dev:player": "pnpm --filter @couloir/player-linux dev",
+    "build:browser": "pnpm --filter @couloir/renderer build:browser"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.5",
+    "happy-dom": "^20.11.6",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "vitest": "^3.0.5"
+  }
+}
