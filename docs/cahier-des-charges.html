@@ -1,0 +1,641 @@
+<title>Écrans de Couloir</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+
+<style>
+:root{
+  --paper:#EFF1EE;
+  --surface:#FBFCFA;
+  --surface-2:#E6E9E4;
+  --ink:#161A18;
+  --ink-soft:#5B635E;
+  --ink-faint:#868E89;
+  --rule:#D5DAD4;
+  --rule-strong:#B9C0B8;
+  --accent:#0B5D45;
+  --accent-soft:#DCE9E2;
+  --signal:#A9481F;
+  --signal-soft:#F3E2D9;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#101312;
+    --surface:#181C1A;
+    --surface-2:#212623;
+    --ink:#E7EBE7;
+    --ink-soft:#9CA5A0;
+    --ink-faint:#78817C;
+    --rule:#2A302D;
+    --rule-strong:#3C433F;
+    --accent:#54BE95;
+    --accent-soft:#172A23;
+    --signal:#DE8A62;
+    --signal-soft:#2C1D15;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#101312;
+  --surface:#181C1A;
+  --surface-2:#212623;
+  --ink:#E7EBE7;
+  --ink-soft:#9CA5A0;
+  --ink-faint:#78817C;
+  --rule:#2A302D;
+  --rule-strong:#3C433F;
+  --accent:#54BE95;
+  --accent-soft:#172A23;
+  --signal:#DE8A62;
+  --signal-soft:#2C1D15;
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0;
+  background:var(--paper);
+  color:var(--ink);
+  font-family:"Source Serif 4","Iowan Old Style",Georgia,serif;
+  font-size:17.5px;
+  line-height:1.65;
+  -webkit-font-smoothing:antialiased;
+}
+.doc{
+  max-width:70ch;
+  margin:0 auto;
+  padding:48px 22px 110px;
+}
+
+/* masthead */
+.eyebrow{
+  font-family:"IBM Plex Mono",ui-monospace,monospace;
+  font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--accent);margin:0 0 16px;
+}
+h1{
+  font-family:"Archivo",system-ui,sans-serif;
+  font-size:clamp(36px,7vw,56px);
+  font-weight:700;letter-spacing:-.028em;line-height:1.03;
+  margin:0;text-wrap:balance;
+}
+.deck{
+  font-size:clamp(18px,2.5vw,21px);
+  color:var(--ink-soft);margin:14px 0 0;max-width:36ch;text-wrap:balance;
+}
+
+/* sommaire */
+.toc{
+  margin:36px 0 0;padding:18px 20px;
+  border:1px solid var(--rule);border-radius:10px;background:var(--surface);
+}
+.toc p{
+  font-family:"Archivo",system-ui,sans-serif;
+  font-size:10px;font-weight:600;letter-spacing:.13em;text-transform:uppercase;
+  color:var(--ink-faint);margin:0 0 10px;
+}
+.toc ul{list-style:none;margin:0;padding:0;
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:2px 22px}
+.toc li{margin:0}
+.toc a{
+  font-family:"Archivo",system-ui,sans-serif;
+  font-size:13.5px;color:var(--ink-soft);text-decoration:none;
+  display:block;padding:3px 0;
+}
+.toc a:hover{color:var(--accent)}
+.toc a:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:3px}
+
+/* sections */
+section{padding:52px 0 0;scroll-margin-top:20px}
+h2{
+  font-family:"Archivo",system-ui,sans-serif;
+  font-size:27px;font-weight:600;letter-spacing:-.02em;line-height:1.15;
+  margin:0 0 4px;text-wrap:balance;
+}
+.h2rule{height:2px;background:var(--ink);opacity:.9;margin:0 0 20px}
+h3{
+  font-family:"Archivo",system-ui,sans-serif;
+  font-size:16px;font-weight:600;margin:30px 0 8px;
+}
+p{margin:0 0 14px}
+.lede{font-size:19px;color:var(--ink-soft);margin-bottom:20px}
+ul,ol{margin:0 0 16px;padding-left:22px}
+li{margin:0 0 7px}
+li::marker{color:var(--ink-faint)}
+a{color:var(--accent)}
+strong{font-weight:600}
+code{
+  font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:.86em;
+  background:var(--surface-2);padding:1px 5px;border-radius:4px;white-space:nowrap;
+}
+
+/* encarts */
+.note{
+  border-left:3px solid var(--accent);background:var(--accent-soft);
+  padding:14px 18px;border-radius:0 8px 8px 0;margin:0 0 18px;font-size:16px;
+}
+.note.warn{border-left-color:var(--signal);background:var(--signal-soft)}
+.note p:last-child{margin-bottom:0}
+.note b{
+  font-family:"Archivo",system-ui,sans-serif;
+  font-size:9.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--accent);display:block;margin-bottom:5px;
+}
+.note.warn b{color:var(--signal)}
+
+/* tableaux */
+.tw{overflow-x:auto;margin:0 0 20px;border:1px solid var(--rule);border-radius:10px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:15px;min-width:440px}
+th{
+  font-family:"Archivo",system-ui,sans-serif;
+  font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--ink-faint);text-align:left;padding:11px 14px;
+  border-bottom:1px solid var(--rule-strong);white-space:nowrap;
+}
+td{padding:10px 14px;border-bottom:1px solid var(--rule);vertical-align:top;line-height:1.45}
+tr:last-child td{border-bottom:none}
+td.num,th.num{font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
+
+/* étapes */
+.rail{list-style:none;margin:0 0 20px;padding:0;position:relative}
+.rail::before{content:"";position:absolute;left:11px;top:10px;bottom:12px;width:2px;background:var(--rule-strong)}
+.rail li{position:relative;padding:0 0 18px 40px;margin:0}
+.rail li::before{
+  content:"";position:absolute;left:5px;top:7px;width:14px;height:14px;border-radius:50%;
+  background:var(--paper);box-shadow:inset 0 0 0 3px var(--accent);
+}
+.rail li.off::before{box-shadow:inset 0 0 0 3px var(--signal)}
+.rail b{font-family:"Archivo",system-ui,sans-serif;font-weight:600;font-size:15.5px;display:block;margin-bottom:3px}
+.rail p{font-size:16px;margin:0;color:var(--ink-soft)}
+
+/* figure */
+figure{margin:22px 0 24px}
+.figbox{
+  border:1px solid var(--rule);border-radius:10px;background:var(--surface);
+  padding:18px 14px;overflow-x:auto;
+}
+.figbox svg{display:block;width:100%;height:auto;min-width:520px}
+figcaption{
+  font-family:"Archivo",system-ui,sans-serif;
+  font-size:11.5px;color:var(--ink-faint);margin-top:9px;line-height:1.5;
+}
+.b{fill:var(--surface);stroke:var(--rule-strong)}
+.ba{fill:var(--accent-soft);stroke:var(--accent)}
+.t{fill:var(--ink);font-family:"Archivo",system-ui,sans-serif;font-size:12.5px;font-weight:600}
+.st{fill:var(--ink-soft);font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:10px}
+.ln{stroke:var(--rule-strong);stroke-width:1.5;fill:none}
+.la{stroke:var(--accent);stroke-width:1.5;fill:none}
+.fa{fill:var(--accent)}
+.fr{fill:var(--rule-strong)}
+
+.endnote{
+  font-family:"Archivo",system-ui,sans-serif;
+  font-size:13.5px;color:var(--ink-faint);
+  margin-top:48px;padding-top:16px;border-top:1px solid var(--rule);
+}
+</style>
+
+<main class="doc">
+
+<p class="eyebrow">Cahier des charges · août 2026</p>
+<h1>Écrans de Couloir</h1>
+<p class="deck">Des écrans dans les couloirs de l'école, pilotés à distance depuis une seule appli.</p>
+
+<nav class="toc">
+  <p>Au sommaire</p>
+  <ul>
+    <li><a href="#idee">L'idée</a></li>
+    <li><a href="#apps">Les deux applications</a></li>
+    <li><a href="#marche">Comment ça marche</a></li>
+    <li><a href="#materiel">Sur quoi ça tourne</a></li>
+    <li><a href="#reperer">Retrouver un écran</a></li>
+    <li><a href="#contenus">Ce qu'on affiche</a></li>
+    <li><a href="#offline">Quand internet tombe</a></li>
+    <li><a href="#surveiller">Surveiller le parc</a></li>
+    <li><a href="#installer">Installer un écran</a></li>
+    <li><a href="#securite">Sécurité et vie privée</a></li>
+    <li><a href="#combien">Combien ça coûte</a></li>
+    <li><a href="#planning">Dans quel ordre</a></li>
+    <li><a href="#decider">Ce qu'il reste à décider</a></li>
+  </ul>
+</nav>
+
+<!-- ---------------------------------- -->
+<section id="idee">
+  <h2>L'idée</h2>
+  <div class="h2rule"></div>
+
+  <p class="lede">Remplacer les panneaux d'affichage papier des couloirs par des écrans qu'on met à jour depuis un navigateur, sans se déplacer.</p>
+
+  <p>Ce qu'on veut obtenir, en clair :</p>
+  <ul>
+    <li>Les élèves voient <strong>les cours du jour</strong> et les changements de salle, à jour, sans avoir à chercher.</li>
+    <li>Entre deux, l'écran fait vivre l'école : <strong>actualités, vidéos, photos, affiches, campagnes de partenaires</strong>.</li>
+    <li>La personne qui s'occupe de la communication <strong>pilote tout ça seule</strong>, sans appeler un développeur.</li>
+    <li>Quand internet tombe, <strong>les écrans continuent</strong> comme si de rien n'était, et se remettent à jour tout seuls au retour.</li>
+    <li>Quand un écran plante, on sait <strong>exactement dans quel couloir aller</strong>.</li>
+  </ul>
+
+  <p>Et ce qu'on ne fait pas pour l'instant : pas d'écrans tactiles, pas de son dans les couloirs, pas de refonte du site de l'école.</p>
+</section>
+
+<!-- ---------------------------------- -->
+<section id="apps">
+  <h2>Les deux applications</h2>
+  <div class="h2rule"></div>
+
+  <p>Le projet, c'est vraiment deux choses distinctes.</p>
+
+  <h3>L'écran</h3>
+  <p>C'est ce que voient les gens dans les couloirs. Un petit boîtier branché en HDMI derrière la dalle, qui démarre tout seul quand on met le courant et qui affiche sa playlist en boucle. Pas de souris, pas de clavier, pas de menu. Si on branche un clavier dessus, il ne se passe rien.</p>
+
+  <h3>La console</h3>
+  <p>C'est l'appli web de pilotage. On y voit tous les écrans de l'école, on choisit ce que chacun affiche, et on programme à l'avance. Elle marche aussi sur téléphone — pratique quand on est debout devant l'écran qui pose problème.</p>
+
+  <p>Ce qu'on peut y faire :</p>
+  <ul>
+    <li>Voir l'état de chaque écran, et une <strong>capture de ce qu'il affiche vraiment</strong> en ce moment.</li>
+    <li>Glisser une image ou une vidéo, la mettre sur un écran ou sur un groupe d'écrans.</li>
+    <li>Composer une playlist : l'ordre des diapos, combien de temps chacune reste, à partir de quand et jusqu'à quand.</li>
+    <li>Prévisualiser avant de publier, au bon format.</li>
+    <li>Programmer : tel contenu le matin, tel autre l'après-midi, celui-là seulement pendant la semaine des portes ouvertes.</li>
+    <li><strong>Revenir en arrière en un clic</strong> si on s'est trompé.</li>
+    <li>Envoyer un <strong>message d'urgence</strong> sur tous les écrans d'un coup.</li>
+  </ul>
+
+  <div class="note">
+    <b>Le mode urgence</b>
+    <p>En trois clics depuis l'accueil, un message prend tous les écrans en plein écran : évacuation, confinement, fermeture exceptionnelle. Il reste affiché tant que quelqu'un ne l'a pas explicitement retiré — il ne disparaît jamais tout seul.</p>
+  </div>
+
+  <h3>Qui fait quoi</h3>
+  <p>Trois niveaux d'accès suffisent : <strong>admin</strong> (gère les écrans, les comptes, les réglages), <strong>éditeur</strong> (publie ce qu'il veut, c'est le rôle du quotidien), <strong>contributeur</strong> (propose un contenu sur ses écrans, quelqu'un valide avant que ça parte). Tout ce qui est publié est tracé : qui, quoi, quand, sur quel écran.</p>
+</section>
+
+<!-- ---------------------------------- -->
+<section id="marche">
+  <h2>Comment ça marche</h2>
+  <div class="h2rule"></div>
+
+  <p class="lede">Le principe à retenir : <strong>l'écran n'attend jamais le serveur pour afficher quelque chose.</strong> Il télécharge tout à l'avance et joue depuis son disque.</p>
+
+  <p>Concrètement, le serveur prépare pour chaque écran une sorte de liste de courses : voilà ta mise en page, voilà tes playlists, voilà les fichiers dont tu as besoin, voilà le programme de la semaine. L'écran récupère cette liste, télécharge ce qui lui manque, vérifie que les fichiers sont intacts, et bascule seulement quand tout est là. S'il manque une vidéo, il continue avec l'ancienne version plutôt que d'afficher un trou.</p>
+
+  <figure>
+    <div class="figbox">
+      <svg viewBox="0 0 760 300" role="img" aria-label="Les sources de contenu et la console alimentent le serveur, qui envoie à chaque écran sa liste de contenus ; les écrans renvoient leur état.">
+        <rect class="b" x="10" y="20" width="180" height="40" rx="7"/>
+        <text class="t" x="24" y="38">Emploi du temps</text>
+        <text class="st" x="24" y="52">Hyperplanning, ADE, Pronote…</text>
+
+        <rect class="b" x="10" y="72" width="180" height="40" rx="7"/>
+        <text class="t" x="24" y="90">Site de l'école</text>
+        <text class="st" x="24" y="104">actualités, photos</text>
+
+        <rect class="b" x="10" y="124" width="180" height="40" rx="7"/>
+        <text class="t" x="24" y="142">Météo, menus, etc.</text>
+
+        <rect class="ba" x="10" y="196" width="180" height="44" rx="7"/>
+        <text class="t" x="24" y="216">La console</text>
+        <text class="st" x="24" y="230">navigateur ou téléphone</text>
+
+        <path class="ln" d="M190 40 H220 Q230 40 230 52 V132 Q230 144 240 144 H272"/>
+        <path class="ln" d="M190 92 H220 Q230 92 230 104 V132 Q230 144 240 144 H272"/>
+        <path class="ln" d="M190 144 H272"/>
+        <polygon class="fr" points="272,139 284,144 272,149"/>
+        <path class="la" d="M190 218 H236 Q248 218 248 206 V182 H272"/>
+        <polygon class="fa" points="272,177 284,182 272,187"/>
+
+        <rect class="b" x="286" y="20" width="150" height="230" rx="9"/>
+        <text class="t" x="302" y="46">Le serveur</text>
+        <text class="st" x="302" y="72">· prépare les listes</text>
+        <text class="st" x="302" y="90">· stocke les fichiers</text>
+        <text class="st" x="302" y="108">· convertit les vidéos</text>
+        <text class="st" x="302" y="126">· garde l'historique</text>
+        <text class="st" x="302" y="144">· reçoit l'état des écrans</text>
+
+        <path class="la" d="M436 90 H484"/>
+        <polygon class="fa" points="484,85 496,90 484,95"/>
+        <text class="st" x="442" y="82">liste + fichiers</text>
+
+        <path class="ln" d="M496 200 H448 Q436 200 436 188 V166"/>
+        <polygon class="fr" points="431,166 436,154 441,166"/>
+        <text class="st" x="442" y="216">« tout va bien »</text>
+
+        <rect class="ba" x="496" y="20" width="254" height="56" rx="7"/>
+        <text class="t" x="512" y="42">A·1·12 — hall central</text>
+        <text class="st" x="512" y="60">en ligne · Raspberry Pi</text>
+        <circle cx="734" cy="34" r="5" class="fa"/>
+
+        <rect class="b" x="496" y="88" width="254" height="56" rx="7"/>
+        <text class="t" x="512" y="110">B·0·03 — devant le CDI</text>
+        <text class="st" x="512" y="128">en ligne · boîtier Android</text>
+        <circle cx="734" cy="102" r="5" class="fa"/>
+
+        <rect class="b" x="496" y="156" width="254" height="56" rx="7"/>
+        <text class="t" x="512" y="178">C·2·07 — salle des profs</text>
+        <text class="st" x="512" y="196">hors ligne depuis 4 h — continue seul</text>
+        <circle cx="734" cy="170" r="5" fill="var(--signal)"/>
+
+        <text class="st" x="496" y="238">… et les autres</text>
+      </svg>
+    </div>
+    <figcaption>Chaque écran travaille avec ce qu'il a en local. Le serveur lui dit quoi afficher, il ne le lui sert pas en direct.</figcaption>
+  </figure>
+</section>
+
+<!-- ---------------------------------- -->
+<section id="materiel">
+  <h2>Sur quoi ça tourne</h2>
+  <div class="h2rule"></div>
+
+  <p class="lede">Ce ne sera pas que des Raspberry Pi. Selon les endroits, le budget et ce qui est déjà en place, on mettra ce qui convient — et l'appli doit tourner partout pareil.</p>
+
+  <p>Pour que ce soit tenable, l'appli est découpée en deux : d'un côté <strong>l'affichage</strong>, écrit en web, strictement identique sur toutes les machines ; de l'autre une <strong>petite couche système</strong> par type d'appareil, qui gère le démarrage automatique, le verrouillage, l'extinction de la dalle et les mises à jour. Ajouter un nouveau type d'appareil, c'est écrire cette petite couche — pas refaire l'appli.</p>
+
+  <div class="tw">
+    <table>
+      <thead><tr><th>Appareil</th><th class="num">Prix</th><th>Quand le choisir</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Raspberry Pi 5</strong></td><td class="num">≈ 145 €</td><td>Le choix par défaut pour une pose neuve. Bon rapport prix / contrôle, parc homogène et facile à gérer.</td></tr>
+        <tr><td><strong>Boîtier Android TV</strong></td><td class="num">60 – 120 €</td><td>Le moins cher. Parfait là où il n'y a qu'une télé et une prise. Attention à la qualité très variable des modèles.</td></tr>
+        <tr><td><strong>Mini-PC</strong><br>Windows ou Linux</td><td class="num">200 – 350 €</td><td>Pour de la 4K, des vidéos lourdes, ou pour réutiliser un PC qui traîne.</td></tr>
+        <tr><td><strong>Écran avec l'électronique intégrée</strong><br>Samsung, LG</td><td class="num">inclus</td><td>L'installation la plus propre : aucun boîtier, aucun câble en plus. Mais l'écran coûte nettement plus cher.</td></tr>
+        <tr><td><strong>Un simple navigateur</strong></td><td class="num">0 €</td><td>Pour dépanner, faire une démo, ou afficher sur un poste déjà allumé. Voir la réserve ci-dessous.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="note warn">
+    <b>Le mode navigateur a ses limites</b>
+    <p>Il ne redémarre pas tout seul, il ne survit pas à une longue coupure internet, et le navigateur peut vider son cache quand il veut. C'est bien pour dépanner, pas pour un écran de couloir permanent. La console signale clairement les écrans qui sont dans ce mode.</p>
+  </div>
+
+  <p>Toutes les machines ne savent pas tout faire — un boîtier Android ne se pilote pas comme un mini-PC. La règle : <strong>quand une fonction n'existe pas sur un appareil, la console grise le bouton et explique pourquoi</strong>, plutôt que de faire semblant et d'échouer en silence.</p>
+
+  <div class="note">
+    <b>Un détail qui compte</b>
+    <p>Le Raspberry Pi n'a pas d'horloge sauvegardée. Après une coupure de courant sans internet, il redémarre à une date fantaisiste — et toute la programmation horaire part de travers. Il faut lui ajouter un petit module d'horloge à 8 €. Les autres appareils en ont un d'origine.</p>
+  </div>
+
+  <p>Côté écran lui-même : une dalle de 43 à 55 pouces, prévue pour rester allumée toute la journée (les télés grand public tiennent mal ce rythme), un support VESA, et de l'Ethernet plutôt que du Wi-Fi quand c'est possible.</p>
+</section>
+
+<!-- ---------------------------------- -->
+<section id="reperer">
+  <h2>Retrouver un écran</h2>
+  <div class="h2rule"></div>
+
+  <p class="lede">La console dit « l'écran 7 ne répond plus ». Encore faut-il savoir devant quel mur aller. C'est un vrai besoin, pas un détail.</p>
+
+  <p>Chaque écran porte un code court, construit sur la géographie du bâtiment : <code>A·1·12</code>, c'est le bâtiment A, premier étage, écran 12. Ce code sert partout — sur l'étiquette, dans la console, comme nom de machine sur le réseau.</p>
+
+  <p>Quatre choses pour ne jamais chercher :</p>
+  <ul>
+    <li><strong>Un plan de l'école dans la console.</strong> Une image par étage, les écrans posés dessus, en vert quand ils vont bien et en rouge quand ils ne répondent plus.</li>
+    <li><strong>Un bouton « Identifier ».</strong> On appuie depuis son téléphone, et l'écran ciblé affiche son code en énorme pendant 30 secondes. Fini le doute entre deux écrans côte à côte.</li>
+    <li><strong>Une étiquette physique</strong> sur le cadre de l'écran et sur le boîtier, avec le code et un QR code qui ouvre directement la bonne fiche.</li>
+    <li><strong>Une fiche par écran</strong> avec une photo de l'emplacement, le numéro de prise réseau, le modèle du boîtier, la date de pose et l'historique des pannes.</li>
+  </ul>
+
+  <p>En option, un tout petit filigrane permanent dans un coin de l'écran : invisible pour le public, suffisant pour quelqu'un qui vient dépanner.</p>
+</section>
+
+<!-- ---------------------------------- -->
+<section id="contenus">
+  <h2>Ce qu'on affiche</h2>
+  <div class="h2rule"></div>
+
+  <p>L'écran peut être découpé en zones : la vidéo en grand, l'emploi du temps dans une colonne, un bandeau qui défile en bas. Chaque zone a sa propre playlist.</p>
+
+  <h3>Les cours</h3>
+  <p>On branche le logiciel d'emploi du temps de l'école et l'écran affiche les cours du jour, l'occupation d'une salle, les prochains créneaux. Les <strong>changements de dernière minute</strong> — salle modifiée, cours annulé, prof absent — remontent en haut et sont mis en évidence.</p>
+  <p>Si les données ne sont plus fraîches, l'écran l'affiche honnêtement (« mis à jour à 8 h 12 ») au lieu de faire croire qu'elles le sont. Et au bout d'un certain temps, il retire carrément le bloc plutôt que d'afficher n'importe quoi.</p>
+
+  <h3>Les actualités du site</h3>
+  <p>C'est le moyen le plus simple de rendre le tout autonome : on publie sur le site de l'école comme d'habitude, dans une catégorie dédiée (« Affichage » par exemple), et ça part sur les écrans. Le texte et la photo sont automatiquement remis en forme dans un modèle lisible de loin — jamais un article brut collé tel quel.</p>
+
+  <h3>Les vidéos</h3>
+  <p>On téléverse le fichier plutôt que de coller un lien YouTube : une vidéo YouTube ne marche pas hors ligne, subit les pubs, et l'interface change sans prévenir. Le serveur convertit automatiquement chaque vidéo dans un format que le boîtier sait lire — pas de 4K envoyée à un appareil qui n'en veut pas.</p>
+
+  <h3>Les partenaires</h3>
+  <p>Si des partenaires sont mis en avant, on définit des dates, les écrans concernés et une fréquence (« une fois toutes les cinq diapos »). Chaque passage est compté, même hors ligne, et on peut sortir un récapitulatif : combien de diffusions, sur quels écrans, quels jours. Utile s'il y a un engagement derrière.</p>
+  <p>Avec un garde-fou : on peut plafonner la part de contenu partenaire dans la rotation, pour que les écrans restent d'abord un outil d'information.</p>
+
+  <h3>Les petits blocs</h3>
+  <p>Heure et date, météo, bandeau défilant, menu du restaurant, horaires de bus, compte à rebours avant un événement, Instagram de l'école, félicitations et anniversaires.</p>
+
+  <h3>Les modèles à remplir</h3>
+  <div class="note">
+    <b>C'est le point clé de l'autonomie</b>
+    <p>Plutôt que de créer chaque affiche de zéro, on part d'un modèle : annonce, événement, mise à l'honneur, citation, chiffres clés, appel à candidature. On remplit un formulaire — un titre, un texte, une photo, une date — et on voit le rendu en direct. Les couleurs, les polices et le logo de l'école sont appliqués automatiquement, donc tout reste cohérent sans avoir à y penser.</p>
+  </div>
+  <p>Un modèle peut aussi aller chercher sa donnée tout seul : « le titre = le dernier article publié sur le site ».</p>
+
+  <p>Deux règles imposées par le système, parce que personne n'y pense au moment de créer : le texte ne peut pas descendre en dessous d'une certaine taille, et une diapo reste affichée assez longtemps pour être lue par quelqu'un qui marche.</p>
+</section>
+
+<!-- ---------------------------------- -->
+<section id="offline">
+  <h2>Quand internet tombe</h2>
+  <div class="h2rule"></div>
+
+  <p class="lede">C'est une exigence forte du projet : une coupure ne doit rien changer de visible dans les couloirs, et tout doit se remettre en ordre tout seul au retour.</p>
+
+  <ol class="rail">
+    <li>
+      <b>Tout va bien</b>
+      <p>L'écran a en local sa liste, tous ses fichiers vérifiés, et les données du jour. Il note dans un petit journal chaque contenu qu'il affiche.</p>
+    </li>
+    <li class="off">
+      <b>La connexion tombe</b>
+      <p>L'écran s'en aperçoit et… ne change rien. Il continue exactement pareil et se met à réessayer de se connecter, d'abord souvent puis de plus en plus espacé.</p>
+    </li>
+    <li class="off">
+      <b>Les heures passent</b>
+      <p>La rotation continue. Les données vieillissent chacune à leur rythme : la météo disparaît vite, le bandeau reste, l'emploi du temps s'affiche avec son heure de mise à jour puis finit par se retirer. Rien ne s'affiche comme frais alors que ça ne l'est plus.</p>
+    </li>
+    <li class="off">
+      <b>Si ça dure vraiment</b>
+      <p>Au bout d'une semaine, l'écran bascule sur une playlist de secours embarquée dès l'installation : identité de l'école, infos permanentes, plan. Jamais d'écran noir, jamais de message d'erreur technique devant les élèves.</p>
+    </li>
+    <li>
+      <b>Internet revient</b>
+      <p>L'écran attend entre 0 et 60 secondes au hasard avant de se manifester. Ça évite que quarante écrans qui redémarrent en même temps après une coupure de courant tombent tous sur le serveur à la même seconde.</p>
+    </li>
+    <li>
+      <b>Il se remet à jour</b>
+      <p>Il remet son horloge à l'heure, récupère la liste à jour, télécharge uniquement ce qui lui manque — en tâche de fond, sans interrompre ce qui est à l'écran — vérifie les fichiers, puis bascule.</p>
+    </li>
+    <li>
+      <b>Il raconte ce qui s'est passé</b>
+      <p>Il renvoie son journal des derniers jours avec les vraies heures. Le serveur reconstitue l'historique de la coupure, et la console affiche combien de temps l'écran a été isolé.</p>
+    </li>
+  </ol>
+
+  <p>Deux garanties concrètes : <strong>sept jours d'autonomie</strong> sans internet, et un téléchargement interrompu qui <strong>reprend où il s'était arrêté</strong> plutôt que de repartir de zéro.</p>
+</section>
+
+<!-- ---------------------------------- -->
+<section id="surveiller">
+  <h2>Surveiller le parc</h2>
+  <div class="h2rule"></div>
+
+  <p>Chaque écran donne signe de vie toutes les minutes : sa version, son espace disque, sa température, si la dalle est bien allumée, ce qu'il affiche.</p>
+
+  <p>On reçoit une alerte quand :</p>
+  <ul>
+    <li>un écran ne dit plus rien depuis un quart d'heure ;</li>
+    <li>la dalle est éteinte alors qu'elle devrait être allumée ;</li>
+    <li>le disque est plein ou la température monte trop ;</li>
+    <li>l'écran redémarre en boucle ;</li>
+    <li><strong>l'image est figée</strong> — on compare deux captures d'écran successives : si elles sont identiques alors que la playlist devait tourner, quelque chose ne va pas.</li>
+  </ul>
+
+  <p>Les mises à jour se déploient progressivement : un écran d'abord, puis quelques-uns, puis le reste. Si quelque chose se passe mal, la mise à jour s'arrête toute seule et l'écran revient à la version précédente.</p>
+</section>
+
+<!-- ---------------------------------- -->
+<section id="installer">
+  <h2>Installer un écran</h2>
+  <div class="h2rule"></div>
+
+  <p class="lede">La pose fait partie du projet. C'est le moment où la fiche de chaque écran se remplit vraiment — et un écran mal renseigné le jour de la pose, c'est un écran qu'on ne retrouve pas six mois plus tard.</p>
+
+  <h3>Comment ça se passe</h3>
+  <ol>
+    <li><strong>On fait le tour du bâtiment</strong> avec quelqu'un de l'école. Pour chaque emplacement : photo, hauteur, orientation, distance de lecture, prise de courant, prise réseau. C'est là qu'on décide les codes et qu'on choisit le type de boîtier.</li>
+    <li><strong>On prépare tout en atelier.</strong> Installation de l'appli, verrouillage, test de démarrage à froid, impression des étiquettes. Les boîtiers arrivent sur place prêts à brancher.</li>
+    <li><strong>On pose.</strong> Support, écran, boîtier derrière, courant, réseau, câbles rangés, les deux étiquettes.</li>
+    <li><strong>On appaire.</strong> L'écran affiche un code à six caractères, on le saisit depuis son téléphone, on renseigne le bâtiment, l'étage, la zone, on le place sur le plan, on prend la photo. La fiche est complète avant de quitter le couloir.</li>
+    <li><strong>On vérifie sur place</strong> avec une petite liste de contrôle, et on passe au suivant.</li>
+  </ol>
+
+  <h3>La liste de contrôle</h3>
+  <ul>
+    <li>L'écran redémarre seul après une coupure de courant et affiche du contenu en moins d'une minute.</li>
+    <li>L'orientation et le cadrage sont bons, pas de bandes noires.</li>
+    <li>Le plus petit texte est lisible depuis là où les gens passent vraiment.</li>
+    <li>Le bouton « Identifier » allume bien le bon écran.</li>
+    <li>Les deux étiquettes sont posées et leurs QR codes ouvrent la bonne fiche.</li>
+    <li>On débranche le réseau cinq minutes : rien ne bouge à l'écran.</li>
+    <li>On rebranche : la console montre que l'écran s'est resynchronisé.</li>
+    <li>L'heure est toujours juste après un cycle courant / réseau coupé.</li>
+    <li>La dalle s'éteint et se rallume aux heures prévues.</li>
+    <li>Un clavier branché sur le boîtier ne donne accès à rien.</li>
+  </ul>
+
+  <p>En rythme de croisière, avec la préparation faite en amont et des emplacements accessibles, on pose <strong>quatre à six écrans par jour</strong>.</p>
+
+  <h3>Ce que l'école prépare</h3>
+  <ul>
+    <li>L'achat des écrans, des supports et des boîtiers.</li>
+    <li>Une prise de courant, et si possible une prise réseau, à chaque emplacement. Les tirages de câbles sont à faire faire en amont.</li>
+    <li>L'accès aux locaux, et l'échelle ou la nacelle s'il faut monter.</li>
+    <li>La validation des emplacements côté sécurité incendie.</li>
+    <li>Les plans des étages, en image, pour alimenter le plan de la console.</li>
+    <li>Quelqu'un de joignable le jour de la pose.</li>
+  </ul>
+
+  <div class="note">
+    <b>Un principe</b>
+    <p>Le tour du bâtiment se fait <strong>avant</strong> d'acheter quoi que ce soit. C'est là qu'on découvre les emplacements sans prise réseau, ceux qui sont inaccessibles, et ceux qui n'ont finalement pas de sens.</p>
+  </div>
+</section>
+
+<!-- ---------------------------------- -->
+<section id="securite">
+  <h2>Sécurité et vie privée</h2>
+  <div class="h2rule"></div>
+
+  <ul>
+    <li><strong>Aucune caméra, aucun micro, aucune mesure d'audience.</strong> Le système ne collecte rien sur les gens qui passent devant.</li>
+    <li>Tout passe en connexion chiffrée. Chaque écran a sa propre identité, qu'on peut couper à distance si un boîtier disparaît.</li>
+    <li>Les écrans sont verrouillés : pas d'accès au système, pas de navigation ailleurs, rien à faire avec un clavier.</li>
+    <li>La console demande une authentification, avec un second facteur pour les comptes admin.</li>
+    <li>Les écrans sont idéalement sur un réseau à part, sans accès au réseau administratif de l'école.</li>
+    <li><strong>Droit à l'image</strong> : toute photo où des personnes sont reconnaissables porte une indication d'autorisation, et peut avoir une date de fin après laquelle elle sort automatiquement des diffusions.</li>
+    <li>Les données sont hébergées en Europe, sauvegardées et chiffrées.</li>
+  </ul>
+</section>
+
+<!-- ---------------------------------- -->
+<section id="combien">
+  <h2>Combien ça coûte</h2>
+  <div class="h2rule"></div>
+
+  <p>Matériel, pour un écran. Le boîtier dépend de ce qu'on choisit, le reste est commun.</p>
+
+  <div class="tw">
+    <table>
+      <thead><tr><th>Poste</th><th class="num">Estimation</th></tr></thead>
+      <tbody>
+        <tr><td>Boîtier — Raspberry Pi 5 complet (alim, boîtier, SSD, module d'horloge)</td><td class="num">145 €</td></tr>
+        <tr><td>Boîtier — ou un Android TV</td><td class="num">60 – 120 €</td></tr>
+        <tr><td>Boîtier — ou un mini-PC</td><td class="num">200 – 350 €</td></tr>
+        <tr><td>Écran 43″ prévu pour l'usage continu</td><td class="num">450 – 700 €</td></tr>
+        <tr><td>Support mural</td><td class="num">50 €</td></tr>
+        <tr><td>Câble, visserie, étiquettes</td><td class="num">15 €</td></tr>
+        <tr><td><strong>Total par écran</strong></td><td class="num"><strong>≈ 600 – 1 100 €</strong></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>Côté fonctionnement : l'hébergement tourne autour de <strong>400 à 900 € par an</strong> pour une cinquantaine d'écrans, plus une centaine d'euros de domaine, certificats et sauvegardes.</p>
+
+  <p>Bon à savoir : mélanger les types de boîtiers fait vraiment baisser la facture. Un mini-PC là où il y a de la vidéo lourde, un boîtier Android là où un diaporama suffit.</p>
+
+  <p class="note"><b>À confirmer</b>Ces montants sont indicatifs, à valider par devis. Le temps de développement et les journées de pose se chiffrent à part.</p>
+</section>
+
+<!-- ---------------------------------- -->
+<section id="planning">
+  <h2>Dans quel ordre</h2>
+  <div class="h2rule"></div>
+
+  <div class="tw">
+    <table>
+      <thead><tr><th>Étape</th><th class="num">Durée</th><th>Ce qu'on peut montrer à la fin</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Cadrage</strong><br>Tour du bâtiment, choix des boîtiers, vérification que l'emploi du temps est récupérable, maquettes.</td><td class="num">2 sem.</td><td>Les emplacements et les maquettes sont validés</td></tr>
+        <tr><td><strong>Le socle</strong><br>Serveur, appli d'affichage, synchronisation, cache local, fonctionnement hors ligne, premier type de boîtier.</td><td class="num">4 sem.</td><td>Un écran pilote tourne et survit à une coupure réseau</td></tr>
+        <tr><td><strong>La console</strong><br>Vue du parc, plan, identification, médiathèque, playlists, programmation, modèles, comptes.</td><td class="num">4 sem.</td><td>On publie sur trois écrans sans aide technique</td></tr>
+        <tr><td><strong>Les contenus</strong><br>Emploi du temps, actualités du site, vidéo, petits blocs, zones, mode urgence.</td><td class="num">3 sem.</td><td>Un écran enchaîne cours, actualités et vidéos</td></tr>
+        <tr><td><strong>Les autres boîtiers</strong><br>Android, Windows, mode navigateur.</td><td class="num">3 sem.</td><td>La même playlist s'affiche pareil sur trois types d'appareils</td></tr>
+        <tr><td><strong>Le suivi</strong><br>Alertes, captures d'écran, comptage des diffusions, mises à jour à distance.</td><td class="num">2 sem.</td><td>Une panne remonte toute seule</td></tr>
+        <tr><td><strong>La pose</strong><br>Préparation, installation, étiquetage, vérifications, formation.</td><td class="num">2 – 3 sem.</td><td>Tous les écrans sont en service</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p><strong>Environ 20 semaines en tout</strong>, sans compter les délais de livraison du matériel. Un premier écran vraiment en service est possible au bout d'une dizaine de semaines.</p>
+
+  <p>Si le calendrier se tend, l'étape « autres boîtiers » peut se décaler — à condition que la séparation entre l'affichage et la couche système soit bien faite dès le socle. C'est elle qui rend le reste facile.</p>
+</section>
+
+<!-- ---------------------------------- -->
+<section id="decider">
+  <h2>Ce qu'il reste à décider</h2>
+  <div class="h2rule"></div>
+
+  <p class="lede">Une question sort du lot : <strong>quel logiciel d'emploi du temps utilise l'école, et est-ce qu'on peut en sortir les données ?</strong> C'est ce qui conditionne le plus le projet.</p>
+
+  <ol>
+    <li><strong>L'emploi du temps</strong> — Hyperplanning, ADE, Pronote, EDT, autre chose ? Et propose-t-il un export automatique ? Si non, il faudra une solution de contournement, à trouver tôt.</li>
+    <li><strong>Combien d'écrans, et où ?</strong> Une liste des emplacements avec bâtiment, étage et orientation permet de figer les codes et le budget.</li>
+    <li><strong>Y a-t-il déjà des écrans ou des boîtiers en place</strong> à réutiliser ? Ça oriente les types d'appareils à gérer en priorité.</li>
+    <li><strong>Le réseau</strong> — de l'Ethernet aux emplacements visés, ou du Wi-Fi ?</li>
+    <li><strong>Le site de l'école</strong> — quel outil, et peut-on y créer une catégorie dédiée à l'affichage ?</li>
+    <li><strong>Les partenaires</strong> — y a-t-il un engagement commercial derrière, donc un besoin de comptage sérieux ?</li>
+    <li><strong>Les horaires</strong> — quand les écrans s'éteignent, et que fait-on pendant les vacances ?</li>
+    <li><strong>Qui s'en occupe</strong> côté école au quotidien, et qui reçoit les alertes de panne ?</li>
+    <li><strong>Quand peut-on poser</strong> — créneaux possibles, présence des élèves, matériel de hauteur sur place.</li>
+  </ol>
+
+  <div class="note">
+    <b>La suite</b>
+    <p>Valider ce document, répondre à ces questions, puis démarrer par le tour du bâtiment et la vérification de l'emploi du temps. Rien ne s'achète avant ça.</p>
+  </div>
+</section>
+
+<p class="endnote">Écrans de Couloir — document de travail, août 2026.</p>
+
+</main>
