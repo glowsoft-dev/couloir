@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { type Manifest, demoManifest } from "@couloir/protocol";
 import type { MediaStore } from "./media.js";
-import type { MemoryStore } from "./store.js";
+import type { Store } from "./store.js";
 
 /**
  * Amorce un écran de démonstration, pour dérouler le scénario avant que la
@@ -9,31 +9,21 @@ import type { MemoryStore } from "./store.js";
  * noyau de rendu travaillent ainsi sur exactement le même exemple.
  */
 export async function seedDemoScreen(
-  store: MemoryStore,
+  store: Store,
   media?: MediaStore,
 ): Promise<{ screenId: string; manifest: Manifest }> {
-  const screenId = randomUUID();
-
-  store.claim(
-    {
-      deviceId: "seed",
-      publicKey: "seed",
-      capabilities: {} as never,
-      pairingCode: "SEED00",
-      expiresAtMs: Number.MAX_SAFE_INTEGER,
-      screenId: null,
-      deviceToken: null,
-    },
-    {
-      id: screenId,
-      code: "A·1·12",
-      label: "Hall central, face à l'accueil",
-      building: "A",
-      floor: 1,
-      area: "hall central",
-      manifestVersion: 0,
-    },
-  );
+  // On passe par le vrai chemin d'enrôlement plutôt que d'injecter des
+  // lignes à la main : le jeu d'essai reste ainsi représentatif.
+  const device = await store.startEnrollment("seed".padEnd(44, "x"), {} as never);
+  const { screen } = await store.claimNew(device.deviceId, {
+    code: `A·1·${randomUUID().slice(0, 2)}`,
+    label: "Hall central, face à l'accueil",
+    building: "A",
+    floor: 1,
+    area: "hall central",
+    orientation: "landscape",
+  });
+  const screenId = screen.id;
 
   let manifest = demoManifest(screenId);
 
@@ -52,7 +42,7 @@ export async function seedDemoScreen(
     };
   }
 
-  store.putManifest(manifest);
+  await store.putManifest(manifest);
   return { screenId, manifest };
 }
 

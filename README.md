@@ -10,7 +10,7 @@ distance depuis une seule application.
 
 ```bash
 pnpm install
-pnpm test          # 92 tests
+pnpm test          # 105 tests
 pnpm build
 pnpm build:browser # le bundle de rendu servi au navigateur
 pnpm dev:server    # l'API,    http://localhost:3000
@@ -23,12 +23,22 @@ dans chacun des états réels : rotation normale, emploi du temps périmé,
 message d'urgence, repérage, repli hors ligne, extinction. C'est le moyen le
 plus rapide de vérifier qu'une mise en page tient, sans matériel ni serveur.
 
-L'infrastructure locale (PostgreSQL, MinIO, Mosquitto) n'est pas encore
-utilisée par le code, mais elle est prête :
+Le serveur a besoin de PostgreSQL :
 
 ```bash
 pnpm infra:up
 ```
+
+Il est exposé sur le **port 5442**, pas 5432 — celui-ci est souvent déjà pris
+par un autre projet. `DATABASE_URL` permet d'en changer.
+
+Pour une démonstration rapide sans base, `COULOIR_STORE=memory` fait tourner
+le serveur en mémoire — mais tout est perdu à l'arrêt, y compris les écrans
+enrôlés.
+
+Les tests qui touchent PostgreSQL se sautent proprement si la base n'est pas
+joignable : `pnpm test` passe sans Docker. L'intégration continue, elle, doit
+lancer `pnpm infra:up` d'abord.
 
 ## Faire tourner un écran de bout en bout
 
@@ -88,10 +98,10 @@ curl -s -X POST localhost:3000/v1/enroll/claim -H 'content-type: application/jso
 | `packages/protocol` | le contrat serveur ↔ écrans. Schémas et logique pure, sans dépendance à Node. |
 | `packages/agent` | machine à états, backoff, contrat d'abstraction des plateformes. |
 | `packages/renderer` | le noyau de rendu. La décision en logique pure, le DOM par-dessus, sans framework. |
-| `apps/server` | l'API et le service des médias. |
+| `apps/server` | l'API, le service des médias, la persistance PostgreSQL. |
 | `apps/player-linux` | la coque Linux : les six portes, le serveur local, les unités systemd. |
 
-Le reste — console, coques Android et Electron, PostgreSQL — arrive ensuite.
+Le reste — console, coques Android et Electron, authentification des appareils — arrive ensuite.
 
 ## Poser un écran
 

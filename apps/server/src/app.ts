@@ -1,4 +1,4 @@
-import { createHash, randomUUID } from "node:crypto";
+import { createHash } from "node:crypto";
 import Fastify, { type FastifyInstance } from "fastify";
 import {
   EnrollClaimRequest,
@@ -10,7 +10,7 @@ import {
   demoManifest,
 } from "@couloir/protocol";
 import { MediaStore, parseRange } from "./media.js";
-import { MemoryStore } from "./store.js";
+import { MemoryStore, type Store, isPairingExpired } from "./store.js";
 
 /**
  * L'API du serveur.
@@ -21,7 +21,7 @@ import { MemoryStore } from "./store.js";
  */
 
 export interface AppOptions {
-  store?: MemoryStore;
+  store?: Store;
   media?: MediaStore;
   logger?: boolean;
   /** Ouvre les routes de publication de développement. */
@@ -35,14 +35,14 @@ function etagOf(manifest: Manifest): string {
 }
 
 export function buildApp(options: AppOptions = {}): FastifyInstance {
-  const store = options.store ?? new MemoryStore();
+  const store: Store = options.store ?? new MemoryStore();
   const media_ = options.media ?? new MediaStore("./data/media");
   const app = Fastify({ logger: options.logger ?? false });
 
   app.decorate("store", store);
   app.decorate("media", media_);
 
-  app.get(ROUTES.health, async () => ({ status: "ok", screens: store.listScreens().length }));
+  app.get(ROUTES.health, async () => ({ status: "ok", screens: (await store.listScreens()).length }));
 
   // --- Enrôlement -----------------------------------------------------
 
@@ -57,11 +57,15 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
       });
     }
 
-    const device = store.startEnrollment(parsed.data.publicKey, parsed.data.capabilities);
+    const device = await store.startEnrollment(
+      parsed.data.publicKey,
+      parsed.data.capabilities,
+      parsed.data.hardwareId,
+    );
     return reply.code(201).send({
       deviceId: device.deviceId,
       pairingCode: device.pairingCode,
-      expiresAt: new Date(device.expiresAtMs).toISOString().replace(/\.\d+Z$/, "Z"),
+      expiresAt: new Date(device.pairingExpiresAtMs).toISOString().replace(/\.\d+Z$/, "Z"),
       pollIntervalSec: 5,
     });
   });
@@ -73,24 +77,21 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
       return reply.code(400).send({ code: "missing-device", message: "deviceId requis.", retryable: false });
     }
 
-    const device = store.getDevice(deviceId);
+    const device = await store.getDevice(deviceId);
     if (!device) {
       return reply.code(404).send({ code: "unknown-device", message: "Appareil inconnu.", retryable: false });
     }
-    if (store.isExpired(device)) {
+    if (isPairingExpired(device, Date.now())) {
       return reply.send({ state: "expired" });
     }
     if (!device.screenId) {
       return reply.send({ state: "pending" });
     }
 
-    const screen = store.getScreen(device.screenId);
-    return reply.send({
-      state: "claimed",
-      screenId: device.screenId,
-      screenCode: screen?.code,
-      deviceToken: device.deviceToken ?? undefined,
-    });
+    const screen = await store.getScreen(device.screenId);
+    // Le jeton n'est délivré qu'une fois, au rattachement : on ne le
+    // conserve que sous forme d'empreinte et on ne peut pas le rejouer.
+    return reply.send({ state: "claimed", screenId: device.screenId, screenCode: screen?.code });
   });
 
   /** Appelé depuis la console, code d'appairage en main. */
@@ -106,7 +107,7 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
     }
     const { pairingCode, existingScreenId, newScreen } = parsed.data;
 
-    const device = store.findByPairingCode(pairingCode);
+    const device = await store.findByPairingCode(pairingCode);
     if (!device) {
       return reply.code(404).send({
         code: "unknown-pairing-code",
@@ -114,7 +115,7 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
         retryable: false,
       });
     }
-    if (store.isExpired(device)) {
+    if (isPairingExpired(device, Date.now())) {
       return reply.code(410).send({
         code: "pairing-code-expired",
         message: "Ce code a expiré. Redémarrez l'écran pour en obtenir un nouveau.",
@@ -124,16 +125,20 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
 
     // Remplacement d'un boîtier : l'écran existe, on le reprend tel quel.
     if (existingScreenId) {
-      const screen = store.getScreen(existingScreenId);
-      if (!screen) {
+      const claimed = await store.claimExisting(device.deviceId, existingScreenId);
+      if (!claimed) {
         return reply.code(404).send({
           code: "unknown-screen",
           message: "Cet écran n'existe pas.",
           retryable: false,
         });
       }
-      const { deviceToken } = store.claim(device, screen);
-      return reply.send({ state: "claimed", screenId: screen.id, screenCode: screen.code, deviceToken });
+      return reply.send({
+        state: "claimed",
+        screenId: claimed.screen.id,
+        screenCode: claimed.screen.code,
+        deviceToken: claimed.deviceToken,
+      });
     }
 
     if (!newScreen) {
@@ -144,20 +149,19 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
       });
     }
 
-    const { deviceToken } = store.claim(device, {
-      id: randomUUID(),
+    const claimed = await store.claimNew(device.deviceId, {
       code: newScreen.code,
       label: newScreen.label,
       building: newScreen.building,
       floor: newScreen.floor,
       area: newScreen.area,
-      manifestVersion: 0,
+      orientation: newScreen.orientation,
     });
     return reply.send({
       state: "claimed",
-      screenId: device.screenId!,
-      screenCode: newScreen.code,
-      deviceToken,
+      screenId: claimed.screen.id,
+      screenCode: claimed.screen.code,
+      deviceToken: claimed.deviceToken,
     });
   });
 
@@ -169,7 +173,7 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
       return reply.code(401).send({ code: "unauthenticated", message: "Appareil non identifié.", retryable: false });
     }
 
-    const device = store.getDevice(deviceId);
+    const device = await store.getDevice(deviceId);
     if (!device?.screenId) {
       return reply.code(403).send({
         code: "not-claimed",
@@ -178,7 +182,7 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
       });
     }
 
-    const manifest = store.getManifest(device.screenId);
+    const manifest = await store.getManifest(device.screenId);
     if (!manifest) {
       return reply.code(404).send({
         code: "no-manifest",
@@ -233,16 +237,16 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
   if (options.devRoutes) {
     app.post<{ Body: { screenId?: string; version?: number } }>("/dev/publish-demo", async (request, reply) => {
       const screenId = request.body?.screenId;
-      if (!screenId || !store.getScreen(screenId)) {
+      if (!screenId || !(await store.getScreen(screenId))) {
         return reply.code(404).send({ code: "unknown-screen", message: "Écran inconnu.", retryable: false });
       }
 
-      const existing = store.getManifest(screenId);
+      const existing = await store.getManifest(screenId);
       const version = request.body?.version ?? (existing ? existing.version + 1 : 1);
       const manifest = demoManifest(screenId, version);
       const poster = media_.get("affiche-po-2026");
 
-      store.putManifest({
+      await store.putManifest({
         ...manifest,
         assets: manifest.assets.map((asset) => ({
           ...asset,
@@ -285,7 +289,8 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
 
   app.post(ROUTES.telemetry, async (request, reply) => {
     const deviceId = request.headers[HEADERS.deviceId];
-    if (typeof deviceId !== "string" || !store.getDevice(deviceId)?.screenId) {
+    const device = typeof deviceId === "string" ? await store.getDevice(deviceId) : null;
+    if (!device?.screenId) {
       return reply.code(401).send({ code: "unauthenticated", message: "Appareil non identifié.", retryable: false });
     }
 
@@ -302,16 +307,11 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
     // L'acquittement porte les identifiants générés par l'agent : c'est lui
     // qui rend le renvoi après coupure idempotent, et qui autorise l'agent
     // à purger sa file locale. Rien d'autre ne doit servir de signal.
-    const { heartbeats, playEvents, logs } = parsed.data;
-    const acceptedEventIds = [
-      ...heartbeats.map((h) => h.eventId),
-      ...playEvents.map((p) => p.eventId),
-      ...logs.map((l) => l.eventId),
-    ];
+    const acceptedEventIds = await store.recordTelemetry(device.screenId, parsed.data);
 
     request.log.info(
-      { deviceId, heartbeats: heartbeats.length, playEvents: playEvents.length, logs: logs.length },
-      "lot de télémétrie reçu",
+      { deviceId, accepted: acceptedEventIds.length },
+      "lot de télémétrie enregistré",
     );
     return reply.send({ acceptedEventIds });
   });
@@ -327,7 +327,7 @@ function publicUrl(request: { headers: Record<string, unknown> }): string {
 
 declare module "fastify" {
   interface FastifyInstance {
-    store: MemoryStore;
+    store: Store;
     media: MediaStore;
   }
 }

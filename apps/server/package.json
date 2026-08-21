@@ -12,6 +12,7 @@
   "dependencies": {
     "@couloir/protocol": "workspace:*",
     "fastify": "^5.2.1",
+    "postgres": "^3.4.9",
     "zod": "^3.24.1"
   },
   "types": "./dist/index.d.ts",
