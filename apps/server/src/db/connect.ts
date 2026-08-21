@@ -16,6 +16,31 @@ export interface DatabaseOptions {
 
 export const DEFAULT_DATABASE_URL = "postgres://couloir:couloir@localhost:5442/couloir";
 
+/**
+ * Base dédiée aux tests.
+ *
+ * Séparée du développement, et ce n'est pas un détail : les tests vident les
+ * tables entre chaque cas. Partager la base reviendrait à effacer l'état
+ * local à chaque `pnpm test` — et à chercher longtemps pourquoi les écrans
+ * ont disparu.
+ */
+export const TEST_DATABASE_URL =
+  process.env["DATABASE_URL_TEST"] ?? "postgres://couloir:couloir@localhost:5442/couloir_test";
+
+/** Crée la base de test si elle n'existe pas encore. */
+export async function ensureTestDatabase(): Promise<Sql> {
+  const name = new URL(TEST_DATABASE_URL).pathname.slice(1);
+  const admin = postgres(new URL("/postgres", TEST_DATABASE_URL).toString(), { max: 1 });
+  try {
+    const existing = await admin`SELECT 1 FROM pg_database WHERE datname = ${name}`;
+    // `CREATE DATABASE` ne supporte pas IF NOT EXISTS avant PostgreSQL 17.
+    if (existing.length === 0) await admin.unsafe(`CREATE DATABASE "${name}"`);
+  } finally {
+    await admin.end({ timeout: 5 });
+  }
+  return postgres(TEST_DATABASE_URL, { max: 4, onnotice: () => {} });
+}
+
 export function connect(options: DatabaseOptions = {}): Sql {
   return postgres(options.url ?? process.env["DATABASE_URL"] ?? DEFAULT_DATABASE_URL, {
     max: options.max ?? 10,

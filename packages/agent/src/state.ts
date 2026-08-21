@@ -35,6 +35,8 @@ export type AgentEvent =
   | { type: "boot"; clockReliable: boolean }
   | { type: "clock-synced" }
   | { type: "manifest-unchanged" }
+  /** Le serveur répond, mais rien n'a encore été publié sur cet écran. */
+  | { type: "manifest-absent" }
   | { type: "manifest-received"; version: number; missingAssets: number }
   | { type: "sync-failed" }
   | { type: "asset-downloaded"; remaining: number }
@@ -120,6 +122,34 @@ export function reduce(
           { type: "flush-telemetry" },
           { type: "schedule-retry", delayMs: settings.pollIntervalSec * 1000 },
         ],
+      };
+    }
+
+    case "manifest-absent": {
+      // Le contact a réussi : on remet le compteur d'échecs à zéro et on
+      // remonte la télémétrie, même s'il n'y a rien à afficher. Sans ça, un
+      // écran fraîchement rattaché reste muet dans la console et paraît
+      // mort alors qu'il va très bien.
+      const base: AgentContext = { ...context, lastContactMs: nowMs, consecutiveFailures: 0 };
+      const hasContent = context.activeVersion > 0;
+      const retry = { type: "schedule-retry", delayMs: settings.pollIntervalSec * 1000 } as const;
+
+      if (hasContent) {
+        return {
+          context: { ...base, state: "active" },
+          effects: [{ type: "flush-telemetry" }, retry],
+        };
+      }
+      return {
+        context: { ...base, state: "fallback" },
+        effects:
+          context.state === "fallback"
+            ? [{ type: "flush-telemetry" }, retry]
+            : [
+                { type: "play-fallback", reason: "offline-too-long" },
+                { type: "flush-telemetry" },
+                retry,
+              ],
       };
     }
 

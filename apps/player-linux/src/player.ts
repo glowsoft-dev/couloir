@@ -188,7 +188,11 @@ export class Player {
       await runtime.record({ heartbeats: [heartbeat], playEvents: [], logs: [] });
     };
 
-    void beat();
+    // Le tout premier battement part sans attendre le cycle de poll : c'est
+    // l'instant où quelqu'un regarde la console pour vérifier que le
+    // rattachement a pris. Une minute d'écran « muet » ferait douter.
+    void beat().then(() => this.runtime?.syncNow());
+
     this.heartbeatTimer = setInterval(() => void beat(), intervalMs);
     this.heartbeatTimer.unref?.();
   }

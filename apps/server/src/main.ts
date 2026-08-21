@@ -34,7 +34,19 @@ if (useMemory) {
   closeDatabase = () => store.close();
 }
 
-const app = buildApp({ store, media, logger: true, devRoutes: process.env["COULOIR_DEV"] === "1" });
+const consoleToken = process.env["COULOIR_CONSOLE_TOKEN"];
+if (!consoleToken) {
+  console.warn("[couloir] COULOIR_CONSOLE_TOKEN absent : la console restera fermée");
+}
+
+const app = buildApp({
+  store,
+  media,
+  logger: true,
+  devRoutes: process.env["COULOIR_DEV"] === "1",
+  ...(consoleToken ? { consoleToken } : {}),
+  timetableUrl: process.env["COULOIR_TIMETABLE_URL"] ?? "http://localhost:3000/connectors/timetable",
+});
 
 // Un écran de démonstration, uniquement quand il n'y a encore rien.
 if (process.env["COULOIR_DEV"] === "1" && (await store.listScreens()).length === 0) {

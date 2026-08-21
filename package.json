@@ -17,7 +17,8 @@
     "infra:up": "docker compose up -d",
     "infra:down": "docker compose down",
     "dev:player": "pnpm --filter @couloir/player-linux dev",
-    "build:browser": "pnpm --filter @couloir/renderer build:browser"
+    "build:browser": "pnpm --filter @couloir/renderer build:browser",
+    "dev:console": "pnpm --filter @couloir/console dev"
   },
   "devDependencies": {
     "@types/node": "^22.10.5",

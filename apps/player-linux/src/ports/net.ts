@@ -76,12 +76,19 @@ export class HttpNet implements NetPort {
 
   async fetchManifest(
     etag: string | null,
-  ): Promise<{ status: "unchanged" } | { status: "updated"; manifest: Manifest; etag: string }> {
+  ): Promise<
+    | { status: "unchanged" }
+    | { status: "none" }
+    | { status: "updated"; manifest: Manifest; etag: string }
+  > {
     const response = await this.request(ROUTES.manifest, {
       headers: etag ? { "if-none-match": etag } : {},
     });
 
     if (response.status === 304) return { status: "unchanged" };
+    // Le serveur répond : l'écran est joignable, il n'a simplement pas encore
+    // de contenu. Ce n'est pas une panne.
+    if (response.status === 404) return { status: "none" };
     if (!response.ok) throw new Error(`manifeste : HTTP ${response.status}`);
 
     // On valide avant d'appliquer : un manifeste mal formé doit échouer ici,

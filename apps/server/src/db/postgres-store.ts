@@ -11,8 +11,11 @@ import {
   type ClaimResult,
   type DeviceRecord,
   type NewScreen,
+  OFFLINE_AFTER_MS,
   PAIRING_TTL_MS,
+  type PendingDevice,
   type ScreenRecord,
+  type ScreenStatus,
   type Store,
   hashToken,
   newPairingCode,
@@ -144,6 +147,59 @@ export class PostgresStore implements Store {
     return rows.map(toScreen);
   }
 
+  /**
+   * Le parc avec son état.
+   *
+   * Le dernier battement est agrégé en SQL plutôt que ligne par ligne :
+   * la console rafraîchit cette vue en continu, et une requête par écran
+   * ferait mal dès la trentaine.
+   */
+  async listScreenStatuses(nowMs = Date.now()): Promise<ScreenStatus[]> {
+    const rows = await this.sql<StatusRow[]>`
+      SELECT s.*,
+             d.id AS device_id,
+             d.capabilities ->> 'platform' AS platform,
+             b.at AS last_heartbeat_at,
+             b.state AS agent_state
+      FROM screens s
+      LEFT JOIN devices d ON d.screen_id = s.id
+      LEFT JOIN LATERAL (
+        SELECT at, state FROM heartbeats
+        WHERE screen_id = s.id
+        ORDER BY at DESC
+        LIMIT 1
+      ) b ON true
+      ORDER BY s.code
+    `;
+
+    return rows.map((row) => {
+      const lastHeartbeatAtMs = row.last_heartbeat_at?.getTime() ?? null;
+      return {
+        ...toScreen(row),
+        deviceId: row.device_id,
+        platform: row.platform,
+        lastHeartbeatAtMs,
+        agentState: row.agent_state,
+        online: lastHeartbeatAtMs !== null && nowMs - lastHeartbeatAtMs < OFFLINE_AFTER_MS,
+      };
+    });
+  }
+
+  async listPendingDevices(nowMs = Date.now()): Promise<PendingDevice[]> {
+    const rows = await this.sql<PendingRow[]>`
+      SELECT id, pairing_code, pairing_expires_at, capabilities ->> 'platform' AS platform
+      FROM devices
+      WHERE screen_id IS NULL AND pairing_code IS NOT NULL AND pairing_expires_at > ${new Date(nowMs)}
+      ORDER BY created_at DESC
+    `;
+    return rows.map((row) => ({
+      deviceId: row.id,
+      pairingCode: row.pairing_code,
+      pairingExpiresAtMs: row.pairing_expires_at.getTime(),
+      platform: row.platform,
+    }));
+  }
+
   async putManifest(manifest: Manifest): Promise<void> {
     const problems = findBrokenReferences(manifest);
     if (problems.length > 0) {
@@ -231,6 +287,20 @@ interface DeviceRow {
   pairing_code: string | null;
   pairing_expires_at: Date | null;
   screen_id: string | null;
+}
+
+interface StatusRow extends ScreenRow {
+  device_id: string | null;
+  platform: string | null;
+  last_heartbeat_at: Date | null;
+  agent_state: string | null;
+}
+
+interface PendingRow {
+  id: string;
+  pairing_code: string;
+  pairing_expires_at: Date;
+  platform: string | null;
 }
 
 interface ScreenRow {

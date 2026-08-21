@@ -77,24 +77,24 @@ function O(e, t) {
   const n = E(t, e.timezone);
   return e.displayOff.some((r) => r.daysOfWeek.length > 0 && !r.daysOfWeek.includes(n.dayOfWeek) ? !1 : S(n.minutesOfDay, r.from, r.to));
 }
-const T = 130, W = 2500, R = 6e4, $ = 1.9;
+const T = 130, W = 2500, $ = 6e4, R = 1.9;
 function _(e) {
   const t = e.trim();
   return t === "" ? 0 : t.split(/\s+/).length;
 }
-function j(e) {
+function L(e) {
   const t = _(e);
   return Math.round(W + t / T * 6e4);
 }
-function q(e) {
+function j(e) {
   return e.kind !== "template" ? "" : Object.values(e.fields).filter((t) => typeof t == "string").join(" ");
 }
-function L(e) {
-  const t = "durationMs" in e && e.durationMs ? e.durationMs : 0, n = j(q(e)), r = Math.min(Math.max(t, n), R);
+function q(e) {
+  const t = "durationMs" in e && e.durationMs ? e.durationMs : 0, n = L(j(e)), r = Math.min(Math.max(t, n), $);
   return { effectiveMs: r, requestedMs: t, extended: r > t };
 }
 function U(e) {
-  const t = Math.round(e * $ / 100);
+  const t = Math.round(e * R / 100);
   return {
     eyebrow: Math.round(t * 0.72),
     title: Math.round(t * 2.4),
@@ -180,7 +180,7 @@ function H(e) {
     }
   }, p = (l) => {
     const h = r.get(l);
-    return h ? h.kind === "media" && h.durationMs === void 0 ? null : L(h).effectiveMs : 0;
+    return h ? h.kind === "media" && h.durationMs === void 0 ? null : q(h).effectiveMs : 0;
   }, b = e.forceFallback ? "fallback" : "normal", d = /* @__PURE__ */ new Map(), m = [], f = [];
   for (const l of t.layout.zones) {
     const h = e.forceFallback ? t.fallbackPlaylistId : D(t, l.id, n) ?? l.playlistId, v = a.get(h), k = e.rotations.get(l.id), C = k && k.playlistId === h ? v?.slideIds[k.index] ?? null : null, w = Z({
@@ -266,7 +266,7 @@ function G(e) {
   }
   return c;
 }
-const V = `
+const Y = `
 :host, .couloir-root {
   --ink: #F4F6F4;
   --ink-soft: #A8B2AC;
@@ -301,14 +301,21 @@ const V = `
   flex-direction: column;
   justify-content: center;
   padding: var(--pad);
-  /* Visible PAR DÉFAUT : le fondu est décoratif, jamais ce qui rend le
-     contenu visible. Une page en arrière-plan, un compositeur qui cale ou
-     un navigateur qui gèle ses animations laisserait sinon un écran noir —
-     exactement ce que le projet promet de ne jamais faire. */
+  /* L'entrée n'anime QUE la position, jamais l'opacité.
+     Supprimer le mode de remplissage ne suffisait pas : tant qu'une
+     animation part d'une opacité nulle, un navigateur qui la gèle — page en
+     arrière-plan, compositeur qui cale — fige le contenu à zéro et laisse un
+     écran noir. Un déplacement gelé, lui, est au pire un décalage de six
+     pixels.
+     (Ce bloc est un littéral de gabarit : pas d'accent grave en commentaire,
+     il terminerait la chaîne.) */
   opacity: 1;
   animation: couloir-in .45s ease;
 }
-@keyframes couloir-in { from { opacity: 0 } to { opacity: 1 } }
+@keyframes couloir-in {
+  from { transform: translateY(6px) }
+  to { transform: none }
+}
 @media (prefers-reduced-motion: reduce) {
   .couloir-slide { animation: none }
   .couloir-zone { transition: none }
@@ -440,9 +447,9 @@ const V = `
   pointer-events: none;
 }
 `;
-function Y(e, t = {}) {
+function J(e, t = {}) {
   const n = e.ownerDocument, r = n.createElement("style");
-  r.textContent = V, e.appendChild(r);
+  r.textContent = Y, e.appendChild(r);
   const o = n.createElement("div");
   o.className = "couloir-root", e.appendChild(o);
   let a = () => {
@@ -482,7 +489,7 @@ function Y(e, t = {}) {
           c.delete(y.zoneId);
           continue;
         }
-        c.set(y.zoneId, h), l.appendChild(J(n, y, y.slide, t, a));
+        c.set(y.zoneId, h), l.appendChild(K(n, y, y.slide, t, a));
       }
     }
     for (const y of [...o.querySelectorAll("[data-zone]")]) {
@@ -508,7 +515,7 @@ function g(e, t, n, r) {
   const o = e.createElement(t);
   return o.className = n, r !== void 0 && (o.textContent = r), o;
 }
-function J(e, t, n, r, o) {
+function K(e, t, n, r, o) {
   const a = e.createElement("div");
   switch (a.className = "couloir-slide", a.dataset.slide = n.slideId, n.kind) {
     case "media": {
@@ -551,10 +558,10 @@ function J(e, t, n, r, o) {
       return a.appendChild(g(e, "p", "couloir-eyebrow", n.widget)), a;
     }
     case "data":
-      return K(e, a, n), n.staleLabel && a.appendChild(g(e, "p", "couloir-stale", n.staleLabel)), a;
+      return Q(e, a, n), n.staleLabel && a.appendChild(g(e, "p", "couloir-stale", n.staleLabel)), a;
   }
 }
-function K(e, t, n) {
+function Q(e, t, n) {
   if (n.view.startsWith("timetable")) {
     const a = Array.isArray(n.payload) ? n.payload : [];
     t.appendChild(g(e, "p", "couloir-eyebrow", "Cours du jour"));
@@ -575,7 +582,7 @@ function K(e, t, n) {
   o && (o.category && t.appendChild(g(e, "p", "couloir-eyebrow", o.category)), t.appendChild(g(e, "h1", "couloir-title", o.title)), o.excerpt && t.appendChild(g(e, "p", "couloir-body", o.excerpt)));
 }
 function te(e, t) {
-  const n = Y(e, t), r = t.pollMs ?? 2e3, o = t.tickMs ?? 500;
+  const n = J(e, t), r = t.pollMs ?? 2e3, o = t.tickMs ?? 500;
   let a = null, c = /* @__PURE__ */ new Map(), i = /* @__PURE__ */ new Set(), s = !1;
   n.onMediaEnded((m) => {
     i.add(m), p();
@@ -594,7 +601,7 @@ function te(e, t) {
   function p() {
     if (s) return;
     if (!a?.manifest) {
-      n.update(Q(a));
+      n.update(V(a));
       return;
     }
     const m = H({
@@ -617,7 +624,7 @@ function te(e, t) {
     }
   };
 }
-function Q(e) {
+function V(e) {
   return e?.pairing ? {
     mode: "identify",
     zones: [],
@@ -661,26 +668,26 @@ async function ee(e, t) {
 }
 export {
   W as GLANCE_TIME_MS,
-  R as MAX_SENSIBLE_DURATION_MS,
-  $ as MIN_BODY_TEXT_HEIGHT_PERCENT,
+  $ as MAX_SENSIBLE_DURATION_MS,
+  R as MIN_BODY_TEXT_HEIGHT_PERCENT,
   T as READING_WORDS_PER_MINUTE,
-  V as RENDERER_CSS,
+  Y as RENDERER_CSS,
   D as activePlaylistId,
   Z as advanceRotation,
   G as collapseEmptyZones,
   _ as countWords,
   H as direct,
-  L as effectiveDuration,
+  q as effectiveDuration,
   O as isDisplayOffPeriod,
   z as isDisplayable,
   N as isScheduleActive,
   S as isWithinDailyWindow,
   E as localMoment,
-  j as minReadableDurationMs,
-  Y as mountRenderer,
+  L as minReadableDurationMs,
+  J as mountRenderer,
   x as parseClock,
   A as resolveSource,
-  q as slideText,
+  j as slideText,
   F as stalenessLabel,
   te as startPlayer,
   U as typeScale

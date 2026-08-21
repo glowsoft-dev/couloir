@@ -36,6 +36,16 @@ describe("visibilité sans animation", () => {
     expect(declarations).not.toMatch(/animation:[^;]*forwards/);
   });
 
+  it("aucune image-clé d'entrée ne touche à l'opacité", () => {
+    // Le vrai piège, et celui que le test précédent avait laissé passer :
+    // retirer `forwards` ne suffit pas. Une animation gelée reste bloquée
+    // sur son image de départ — si celle-ci met l'opacité à zéro, l'écran
+    // est noir aussi longtemps que le navigateur ne la relance pas.
+    const keyframes = /@keyframes\s+couloir-in\s*\{([\s\S]*?)\}\s*\}/.exec(RENDERER_CSS);
+    expect(keyframes).not.toBeNull();
+    expect(keyframes![1]).not.toMatch(/opacity/);
+  });
+
   it("reste lisible quand les animations sont désactivées", () => {
     const reduced = RENDERER_CSS.slice(RENDERER_CSS.indexOf("prefers-reduced-motion"));
     expect(reduced).toMatch(/animation:\s*none/);

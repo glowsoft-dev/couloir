@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import type { Sql } from "postgres";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { FEATURE_PROFILES, type Capabilities, demoManifest } from "@couloir/protocol";
-import { connect } from "./connect.js";
+import { ensureTestDatabase } from "./connect.js";
 import { migrate, truncateAll } from "./migrate.js";
 import { PostgresStore } from "./postgres-store.js";
 
@@ -13,7 +13,11 @@ import { PostgresStore } from "./postgres-store.js";
  * transactions ou l'idempotence : ce sont précisément les endroits où
  * PostgreSQL se comporte différemment. Ces tests montent donc le schéma réel.
  *
- * Ils se sautent proprement quand la base n'est pas joignable — un
+ * Ils tournent sur une base DÉDIÉE, `couloir_test`, créée au besoin : ils
+ * vident les tables entre chaque cas, et partager la base de développement
+ * reviendrait à effacer les écrans enrôlés à chaque `pnpm test`.
+ *
+ * Ils se sautent proprement quand PostgreSQL n'est pas joignable — un
  * développeur sans Docker doit pouvoir lancer `pnpm test` sans échec rouge —
  * mais l'intégration continue, elle, doit les exécuter.
  */
@@ -43,14 +47,15 @@ const NEW_SCREEN = {
 };
 
 beforeAll(async () => {
-  const candidate = connect({ max: 4 });
   try {
+    // Base dédiée : ces tests vident les tables entre chaque cas, et ils ne
+    // doivent surtout pas le faire sur la base de développement.
+    const candidate = await ensureTestDatabase();
     await candidate.unsafe("SELECT 1");
     await migrate(candidate);
     sql = candidate;
     store = new PostgresStore(candidate);
   } catch {
-    await candidate.end({ timeout: 1 }).catch(() => {});
     sql = null;
   }
 }, 30_000);

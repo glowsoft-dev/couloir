@@ -223,6 +223,37 @@ describe("bascule de manifeste", () => {
   });
 });
 
+describe("écran rattaché mais sans contenu", () => {
+  it("donne signe de vie même quand rien n'a été publié", () => {
+    // Constaté dans la console : un écran fraîchement rattaché paraissait
+    // mort. Le 404 « rien à publier » était traité comme une panne réseau,
+    // donc la télémétrie ne partait jamais — alors que la connexion marchait.
+    const fresh = { ...initialContext(), state: "syncing" as const, clockReliable: true };
+    const { context, effects } = reduce(fresh, { type: "manifest-absent" }, SETTINGS, T0);
+
+    expect(context.state).toBe("fallback");
+    expect(context.lastContactMs).toBe(T0);
+    expect(effects).toContainEqual({ type: "flush-telemetry" });
+    expect(effects).toContainEqual({ type: "play-fallback", reason: "offline-too-long" });
+  });
+
+  it("ne rejoue pas le repli à chaque tentative", () => {
+    const fresh = { ...initialContext(), state: "fallback" as const, clockReliable: true };
+    const { effects } = reduce(fresh, { type: "manifest-absent" }, SETTINGS, T0);
+
+    expect(effects).toContainEqual({ type: "flush-telemetry" });
+    expect(effects.some((e) => e.type === "play-fallback")).toBe(false);
+  });
+
+  it("garde son contenu si une publication est retirée côté serveur", () => {
+    const { context, effects } = reduce(activeScreen(), { type: "manifest-absent" }, SETTINGS, T0);
+
+    expect(context.state).toBe("active");
+    expect(context.activeVersion).toBe(4);
+    expect(effects.some((e) => e.type === "play-fallback")).toBe(false);
+  });
+});
+
 describe("scénario complet : la coupure de 48 h de la recette", () => {
   it("survit à la coupure et se remet à jour au retour", () => {
     let context = activeScreen();

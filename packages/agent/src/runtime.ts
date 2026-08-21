@@ -232,6 +232,11 @@ export class AgentRuntime {
         return;
       }
 
+      if (result.status === "none") {
+        await this.dispatch({ type: "manifest-absent" });
+        return;
+      }
+
       this.etag = result.etag;
       this.staging = result.manifest;
       const missing = await this.missingAssetCount(result.manifest);

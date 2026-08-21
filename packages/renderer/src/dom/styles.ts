@@ -44,14 +44,21 @@ export const RENDERER_CSS = `
   flex-direction: column;
   justify-content: center;
   padding: var(--pad);
-  /* Visible PAR DÉFAUT : le fondu est décoratif, jamais ce qui rend le
-     contenu visible. Une page en arrière-plan, un compositeur qui cale ou
-     un navigateur qui gèle ses animations laisserait sinon un écran noir —
-     exactement ce que le projet promet de ne jamais faire. */
+  /* L'entrée n'anime QUE la position, jamais l'opacité.
+     Supprimer le mode de remplissage ne suffisait pas : tant qu'une
+     animation part d'une opacité nulle, un navigateur qui la gèle — page en
+     arrière-plan, compositeur qui cale — fige le contenu à zéro et laisse un
+     écran noir. Un déplacement gelé, lui, est au pire un décalage de six
+     pixels.
+     (Ce bloc est un littéral de gabarit : pas d'accent grave en commentaire,
+     il terminerait la chaîne.) */
   opacity: 1;
   animation: couloir-in .45s ease;
 }
-@keyframes couloir-in { from { opacity: 0 } to { opacity: 1 } }
+@keyframes couloir-in {
+  from { transform: translateY(6px) }
+  to { transform: none }
+}
 @media (prefers-reduced-motion: reduce) {
   .couloir-slide { animation: none }
   .couloir-zone { transition: none }
