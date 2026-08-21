@@ -32,8 +32,15 @@ export class UnsupportedOperation extends Error {
 
 /** Réseau. Toutes les méthodes peuvent échouer : c'est le cas nominal ici. */
 export interface NetPort {
+  /**
+   * `none` : le serveur répond, mais aucun contenu n'a encore été publié sur
+   * cet écran. C'est très différent d'une panne réseau — la connexion marche,
+   * et l'écran doit continuer à donner signe de vie.
+   */
   fetchManifest(etag: string | null): Promise<
-    { status: "unchanged" } | { status: "updated"; manifest: Manifest; etag: string }
+    | { status: "unchanged" }
+    | { status: "none" }
+    | { status: "updated"; manifest: Manifest; etag: string }
   >;
   /**
    * Télécharge un média dans le cache.

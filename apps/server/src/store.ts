@@ -57,6 +57,36 @@ export interface ClaimResult {
   screen: ScreenRecord;
 }
 
+/**
+ * Un écran tel que la console le présente.
+ *
+ * L'état est déduit du dernier battement de cœur, pas déclaré : un écran
+ * débranché n'a aucun moyen de dire qu'il est parti.
+ */
+export interface ScreenStatus extends ScreenRecord {
+  deviceId: string | null;
+  platform: string | null;
+  lastHeartbeatAtMs: number | null;
+  agentState: string | null;
+  online: boolean;
+}
+
+/** Un boîtier qui affiche son code et attend d'être rattaché. */
+export interface PendingDevice {
+  deviceId: string;
+  pairingCode: string;
+  pairingExpiresAtMs: number;
+  platform: string | null;
+}
+
+/**
+ * Au-delà, on considère l'écran muet.
+ *
+ * Trois battements manqués : assez pour absorber une requête perdue, assez
+ * court pour qu'une panne remonte dans le quart d'heure promis.
+ */
+export const OFFLINE_AFTER_MS = 3 * 60_000;
+
 export interface Store {
   startEnrollment(
     publicKey: string,
@@ -79,6 +109,11 @@ export interface Store {
 
   getScreen(screenId: ScreenId): Promise<ScreenRecord | null>;
   listScreens(): Promise<ScreenRecord[]>;
+
+  /** Le parc tel que la console l'affiche, état compris. */
+  listScreenStatuses(nowMs?: number): Promise<ScreenStatus[]>;
+  /** Les boîtiers qui affichent un code et attendent un rattachement. */
+  listPendingDevices(nowMs?: number): Promise<PendingDevice[]>;
 
   putManifest(manifest: Manifest): Promise<void>;
   getManifest(screenId: ScreenId): Promise<Manifest | null>;
@@ -131,6 +166,7 @@ export class MemoryStore implements Store {
   private readonly screens = new Map<ScreenId, ScreenRecord>();
   private readonly manifests = new Map<ScreenId, Manifest>();
   private readonly seenEventIds = new Set<string>();
+  private readonly lastBeat = new Map<ScreenId, { atMs: number; state: string }>();
 
   constructor(private readonly now: () => number = Date.now) {}
 
@@ -205,6 +241,33 @@ export class MemoryStore implements Store {
     return [...this.screens.values()];
   }
 
+  async listScreenStatuses(nowMs = this.now()): Promise<ScreenStatus[]> {
+    return [...this.screens.values()].map((screen) => {
+      const device = [...this.devices.values()].find((d) => d.screenId === screen.id);
+      const beat = this.lastBeat.get(screen.id);
+      return {
+        ...screen,
+        deviceId: device?.deviceId ?? null,
+        platform: device?.capabilities?.platform ?? null,
+        lastHeartbeatAtMs: beat?.atMs ?? null,
+        agentState: beat?.state ?? null,
+        online: beat !== undefined && nowMs - beat.atMs < OFFLINE_AFTER_MS,
+      };
+    });
+  }
+
+  async listPendingDevices(nowMs = this.now()): Promise<PendingDevice[]> {
+    return [...this.devices.values()]
+      .filter((d) => d.screenId === null && d.pairingCode !== null)
+      .filter((d) => d.pairingExpiresAtMs !== null && d.pairingExpiresAtMs > nowMs)
+      .map((d) => ({
+        deviceId: d.deviceId,
+        pairingCode: d.pairingCode!,
+        pairingExpiresAtMs: d.pairingExpiresAtMs!,
+        platform: d.capabilities?.platform ?? null,
+      }));
+  }
+
   async putManifest(manifest: Manifest): Promise<void> {
     const problems = findBrokenReferences(manifest);
     if (problems.length > 0) {
@@ -219,7 +282,15 @@ export class MemoryStore implements Store {
     return this.manifests.get(screenId) ?? null;
   }
 
-  async recordTelemetry(_screenId: ScreenId, batch: TelemetryBatch): Promise<string[]> {
+  async recordTelemetry(screenId: ScreenId, batch: TelemetryBatch): Promise<string[]> {
+    for (const beat of batch.heartbeats) {
+      const atMs = Date.parse(beat.at);
+      const previous = this.lastBeat.get(screenId);
+      // Un lot rattrapé après coupure contient des battements anciens : on ne
+      // fait jamais reculer la date du dernier signe de vie.
+      if (!previous || atMs > previous.atMs) this.lastBeat.set(screenId, { atMs, state: beat.state });
+    }
+
     const ids = [
       ...batch.heartbeats.map((h) => h.eventId),
       ...batch.playEvents.map((p) => p.eventId),

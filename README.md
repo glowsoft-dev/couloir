@@ -10,13 +10,23 @@ distance depuis une seule application.
 
 ```bash
 pnpm install
-pnpm test          # 119 tests
+pnpm test          # 143 tests
 pnpm build
 pnpm build:browser # le bundle de rendu servi au navigateur
 pnpm dev:server    # l'API,    http://localhost:3000
 pnpm dev:renderer  # maquette, http://127.0.0.1:5173
 pnpm dev:player    # un vrai player, http://127.0.0.1:8080
+pnpm dev:console   # la console,     http://127.0.0.1:5174
 ```
+
+La console a besoin d'un jeton, défini au lancement du serveur :
+
+```bash
+COULOIR_CONSOLE_TOKEN=demo-couloir pnpm dev:server
+```
+
+Sans ce jeton, la console reste fermée — c'est volontaire, on ne l'ouvre
+jamais par défaut.
 
 `dev:renderer` ouvre un écran de démonstration avec des boutons pour basculer
 dans chacun des états réels : rotation normale, emploi du temps périmé,
@@ -100,8 +110,9 @@ curl -s -X POST localhost:3000/v1/enroll/claim -H 'content-type: application/jso
 | `packages/renderer` | le noyau de rendu. La décision en logique pure, le DOM par-dessus, sans framework. |
 | `apps/server` | l'API, le service des médias, la persistance PostgreSQL. |
 | `apps/player-linux` | la coque Linux : les six portes, le serveur local, les unités systemd. |
+| `apps/console` | l'interface de pilotage : parc, appairage, bibliothèque, publication. |
 
-Le reste — console, coques Android et Electron — arrive ensuite.
+Le reste — coques Android et Electron, programmation calendaire, comptes nominatifs — arrive ensuite.
 
 ## Poser un écran
 

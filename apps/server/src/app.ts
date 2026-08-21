@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import Fastify, { type FastifyInstance } from "fastify";
+import multipart from "@fastify/multipart";
 import {
   EnrollClaimRequest,
   EnrollStartRequest,
@@ -13,6 +14,7 @@ import {
   requiresSignature,
 } from "@couloir/protocol";
 import { ReplayGuard, verifyRequest } from "./auth.js";
+import { registerConsoleApi } from "./console-api.js";
 import { MediaStore, parseRange } from "./media.js";
 import { MemoryStore, type Store, isPairingExpired } from "./store.js";
 
@@ -28,6 +30,10 @@ export interface AppOptions {
   store?: Store;
   media?: MediaStore;
   logger?: boolean;
+  /** Jeton d'accès à la console. Absent = console fermée. */
+  consoleToken?: string;
+  /** Connecteur d'emploi du temps proposé par défaut à la publication. */
+  timetableUrl?: string;
   /**
    * Coupe la vérification des signatures.
    * Réservé aux tests qui portent sur autre chose : en production, une
@@ -51,6 +57,10 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
 
   app.decorate("store", store);
   app.decorate("media", media_);
+
+  // Import de médias depuis la console. 512 Mo : une vidéo d'établissement
+  // tient largement dedans, et au-delà c'est une erreur de manipulation.
+  void app.register(multipart, { limits: { fileSize: 512 * 1024 * 1024, files: 1 } });
 
   // --- Signature des requêtes d'appareil --------------------------------
 
@@ -375,6 +385,15 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
     );
     return reply.send({ acceptedEventIds });
   });
+
+  if (options.consoleToken !== undefined || options.devRoutes) {
+    registerConsoleApi(app, {
+      store,
+      media: media_,
+      ...(options.consoleToken !== undefined ? { adminToken: options.consoleToken } : {}),
+      ...(options.timetableUrl !== undefined ? { timetableUrl: options.timetableUrl } : {}),
+    });
+  }
 
   return app;
 }

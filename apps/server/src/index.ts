@@ -20,3 +20,5 @@ export { migrate, truncateAll } from "./db/migrate.js";
 export { connect, type DatabaseOptions } from "./db/connect.js";
 export { MediaStore, parseRange, type StoredMedia, type RangeRequest } from "./media.js";
 export { seedDemoScreen } from "./seed.js";
+export { compose, CompositionError, type PublishSpec, type LayoutChoice } from "./composer.js";
+export { registerConsoleApi, CONSOLE_PREFIX } from "./console-api.js";

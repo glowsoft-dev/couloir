@@ -61,7 +61,7 @@ packages/
 apps/
   server/       API Fastify, service des médias, persistance PostgreSQL.
   player-linux/ coque Linux : les six portes, le serveur local, systemd.
-  console/      interface de pilotage (à venir)
+  console/      interface de pilotage (React).
 ```
 
 `@couloir/protocol` est la **seule** dépendance partagée entre le serveur,
@@ -237,7 +237,7 @@ de régression désormais.
 
 | Défaut | Conséquence | Correction |
 |---|---|---|
-| Le contenu partait d'une opacité nulle et ne devenait visible qu'à la fin du fondu | navigateur qui gèle ses animations → **écran noir** | visible par défaut, le fondu est décoratif |
+| Le contenu partait d'une opacité nulle et ne devenait visible qu'à la fin du fondu | navigateur qui gèle ses animations → **écran noir** | l'entrée n'anime que la position, jamais l'opacité |
 | Le serveur local ne renvoyait pas de `Content-Type` | image cassée dans le navigateur | le type vient du manifeste, qui fait autorité |
 | Le manifeste n'existait qu'en mémoire | un rallumage pendant une coupure perdait le contenu | conservé sur disque, rechargé au démarrage |
 | Un écran neuf dont le premier téléchargement échoue restait en `staging` | rien à l'écran, aucun signal | bascule sur le contenu embarqué |
@@ -327,11 +327,49 @@ signature, aucune primitive — chaque plateforme signe avec ce qu'elle a.
 
 Le fichier d'identité du player est en `0600` : il contient la clé privée.
 
+## La console
+
+API séparée de celle des écrans, sous `/v1/console`. Les deux n'ont ni les
+mêmes clients, ni la même authentification, ni la même surface : un player ne
+doit pas pouvoir publier, une console ne doit pas pouvoir remonter de la
+télémétrie.
+
+### Le composeur
+
+La console manipule des idées simples — « ces trois images, quinze secondes
+chacune, avec les cours dans une colonne ». Le manifeste, lui, est un objet
+normalisé avec ses identifiants croisés, sa playlist de repli et ses sources
+de données. `compose()` fait la traduction, en logique pure.
+
+C'est la pièce qui mérite le plus de tests : une erreur ici produit un écran
+vide qu'on ne diagnostiquera qu'en montant sur une échelle. Elle revalide
+d'ailleurs sa propre sortie — une composition incohérente est un bug du
+composeur, jamais une faute de l'utilisateur.
+
+### L'état du parc
+
+Déduit du dernier battement de cœur, jamais déclaré : un écran débranché n'a
+aucun moyen de dire qu'il est parti. Muet au-delà de trois minutes, soit
+trois battements manqués. La requête agrège en SQL plutôt qu'écran par
+écran — la console rafraîchit cette vue toutes les cinq secondes.
+
+### Dette assumée
+
+L'accès est un **jeton partagé** en `Bearer`, absent par défaut. Les comptes
+nominatifs, les rôles et le journal d'audit promis au cahier des charges
+restent à faire. Une console sans aucune protection serait pire que des
+`curl` ; un jeton partagé n'est pas une authentification.
+
 ## Ce qui n'est pas encore fait
 
 Le socle tourne, mais il reste volontairement incomplet :
 
-- **La console** — aucune interface. `/dev/publish-demo` en tient lieu.
+- **Les comptes** — la console est protégée par un jeton partagé, pas par des
+  comptes nominatifs avec rôles et journal d'audit.
+- **La programmation calendaire** — on publie, ça part tout de suite. Les
+  plages horaires et les campagnes datées restent à faire.
+- **Le plan interactif** — la console liste les écrans, elle ne les situe pas
+  encore sur un plan d'étage.
 - **TLS** — les échanges ne sont pas chiffrés en développement. La signature
   authentifie l'appareil, elle ne protège pas la confidentialité.
 - **URL signées** — les médias sont servis sans signature ni expiration.
