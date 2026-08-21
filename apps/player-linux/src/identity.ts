@@ -1,4 +1,4 @@
-import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
+import { chmod, mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import {
   type Capabilities,
@@ -6,6 +6,7 @@ import {
   type EnrollStatusResponse,
   ROUTES,
 } from "@couloir/protocol";
+import { generateDeviceKeys } from "./ports/keys.js";
 
 /**
  * L'identité de l'écran, telle qu'elle est gardée sur le disque.
@@ -20,6 +21,9 @@ export interface Identity {
   screenId: string | null;
   screenCode: string | null;
   deviceToken: string | null;
+  /** Ne quitte jamais le boîtier. Le serveur n'en voit que la partie publique. */
+  privateKeyPem: string;
+  publicKey: string;
 }
 
 export interface Pairing {
@@ -46,7 +50,10 @@ export class IdentityFile {
   async write(identity: Identity): Promise<void> {
     await mkdir(this.directory, { recursive: true });
     const temporary = `${this.path}.tmp`;
-    await writeFile(temporary, JSON.stringify(identity, null, 2));
+    // Le fichier contient la clé privée de l'appareil : lisible par son
+    // seul propriétaire, jamais par le reste du système.
+    await writeFile(temporary, JSON.stringify(identity, null, 2), { mode: 0o600 });
+    await chmod(temporary, 0o600);
     await rename(temporary, this.path);
   }
 }
@@ -73,23 +80,30 @@ export async function enroll(
   signal?: AbortSignal,
 ): Promise<Identity> {
   const existing = await file.read();
-  if (existing?.screenId) return existing;
+  // Une identité sans clé date d'avant la signature des requêtes : elle ne
+  // serait plus acceptée par le serveur, autant repartir proprement.
+  if (existing?.screenId && existing.privateKeyPem) return existing;
 
-  let deviceId = existing?.deviceId ?? null;
+  const keys =
+    existing?.privateKeyPem && existing.publicKey
+      ? { privateKeyPem: existing.privateKeyPem, publicKey: existing.publicKey }
+      : generateDeviceKeys();
+
+  let deviceId = existing?.privateKeyPem ? (existing.deviceId ?? null) : null;
   let pollIntervalSec = 5;
 
   if (!deviceId) {
     const response = await fetch(new URL(ROUTES.enrollStart, baseUrl), {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ publicKey: "x".repeat(44), capabilities }),
+      body: JSON.stringify({ publicKey: keys.publicKey, capabilities }),
     });
     if (!response.ok) throw new Error(`enrôlement : HTTP ${response.status}`);
 
     const start = (await response.json()) as EnrollStartResponse;
     deviceId = start.deviceId;
     pollIntervalSec = start.pollIntervalSec;
-    await file.write({ deviceId, screenId: null, screenCode: null, deviceToken: null });
+    await file.write({ deviceId, screenId: null, screenCode: null, deviceToken: null, ...keys });
     callbacks.onPairingCode({ code: start.pairingCode, expiresAt: start.expiresAt });
     callbacks.log?.(`code d'appairage ${start.pairingCode}, à saisir dans la console`);
   }
@@ -109,7 +123,8 @@ export async function enroll(
       // Le code a vécu 24 h sans être saisi : on en redemande un plutôt que
       // de laisser l'écran bloqué sur un code mort.
       callbacks.log?.("code d'appairage expiré, nouvelle demande");
-      await file.write({ deviceId: "", screenId: null, screenCode: null, deviceToken: null });
+      // On garde la clé : c'est l'identité cryptographique du boîtier.
+      await file.write({ deviceId: "", screenId: null, screenCode: null, deviceToken: null, ...keys });
       return enroll(baseUrl, capabilities, file, callbacks, signal);
     }
 
@@ -119,6 +134,7 @@ export async function enroll(
         screenId: status.screenId,
         screenCode: status.screenCode ?? null,
         deviceToken: status.deviceToken ?? null,
+        ...keys,
       };
       await file.write(identity);
       callbacks.onClaimed(identity);

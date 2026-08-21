@@ -113,7 +113,12 @@ export class Player {
     );
 
     const net = new HttpNet(
-      { baseUrl: this.options.serverUrl, deviceId: this.identity.deviceId, agentVersion: VERSIONS.agent },
+      {
+        baseUrl: this.options.serverUrl,
+        deviceId: this.identity.deviceId,
+        agentVersion: VERSIONS.agent,
+        privateKeyPem: this.identity.privateKeyPem,
+      },
       store,
     );
     const clock = new LinuxClock(clockReliable);

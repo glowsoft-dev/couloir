@@ -286,14 +286,54 @@ Un battement de cœur resté bloqué dans la file locale d'un player pendant
 son arrêt est remonté ensuite **avec son horodatage d'origine**, et la file
 n'a été vidée qu'après acquittement.
 
+## Authentification des appareils
+
+Chaque écran génère une paire Ed25519 à son premier démarrage. **La clé
+privée ne quitte jamais le boîtier** ; le serveur n'en connaît que la partie
+publique. Une base serveur compromise ne permet donc pas d'usurper un écran.
+
+Ce qui est signé, dans cet ordre :
+
+```
+couloir-ed25519-v1 \n MÉTHODE \n chemin+requête \n horodatage \n sha256(corps)
+```
+
+Chaque élément ferme une attaque précise :
+
+| Élément signé | Ce qu'il empêche |
+|---|---|
+| méthode et chemin | rejouer une signature valide sur une autre route |
+| empreinte du corps | glisser de fausses preuves de diffusion dans un lot authentique |
+| horodatage (±5 min) | rejouer indéfiniment une requête interceptée |
+| fenêtre anti-rejeu | rejouer la même requête à l'intérieur de la tolérance |
+
+Cinq minutes de tolérance : assez large pour un Raspberry Pi qui vient de
+resynchroniser son heure après une coupure, assez étroit pour que la fenêtre
+de rejeu reste courte. Un décalage est refusé avec `retryable: true` et un
+message explicite — l'agent doit pouvoir repartir seul.
+
+**L'enrôlement reste non signé** : l'appareil n'a pas encore d'identité
+reconnue quand il se déclare. C'est précisément le rôle du code d'appairage,
+saisi par un humain, de faire ce premier pont de confiance.
+
+**La révocation est gratuite** : détacher un boîtier de son écran suffit à
+ce que ses requêtes soient refusées. C'est le même chemin que le
+remplacement de matériel.
+
+Le format de clé transporté est **32 octets bruts en base64url**, celui que
+produisent naturellement WebCrypto et les bibliothèques Android : les futures
+coques n'auront rien à convertir. Le protocole ne contient que le *format* de
+signature, aucune primitive — chaque plateforme signe avec ce qu'elle a.
+
+Le fichier d'identité du player est en `0600` : il contient la clé privée.
+
 ## Ce qui n'est pas encore fait
 
 Le socle tourne, mais il reste volontairement incomplet :
 
-- **Authentification des appareils** — les requêtes portent `x-couloir-device`
-  mais la signature Ed25519 n'est pas vérifiée. En l'état, un en-tête suffit
-  à se faire passer pour n'importe quel écran. À fermer avant toute pose sur
-  un vrai réseau.
+- **La console** — aucune interface. `/dev/publish-demo` en tient lieu.
+- **TLS** — les échanges ne sont pas chiffrés en développement. La signature
+  authentifie l'appareil, elle ne protège pas la confidentialité.
 - **URL signées** — les médias sont servis sans signature ni expiration.
 - **Les autres coques** — Android et Electron restent à écrire. La coque
   Linux existe et sert de référence : elles n'ont qu'à implémenter `ports.ts`.

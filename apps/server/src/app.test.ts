@@ -162,9 +162,11 @@ describe("enrôlement", () => {
   });
 });
 
+// Ces cas portent sur le routage et les en-têtes, pas sur la signature :
+// celle-ci a ses propres tests dans `auth.test.ts`.
 describe("manifeste", () => {
   it("refuse de servir un appareil non rattaché", async () => {
-    const app = buildApp();
+    const app = buildApp({ trustUnsignedDevices: true });
     const start = await app.inject({
       method: "POST",
       url: ROUTES.enrollStart,
@@ -185,7 +187,7 @@ describe("manifeste", () => {
     // C'est ce qui garde la consommation réseau sous le seuil annoncé :
     // un écran à jour coûte quelques centaines d'octets par cycle.
     const store = new MemoryStore();
-    const app = buildApp({ store });
+    const app = buildApp({ store, trustUnsignedDevices: true });
     const { deviceId, screenId } = await enroll(app);
 
     const seeded = await seedDemoScreen(store);
@@ -234,7 +236,7 @@ describe("télémétrie", () => {
   it("n'acquitte que les événements reçus", async () => {
     // L'agent ne purge sa file locale que sur cette liste : c'est ce qui
     // garantit qu'une coupure ne fait perdre aucune preuve de diffusion.
-    const app = buildApp();
+    const app = buildApp({ trustUnsignedDevices: true });
     const { deviceId } = await enroll(app);
 
     const eventId = "3f6b1a2c-0d4e-4f8a-9b1c-2d3e4f5a6b7c";

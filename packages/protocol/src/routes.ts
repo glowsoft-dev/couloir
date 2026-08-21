@@ -26,10 +26,28 @@ export const ROUTES = {
 /** En-têtes propres au protocole. */
 export const HEADERS = {
   deviceId: "x-couloir-device",
+  /** Signature Ed25519 de la requête, en base64url. */
   signature: "x-couloir-signature",
+  /** Millisecondes epoch, bornées par la tolérance d'horloge. */
   timestamp: "x-couloir-timestamp",
   agentVersion: "x-couloir-agent",
 } as const;
+
+/**
+ * Routes exigeant une signature d'appareil.
+ *
+ * L'enrôlement en est exclu : l'appareil n'a pas encore d'identité reconnue
+ * au moment où il se déclare. C'est précisément le rôle du code d'appairage,
+ * saisi par un humain, de faire ce premier pont de confiance.
+ */
+export const SIGNED_ROUTES: readonly string[] = [
+  `${API_PREFIX}/devices/me/manifest`,
+  `${API_PREFIX}/devices/me/telemetry`,
+];
+
+export function requiresSignature(pathname: string): boolean {
+  return SIGNED_ROUTES.some((route) => pathname === route || pathname.startsWith(`${route}?`));
+}
 
 /** Sujets MQTT pour le canal temps réel. Le poll reste le filet de sécurité. */
 export const MQTT_TOPICS = {
