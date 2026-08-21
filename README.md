@@ -10,7 +10,7 @@ distance depuis une seule application.
 
 ```bash
 pnpm install
-pnpm test          # 105 tests
+pnpm test          # 119 tests
 pnpm build
 pnpm build:browser # le bundle de rendu servi au navigateur
 pnpm dev:server    # l'API,    http://localhost:3000
@@ -101,7 +101,7 @@ curl -s -X POST localhost:3000/v1/enroll/claim -H 'content-type: application/jso
 | `apps/server` | l'API, le service des médias, la persistance PostgreSQL. |
 | `apps/player-linux` | la coque Linux : les six portes, le serveur local, les unités systemd. |
 
-Le reste — console, coques Android et Electron, authentification des appareils — arrive ensuite.
+Le reste — console, coques Android et Electron — arrive ensuite.
 
 ## Poser un écran
 

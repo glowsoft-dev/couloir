@@ -8,7 +8,11 @@ import {
   ROUTES,
   TelemetryBatch,
   demoManifest,
+  SIGNATURE_MAX_SKEW_MS,
+  explainRejection,
+  requiresSignature,
 } from "@couloir/protocol";
+import { ReplayGuard, verifyRequest } from "./auth.js";
 import { MediaStore, parseRange } from "./media.js";
 import { MemoryStore, type Store, isPairingExpired } from "./store.js";
 
@@ -24,6 +28,12 @@ export interface AppOptions {
   store?: Store;
   media?: MediaStore;
   logger?: boolean;
+  /**
+   * Coupe la vérification des signatures.
+   * Réservé aux tests qui portent sur autre chose : en production, une
+   * requête d'appareil non signée n'a aucune raison d'exister.
+   */
+  trustUnsignedDevices?: boolean;
   /** Ouvre les routes de publication de développement. */
   devRoutes?: boolean;
 }
@@ -41,6 +51,56 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
 
   app.decorate("store", store);
   app.decorate("media", media_);
+
+  // --- Signature des requêtes d'appareil --------------------------------
+
+  const replayGuard = new ReplayGuard(SIGNATURE_MAX_SKEW_MS);
+
+  // Le corps brut est conservé : c'est son empreinte qui est signée, et
+  // `JSON.stringify` d'un objet reparsé ne redonne pas les mêmes octets.
+  app.addContentTypeParser(
+    "application/json",
+    { parseAs: "buffer" },
+    (request, body: Buffer, done) => {
+      (request as { rawBody?: Buffer }).rawBody = body;
+      if (body.length === 0) return done(null, undefined);
+      try {
+        done(null, JSON.parse(body.toString("utf8")));
+      } catch (error) {
+        done(error as Error, undefined);
+      }
+    },
+  );
+
+  app.addHook("preHandler", async (request, reply) => {
+    const pathname = request.url.split("?")[0] ?? request.url;
+    if (!requiresSignature(pathname)) return;
+    if (options.trustUnsignedDevices) return;
+
+    const result = await verifyRequest(
+      {
+        method: request.method,
+        url: request.url,
+        headers: request.headers as Record<string, string | string[] | undefined>,
+        rawBody: (request as { rawBody?: Buffer }).rawBody,
+      },
+      store,
+      replayGuard,
+    );
+
+    if (!result.ok) {
+      request.log.warn({ url: request.url, reason: result.reason }, "requête d'appareil rejetée");
+      return reply.code(401).send({
+        code: result.reason,
+        message: explainRejection(result.reason),
+        // Un décalage d'horloge se corrige tout seul : l'agent doit réessayer.
+        retryable: result.reason === "clock-skew",
+      });
+    }
+
+    (request as { deviceId?: string; screenId?: string }).deviceId = result.deviceId;
+    (request as { deviceId?: string; screenId?: string }).screenId = result.screenId;
+  });
 
   app.get(ROUTES.health, async () => ({ status: "ok", screens: (await store.listScreens()).length }));
 

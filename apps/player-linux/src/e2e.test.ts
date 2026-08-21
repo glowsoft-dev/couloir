@@ -8,6 +8,7 @@ import { FEATURE_PROFILES, ROUTES, type Capabilities, demoManifest } from "@coul
 import { MediaStore, MemoryStore, buildApp } from "@couloir/server";
 import { HttpNet } from "./ports/net.js";
 import { FileQueue } from "./ports/queue.js";
+import { generateDeviceKeys } from "./ports/keys.js";
 import { ManifestFile } from "./ports/manifest-file.js";
 import { FileStore } from "./ports/store.js";
 
@@ -97,10 +98,12 @@ afterEach(async () => {
 
 /** Enrôle un appareil et fabrique l'agent qui va avec, comme le fait `Player`. */
 async function bootPlayer() {
+  // Vraies clés : le player signe ses requêtes comme sur un boîtier posé.
+  const keys = generateDeviceKeys();
   const start = await fetch(`${harness.baseUrl}${ROUTES.enrollStart}`, {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ publicKey: "x".repeat(44), capabilities: CAPS }),
+    body: JSON.stringify({ publicKey: keys.publicKey, capabilities: CAPS }),
   });
   const { deviceId, pairingCode } = (await start.json()) as { deviceId: string; pairingCode: string };
 
@@ -129,11 +132,17 @@ async function bootPlayer() {
   await queue.open();
 
   const net = new HttpNet(
-    { baseUrl: harness.baseUrl, deviceId, agentVersion: "0.1.0", timeoutMs: 2_000 },
+    {
+      baseUrl: harness.baseUrl,
+      deviceId,
+      agentVersion: "0.1.0",
+      privateKeyPem: keys.privateKeyPem,
+      timeoutMs: 2_000,
+    },
     store,
   );
 
-  return { deviceId, screenId, store, queue, net };
+  return { deviceId, screenId, store, queue, net, keys };
 }
 
 function makeRuntime(

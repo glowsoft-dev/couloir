@@ -2,6 +2,7 @@ import { createWriteStream } from "node:fs";
 import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import { type DeviceCommand, HEADERS, Manifest, ROUTES, type TelemetryAck, type TelemetryBatch } from "@couloir/protocol";
+import { signRequest } from "./keys.js";
 import type { NetPort } from "@couloir/agent";
 import type { FileStore } from "./store.js";
 
@@ -18,6 +19,8 @@ export interface HttpNetOptions {
   baseUrl: string;
   deviceId: string;
   agentVersion: string;
+  /** Clé privée de l'appareil. Elle ne quitte jamais le boîtier. */
+  privateKeyPem: string;
   /** Coupe une requête qui traîne, plutôt que de bloquer la boucle. */
   timeoutMs?: number;
 }
@@ -32,25 +35,39 @@ export class HttpNet implements NetPort {
     this.timeoutMs = options.timeoutMs ?? 15_000;
   }
 
-  private headers(): Record<string, string> {
-    return {
-      [HEADERS.deviceId]: this.options.deviceId,
-      [HEADERS.agentVersion]: this.options.agentVersion,
-    };
+  /**
+   * En-têtes signés pour une requête donnée.
+   *
+   * La signature couvre la méthode, le chemin et l'empreinte du corps : une
+   * signature valide ne peut donc pas être rejouée sur une autre route ni
+   * avec un autre contenu.
+   */
+  private headers(method: string, path: string, body?: string): Record<string, string> {
+    return signRequest(this.options.privateKeyPem, this.options.deviceId, this.options.agentVersion, {
+      method,
+      path,
+      ...(body !== undefined ? { body } : {}),
+    });
   }
 
   private url(path: string): string {
     return new URL(path, this.options.baseUrl).toString();
   }
 
-  private async request(path: string, init: RequestInit = {}): Promise<Response> {
+  private async request(
+    path: string,
+    init: RequestInit & { body?: string } = {},
+  ): Promise<Response> {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), this.timeoutMs);
     try {
       return await fetch(this.url(path), {
         ...init,
         signal: controller.signal,
-        headers: { ...this.headers(), ...(init.headers as Record<string, string> | undefined) },
+        headers: {
+          ...this.headers(init.method ?? "GET", path, init.body),
+          ...(init.headers as Record<string, string> | undefined),
+        },
       });
     } finally {
       clearTimeout(timer);
@@ -89,12 +106,11 @@ export class HttpNet implements NetPort {
     const timer = setTimeout(() => controller.abort(), this.timeoutMs * 20);
 
     try {
+      // Les médias sont servis par une route publique, signée par URL : la
+      // signature d'appareil n'y ajouterait rien et compliquerait le CDN.
       const response = await fetch(url, {
         signal: controller.signal,
-        headers: {
-          ...this.headers(),
-          ...(offsetBytes > 0 ? { range: `bytes=${offsetBytes}-` } : {}),
-        },
+        headers: offsetBytes > 0 ? { range: `bytes=${offsetBytes}-` } : {},
       });
 
       if (offsetBytes > 0 && response.status !== 206) {
@@ -127,7 +143,7 @@ export class HttpNet implements NetPort {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), this.timeoutMs);
     try {
-      const response = await fetch(url, { signal: controller.signal, headers: this.headers() });
+      const response = await fetch(url, { signal: controller.signal });
       if (!response.ok) throw new Error(`source ${url} : HTTP ${response.status}`);
       return await response.json();
     } finally {
@@ -136,10 +152,14 @@ export class HttpNet implements NetPort {
   }
 
   async sendTelemetry(batch: TelemetryBatch): Promise<TelemetryAck> {
+    // Le corps est sérialisé UNE fois : c'est cette chaîne exacte qui est
+    // signée puis envoyée. Re-sérialiser donnerait d'autres octets, donc
+    // une empreinte différente et un rejet.
+    const body = JSON.stringify(batch);
     const response = await this.request(ROUTES.telemetry, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify(batch),
+      body,
     });
     if (!response.ok) throw new Error(`télémétrie : HTTP ${response.status}`);
     return (await response.json()) as TelemetryAck;

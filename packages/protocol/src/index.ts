@@ -16,4 +16,5 @@ export * from "./enroll.js";
 export * from "./telemetry.js";
 export * from "./negotiation.js";
 export * from "./routes.js";
+export * from "./signing.js";
 export * from "./demo.js";
