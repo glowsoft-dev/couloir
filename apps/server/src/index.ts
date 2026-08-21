@@ -6,6 +6,17 @@
  * qui ment ne prouve rien sur la plomberie réelle.
  */
 export { buildApp, type AppOptions } from "./app.js";
-export { MemoryStore, type Screen, type PendingDevice } from "./store.js";
+export {
+  MemoryStore,
+  isPairingExpired,
+  type Store,
+  type ScreenRecord,
+  type DeviceRecord,
+  type NewScreen,
+  type ClaimResult,
+} from "./store.js";
+export { PostgresStore } from "./db/postgres-store.js";
+export { migrate, truncateAll } from "./db/migrate.js";
+export { connect, type DatabaseOptions } from "./db/connect.js";
 export { MediaStore, parseRange, type StoredMedia, type RangeRequest } from "./media.js";
 export { seedDemoScreen } from "./seed.js";

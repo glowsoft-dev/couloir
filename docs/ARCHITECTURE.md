@@ -59,7 +59,7 @@ packages/
                     readability — pur, testable sans navigateur ;
                   - application : dom/ — du DOM et du CSS, sans framework.
 apps/
-  server/       API Fastify + service des médias (Range, empreintes).
+  server/       API Fastify, service des médias, persistance PostgreSQL.
   player-linux/ coque Linux : les six portes, le serveur local, systemd.
   console/      interface de pilotage (à venir)
 ```
@@ -242,14 +242,58 @@ de régression désormais.
 | Le manifeste n'existait qu'en mémoire | un rallumage pendant une coupure perdait le contenu | conservé sur disque, rechargé au démarrage |
 | Un écran neuf dont le premier téléchargement échoue restait en `staging` | rien à l'écran, aucun signal | bascule sur le contenu embarqué |
 
+## La persistance
+
+L'API ne connaît qu'une interface, `Store`. Deux implémentations la
+respectent : `MemoryStore` pour les tests et les démonstrations,
+`PostgresStore` en production. C'est ce qui permet de tester tout le serveur
+sans conteneur — et de changer de moteur sans toucher aux routes.
+
+Tout y est **asynchrone, y compris côté mémoire**. Une interface qui ment sur
+son coût finit toujours par se payer au moment de la bascule.
+
+### Migrations en SQL brut
+
+Pas d'ORM ni de générateur de code. Le schéma est petit et stable, et une
+migration qu'on peut lire telle quelle est une migration qu'on pourra relire
+dans deux ans, quand il faudra comprendre pourquoi un index existe. Chaque
+fichier s'applique une fois, dans une transaction.
+
+### Ce que le schéma encode
+
+| Contrainte | Ce qu'elle empêche |
+|---|---|
+| `screens.code` unique | deux `A·1·12` dans le bâtiment, donc un repérage impossible |
+| index partiel sur `devices.screen_id` | deux boîtiers pilotant le même écran |
+| index partiel sur `devices.pairing_code` | deux écrans affichant le même code d'appairage |
+| clé primaire `(screen_id, version)` sur `manifests` | l'écrasement de l'historique — c'est lui qui permettra le retour en arrière |
+| `ON CONFLICT (event_id) DO NOTHING` | qu'un lot rejoué après coupure gonfle le rapport d'une campagne |
+
+Le remplacement d'un boîtier est une **transaction** : détacher l'ancien et
+rattacher le nouveau se font ensemble, ou pas du tout. L'index unique impose
+d'ailleurs cet ordre.
+
+Le jeton d'appareil n'est stocké que sous forme d'empreinte, et n'est délivré
+qu'une fois — au rattachement.
+
+### Vérifié en conditions réelles
+
+Le serveur redémarre, rejoue ses migrations sans rien casser, et un player
+enrôlé continue d'être servi. Avant PostgreSQL, il recevait un 403 : le
+serveur avait tout oublié.
+
+Un battement de cœur resté bloqué dans la file locale d'un player pendant
+son arrêt est remonté ensuite **avec son horodatage d'origine**, et la file
+n'a été vidée qu'après acquittement.
+
 ## Ce qui n'est pas encore fait
 
 Le socle tourne, mais il reste volontairement incomplet :
 
-- **Persistance** — `MemoryStore` est temporaire. Il expose exactement les
-  opérations qu'un dépôt PostgreSQL devra fournir, la bascule est mécanique.
 - **Authentification des appareils** — les requêtes portent `x-couloir-device`
-  mais la signature Ed25519 n'est pas encore vérifiée.
+  mais la signature Ed25519 n'est pas vérifiée. En l'état, un en-tête suffit
+  à se faire passer pour n'importe quel écran. À fermer avant toute pose sur
+  un vrai réseau.
 - **URL signées** — les médias sont servis sans signature ni expiration.
 - **Les autres coques** — Android et Electron restent à écrire. La coque
   Linux existe et sert de référence : elles n'ont qu'à implémenter `ports.ts`.

@@ -189,7 +189,7 @@ describe("manifeste", () => {
     const { deviceId, screenId } = await enroll(app);
 
     const seeded = await seedDemoScreen(store);
-    store.putManifest({ ...seeded.manifest, screenId });
+    await store.putManifest({ ...seeded.manifest, screenId });
 
     const first = await app.inject({
       method: "GET",
@@ -224,9 +224,9 @@ describe("cohérence du manifeste de démonstration", () => {
     const store = new MemoryStore();
     const { manifest } = await seedDemoScreen(store);
 
-    expect(() => store.putManifest({ ...manifest, version: 2, fallbackPlaylistId: "inexistante" })).toThrow(
-      /playlist de repli/,
-    );
+    await expect(
+      store.putManifest({ ...manifest, version: 2, fallbackPlaylistId: "inexistante" }),
+    ).rejects.toThrow(/playlist de repli/);
   });
 });
 
