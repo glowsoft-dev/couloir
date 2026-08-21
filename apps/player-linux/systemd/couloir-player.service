@@ -1,0 +1,23 @@
+# L'agent : réseau, cache, télémétrie, résilience.
+# Volontairement séparé de Chromium — le navigateur peut planter et être
+# relancé sans que l'écran perde son cache ni sa file de télémétrie.
+[Unit]
+Description=Couloir — agent du player
+After=network.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=couloir
+ExecStart=/usr/bin/node /opt/couloir/player/dist/main.js
+Environment=COULOIR_SERVER=https://couloir.exemple.fr
+Environment=COULOIR_DATA=/var/lib/couloir
+Environment=COULOIR_PORT=8080
+Environment=COULOIR_ALLOW_REBOOT=1
+Restart=always
+RestartSec=5
+# Chien de garde : si l'agent se fige, systemd le relance.
+WatchdogSec=120
+
+[Install]
+WantedBy=multi-user.target

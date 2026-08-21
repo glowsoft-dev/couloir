@@ -1,0 +1,29 @@
+# Chromium en kiosque, pointé sur le serveur local de l'agent.
+# Il ne joint JAMAIS le serveur de l'école : tout ce qu'il demande est déjà
+# sur la machine.
+[Unit]
+Description=Couloir — affichage kiosque
+After=couloir-player.service graphical.target
+Requires=couloir-player.service
+
+[Service]
+Type=simple
+User=couloir
+Environment=DISPLAY=:0
+ExecStartPre=/bin/sh -c 'until curl -sf http://127.0.0.1:8080/state >/dev/null; do sleep 1; done'
+ExecStart=/usr/bin/chromium-browser \
+  --kiosk \
+  --app=http://127.0.0.1:8080/ \
+  --noerrdialogs \
+  --disable-infobars \
+  --disable-session-crashed-bubble \
+  --disable-features=TranslateUI \
+  --check-for-update-interval=31536000 \
+  --autoplay-policy=no-user-gesture-required \
+  --disable-pinch \
+  --overscroll-history-navigation=0
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=graphical.target
