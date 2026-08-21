@@ -1,0 +1,34 @@
+# VM de validation de la coque Linux.
+#
+# Debian 12, la base de Raspberry Pi OS, en arm64 : sur un Mac Apple Silicon
+# elle tourne sans émulation, donc à vitesse comparable à celle d'un Pi 5.
+#
+# Ce qu'elle valide : systemd, les chemins /proc et /sys, la détection
+# d'horloge, les métriques disque et mémoire, l'installation par script.
+# Ce qu'elle NE valide PAS : HDMI, CEC, vcgencmd — autrement dit tout ce qui
+# tient au matériel du Pi. Ces bouts-là ne se vérifieront que sur un vrai
+# boîtier, et le code doit se dégrader proprement en leur absence.
+
+vmType: vz
+arch: aarch64
+
+images:
+  - location: "https://cloud.debian.org/images/cloud/bookworm/latest/debian-12-genericcloud-arm64.qcow2"
+    arch: aarch64
+
+# Dimensionné comme un Raspberry Pi 5 4 Go, pour que les limites se voient.
+cpus: 2
+memory: "2GiB"
+disk: "12GiB"
+
+mounts:
+  - location: "~/Documents/Glowsoft/ecole"
+    mountPoint: /couloir
+    writable: false
+
+# Le serveur tourne sur le Mac : la VM le joint par cette adresse.
+hostResolver:
+  enabled: true
+
+message: |
+  VM prête. Le serveur du Mac est joignable sur http://host.lima.internal:3000

@@ -10,7 +10,7 @@ distance depuis une seule application.
 
 ```bash
 pnpm install
-pnpm test          # 143 tests
+pnpm test          # 144 tests
 pnpm build
 pnpm build:browser # le bundle de rendu servi au navigateur
 pnpm dev:server    # l'API,    http://localhost:3000
@@ -114,9 +114,34 @@ curl -s -X POST localhost:3000/v1/enroll/claim -H 'content-type: application/jso
 
 Le reste — coques Android et Electron, programmation calendaire, comptes nominatifs — arrive ensuite.
 
+## Valider la coque Linux sans matériel
+
+Le player s'appelle `player-linux` : il doit être vérifié sur Linux, pas sur
+un Mac. Une VM Debian 12 — la base de Raspberry Pi OS — en arm64, donc sans
+émulation sur un Mac Apple Silicon :
+
+```bash
+brew install lima
+limactl start --name=couloir-pi apps/player-linux/lima/couloir-pi.yaml
+```
+
+Elle valide systemd, les chemins `/proc` et `/sys`, la détection d'horloge,
+les métriques disque, et l'installation par script. Elle ne valide NI HDMI,
+NI CEC, NI `vcgencmd` : ces bouts-là ne se vérifient que sur un vrai boîtier.
+
 ## Poser un écran
 
-`apps/player-linux/scripts/install.sh` prépare un boîtier en atelier :
-compte de service, Chromium en kiosque, deux unités systemd. L'agent et le
+L'artefact déployable est **deux fichiers**, produits par :
+
+```bash
+pnpm --filter @couloir/player-linux build:bundle
+```
+
+Surtout pas `node_modules` : dans un monorepo pnpm c'est un maillage de liens
+symboliques, incopiable sur un boîtier.
+
+`apps/player-linux/scripts/install.sh` prépare ensuite le boîtier en atelier :
+compte de service, Chromium en kiosque, deux unités systemd. Il a été exécuté
+en vrai sur Debian 12 arm64. L'agent et le
 navigateur sont **deux services séparés** — Chromium peut planter et être
 relancé sans que l'écran perde son cache ni sa file de télémétrie.

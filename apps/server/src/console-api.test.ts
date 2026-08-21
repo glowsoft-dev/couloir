@@ -298,6 +298,40 @@ describe("parcours de la console", () => {
     );
   });
 
+  it("inscrit l'adresse configurée dans les médias, pas celle de l'éditeur", async () => {
+    // Constaté sur une VM : l'URL venait de l'en-tête Host de la personne
+    // qui publie. Publier depuis localhost produisait des adresses que les
+    // écrans ne savaient pas joindre.
+    const store = new MemoryStore();
+    const app = buildApp({
+      store,
+      media,
+      consoleToken: TOKEN,
+      publicUrl: "https://couloir.ecole.fr",
+    });
+    const auth = { authorization: `Bearer ${TOKEN}` };
+
+    const device = await store.startEnrollment("x".repeat(44), { platform: "linux" } as never);
+    const { screen } = await store.claimNew(device.deviceId, {
+      code: "D·1·01",
+      label: "Préau",
+      building: "D",
+      floor: 1,
+      area: "préau",
+      orientation: "landscape",
+    });
+
+    await app.inject({
+      method: "POST",
+      url: `${CONSOLE_PREFIX}/screens/${screen.id}/publish`,
+      headers: { ...auth, host: "console-interne.local:3000" },
+      payload: { layout: "plein-ecran", items: [{ assetId: poster.id }] },
+    });
+
+    const manifest = await store.getManifest(screen.id);
+    expect(manifest!.assets[0]!.url).toBe(`https://couloir.ecole.fr/v1/assets/${poster.id}`);
+  });
+
   it("refuse de publier sur un écran inconnu", async () => {
     const { app, auth } = await ready();
     const response = await app.inject({

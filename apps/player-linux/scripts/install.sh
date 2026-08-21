@@ -1,36 +1,111 @@
 #!/usr/bin/env bash
-# Prépare un boîtier Linux. Exécuté en atelier, avant la pose : un écran
-# doit arriver dans le couloir prêt à être appairé.
+#
+# Prépare un boîtier Linux. Exécuté en atelier, avant la pose : un écran doit
+# arriver dans le couloir prêt à être appairé.
+#
+# Testé sur Debian 12 (la base de Raspberry Pi OS) en arm64. Deux pièges
+# rencontrés, et corrigés ici plutôt que sur une échelle :
+#
+#   - le navigateur s'appelle `chromium-browser` sur Raspberry Pi OS et
+#     `chromium` sur Debian. On détecte, on ne suppose pas ;
+#   - le paquet `nodejs` de Debian 12 est en version 18, trop ancienne. On
+#     installe une version épinglée depuis nodejs.org.
 set -euo pipefail
 
-SERVER="${1:?usage: install.sh https://couloir.exemple.fr}"
+SERVER="${1:-}"
+if [ -z "$SERVER" ]; then
+  echo "usage: install.sh https://couloir.exemple.fr" >&2
+  exit 2
+fi
 
-echo "→ compte de service et dossier de données"
-id -u couloir >/dev/null 2>&1 || useradd --system --create-home --home-dir /var/lib/couloir couloir
-install -d -o couloir -g couloir /var/lib/couloir /opt/couloir/player
+NODE_VERSION="${COULOIR_NODE_VERSION:-v22.14.0}"
+PREFIX=/opt/couloir/player
+DATA=/var/lib/couloir
 
-echo "→ dépendances"
+case "$(uname -m)" in
+  aarch64|arm64) NODE_ARCH=linux-arm64 ;;
+  x86_64)        NODE_ARCH=linux-x64 ;;
+  armv7l)        NODE_ARCH=linux-armv7l ;;
+  *) echo "architecture non gérée : $(uname -m)" >&2; exit 1 ;;
+esac
+
+echo "→ compte de service et dossiers"
+id -u couloir >/dev/null 2>&1 || useradd --system --create-home --home-dir "$DATA" couloir
+install -d -o couloir -g couloir "$DATA" "$PREFIX"
+
+echo "→ paquets système"
 apt-get update -qq
-apt-get install -y --no-install-recommends chromium-browser xserver-xorg xinit unclutter curl nodejs
+
+# Le nom du navigateur diffère selon la distribution.
+#
+# La sortie est capturée AVANT d'être filtrée, jamais mise en tuyau vers
+# `grep -q` : celui-ci ferme le tuyau dès qu'il trouve, la commande amont
+# reçoit un SIGPIPE et sort en 141, et `set -o pipefail` en fait un échec.
+# La détection échouait donc systématiquement, en silence.
+BROWSER_PKG=""
+for candidate in chromium chromium-browser; do
+  policy="$(apt-cache policy "$candidate" 2>/dev/null || true)"
+  case "$policy" in
+    *"Candidate: (none)"*) continue ;;
+    *"Candidate: "*) BROWSER_PKG="$candidate"; break ;;
+  esac
+done
+if [ -z "$BROWSER_PKG" ]; then
+  echo "aucun paquet Chromium trouvé (essayé : chromium, chromium-browser)" >&2
+  exit 1
+fi
+echo "  navigateur : $BROWSER_PKG"
+
+apt-get install -y --no-install-recommends \
+  "$BROWSER_PKG" xserver-xorg xinit unclutter curl ca-certificates xz-utils
+
+echo "→ Node ${NODE_VERSION}"
+# Pas celui d'apt : Debian 12 livre encore la version 18.
+if [ "$(/usr/local/bin/node --version 2>/dev/null || true)" != "$NODE_VERSION" ]; then
+  mkdir -p /opt/node
+  curl -fsSL "https://nodejs.org/dist/${NODE_VERSION}/node-${NODE_VERSION}-${NODE_ARCH}.tar.xz" \
+    | tar -xJ --strip-components=1 -C /opt/node
+  ln -sf /opt/node/bin/node /usr/local/bin/node
+fi
+node --version
 
 echo "→ application"
-cp -r dist node_modules /opt/couloir/player/
+# Deux fichiers autonomes, produits par `pnpm --filter @couloir/player-linux
+# build:bundle`. Surtout PAS `node_modules` : dans un monorepo pnpm c'est un
+# maillage de liens symboliques, incopiable sur un boîtier.
+if [ ! -f dist-bundle/couloir-player.mjs ]; then
+  echo "artefact absent : lancez d'abord 'pnpm --filter @couloir/player-linux build:bundle'" >&2
+  exit 1
+fi
+install -m 644 dist-bundle/couloir-player.mjs "$PREFIX"/couloir-player.mjs
+install -m 644 dist-bundle/couloir.js "$PREFIX"/couloir.js
+install -m 755 scripts/kiosk.sh "$PREFIX"/kiosk.sh
 chown -R couloir:couloir /opt/couloir
 
 echo "→ services"
 install -m 644 systemd/couloir-player.service /etc/systemd/system/
 install -m 644 systemd/couloir-kiosk.service /etc/systemd/system/
-sed -i "s|COULOIR_SERVER=.*|COULOIR_SERVER=${SERVER}|" /etc/systemd/system/couloir-player.service
+sed -i "s|^Environment=COULOIR_SERVER=.*|Environment=COULOIR_SERVER=${SERVER}|" \
+  /etc/systemd/system/couloir-player.service
+# Le chemin de Node dépend de l'installation : on ne le fige pas dans l'unité.
+NODE_BIN="$(command -v node)"
+sed -i "s|^ExecStart=.* /opt/couloir/player/couloir-player.mjs|ExecStart=${NODE_BIN} /opt/couloir/player/couloir-player.mjs|" \
+  /etc/systemd/system/couloir-player.service
 systemctl daemon-reload
-systemctl enable --now couloir-player couloir-kiosk
+systemctl enable --now couloir-player
+# Le kiosque n'est activé que s'il y a de quoi afficher : un boîtier sans
+# serveur graphique reste utile pour tester l'agent seul.
+if systemctl list-unit-files graphical.target >/dev/null 2>&1; then
+  systemctl enable couloir-kiosk || true
+fi
 
 cat <<'MSG'
 
-Boîtier prêt. Au premier démarrage, l'écran affiche un code d'appairage
-à six caractères : saisissez-le dans la console pour le rattacher à un
+Boîtier prêt. Au premier démarrage, l'écran affiche un code d'appairage à
+six caractères : saisissez-le dans la console pour le rattacher à un
 emplacement.
 
-Sur Raspberry Pi, pensez au module RTC (DS3231) : sans lui, une coupure
-de courant sans réseau fait redémarrer l'appareil à une date fantaisiste
-et toute la programmation horaire part de travers.
+Sur Raspberry Pi, pensez au module RTC (DS3231) : sans lui, une coupure de
+courant sans réseau fait redémarrer l'appareil à une date fantaisiste et
+toute la programmation horaire part de travers.
 MSG

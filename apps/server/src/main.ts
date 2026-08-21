@@ -34,6 +34,10 @@ if (useMemory) {
   closeDatabase = () => store.close();
 }
 
+// L'adresse par laquelle les ÉCRANS joignent le serveur — pas celle de la
+// console. Les deux diffèrent dès qu'il y a plus d'une machine.
+const publicUrl = process.env["COULOIR_PUBLIC_URL"] ?? `http://localhost:${PORT}`;
+
 const consoleToken = process.env["COULOIR_CONSOLE_TOKEN"];
 if (!consoleToken) {
   console.warn("[couloir] COULOIR_CONSOLE_TOKEN absent : la console restera fermée");
@@ -45,7 +49,8 @@ const app = buildApp({
   logger: true,
   devRoutes: process.env["COULOIR_DEV"] === "1",
   ...(consoleToken ? { consoleToken } : {}),
-  timetableUrl: process.env["COULOIR_TIMETABLE_URL"] ?? "http://localhost:3000/connectors/timetable",
+  timetableUrl: process.env["COULOIR_TIMETABLE_URL"] ?? `${publicUrl}/connectors/timetable`,
+  publicUrl,
 });
 
 // Un écran de démonstration, uniquement quand il n'y a encore rien.

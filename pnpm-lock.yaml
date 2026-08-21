@@ -64,6 +64,9 @@ importers:
       '@couloir/server':
         specifier: workspace:*
         version: link:../server
+      esbuild:
+        specifier: ^0.28.2
+        version: 0.28.2
 
   apps/server:
     dependencies:

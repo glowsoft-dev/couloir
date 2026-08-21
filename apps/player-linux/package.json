@@ -7,7 +7,8 @@
   "scripts": {
     "build": "tsc --build",
     "dev": "tsx watch src/main.ts",
-    "start": "node dist/main.js"
+    "start": "node dist/main.js",
+    "build:bundle": "node scripts/bundle.mjs"
   },
   "dependencies": {
     "@couloir/agent": "workspace:*",
@@ -15,6 +16,7 @@
     "@couloir/renderer": "workspace:*"
   },
   "devDependencies": {
-    "@couloir/server": "workspace:*"
+    "@couloir/server": "workspace:*",
+    "esbuild": "^0.28.2"
   }
 }
