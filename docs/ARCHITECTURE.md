@@ -360,6 +360,49 @@ nominatifs, les rôles et le journal d'audit promis au cahier des charges
 restent à faire. Une console sans aucune protection serait pire que des
 `curl` ; un jeton partagé n'est pas une authentification.
 
+## Ce que la VM Linux a révélé
+
+Toute la coque `player-linux` avait été écrite sans jamais tourner sur Linux.
+Une VM Debian 12 arm64 — `apps/player-linux/lima/couloir-pi.yaml` — a sorti
+quatre défauts en une heure, tous invisibles depuis un Mac.
+
+| Défaut | Ce qui serait arrivé sur un vrai Pi |
+|---|---|
+| L'URL des médias venait de l'en-tête `Host` de **celui qui publie** | publier depuis `localhost` produisait des adresses que les écrans ne savaient pas joindre. Le manifeste arrivait, les médias jamais. |
+| `chromium-browser` n'existe pas sur Debian, seulement sur Raspberry Pi OS | installation en échec, ou kiosque qui ne démarre pas |
+| L'unité systemd figeait `/usr/bin/node`, absent quand Node vient de nodejs.org | service en boucle de redémarrage, écran noir |
+| Aucun artefact déployable : `node_modules` d'un monorepo pnpm est un maillage de liens symboliques | rien à copier sur le boîtier |
+
+Un cinquième, plus retors : la détection du paquet navigateur échouait
+**toujours**, en silence. `grep -q` ferme le tuyau dès qu'il trouve, la
+commande amont reçoit un SIGPIPE et sort en 141, et `set -o pipefail` en fait
+un échec. La sortie est désormais capturée avant d'être filtrée.
+
+Et une correction de conception au passage : `WatchdogSec` était armé dans
+l'unité systemd alors que l'agent n'envoie aucun battement par `sd_notify`.
+Un chien de garde qu'on n'alimente pas redémarre l'écran toutes les deux
+minutes — il valait mieux le retirer que le laisser mordre.
+
+### L'artefact déployable
+
+Deux fichiers, rien à installer :
+
+```
+couloir-player.mjs   l'agent et son serveur local, tout inclus (esbuild)
+couloir.js           le noyau de rendu servi au navigateur
+```
+
+C'est aussi ce qui rend supportable la mise à jour d'un parc de quarante
+écrans.
+
+### Ce que la VM ne dit pas
+
+HDMI, CEC, `vcgencmd`, la sortie vidéo, le module RTC. Tout ce qui tient au
+matériel du Pi ne se vérifiera que sur un vrai boîtier. Le code doit se
+dégrader proprement en leur absence — et c'est vérifié : sans `xrandr` la
+résolution retombe sur 1920×1080, sans zone thermique la température est
+simplement absente du battement de cœur.
+
 ## Ce qui n'est pas encore fait
 
 Le socle tourne, mais il reste volontairement incomplet :

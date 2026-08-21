@@ -61,6 +61,17 @@ export interface ConsoleApiOptions {
   adminToken?: string;
   /** Connecteur d'emploi du temps proposé par défaut à la publication. */
   timetableUrl?: string;
+  /**
+   * L'adresse par laquelle LES ÉCRANS joignent le serveur.
+   *
+   * Elle ne peut pas se déduire de l'en-tête `Host` de la requête : c'est
+   * l'adresse de la personne qui publie, pas celle des écrans. Publier
+   * depuis `localhost` produisait des URL de médias que les écrans ne
+   * savaient pas joindre — constaté sur une VM, et c'est exactement ce qui
+   * arriverait dès que la console et les écrans n'entrent pas par la même
+   * porte.
+   */
+  publicUrl?: string;
 }
 
 export function registerConsoleApi(app: FastifyInstance, options: ConsoleApiOptions): void {
@@ -197,7 +208,7 @@ export function registerConsoleApi(app: FastifyInstance, options: ConsoleApiOpti
           issuedAt: new Date().toISOString().replace(/\.\d+Z$/, "Z"),
           spec,
           media: media.index(),
-          baseUrl: publicUrl(request.headers.host),
+          baseUrl: resolvePublicUrl(options.publicUrl, request.headers.host),
         });
 
         await store.putManifest(manifest);
@@ -215,7 +226,12 @@ export function registerConsoleApi(app: FastifyInstance, options: ConsoleApiOpti
   );
 }
 
-/** L'adresse par laquelle le player joindra le serveur, telle qu'il la voit. */
-function publicUrl(host: string | undefined): string {
-  return `http://${host ?? "localhost:3000"}`;
+/**
+ * L'adresse à inscrire dans les manifestes.
+ *
+ * Configurée de préférence. À défaut, on retombe sur l'en-tête `Host` — utile
+ * en développement sur une seule machine, faux dès qu'il y en a deux.
+ */
+function resolvePublicUrl(configured: string | undefined, host: string | undefined): string {
+  return configured ?? `http://${host ?? "localhost:3000"}`;
 }

@@ -9,15 +9,18 @@ Wants=network-online.target
 [Service]
 Type=simple
 User=couloir
-ExecStart=/usr/bin/node /opt/couloir/player/dist/main.js
+# Chemin réécrit à l'installation : Node vient de nodejs.org, pas d'apt.
+ExecStart=/usr/local/bin/node /opt/couloir/player/couloir-player.mjs
 Environment=COULOIR_SERVER=https://couloir.exemple.fr
 Environment=COULOIR_DATA=/var/lib/couloir
 Environment=COULOIR_PORT=8080
 Environment=COULOIR_ALLOW_REBOOT=1
 Restart=always
 RestartSec=5
-# Chien de garde : si l'agent se fige, systemd le relance.
-WatchdogSec=120
+# Pas de WatchdogSec : il exige que le service envoie des battements par
+# sd_notify, ce que l'agent ne fait pas. Armé sans être alimenté, il
+# redémarrerait l'écran toutes les deux minutes. Le chien de garde de
+# l'affichage est ailleurs — c'est l'agent qui relance Chromium.
 
 [Install]
 WantedBy=multi-user.target

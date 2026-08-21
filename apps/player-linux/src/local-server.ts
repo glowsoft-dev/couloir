@@ -1,4 +1,4 @@
-import { createReadStream } from "node:fs";
+import { createReadStream, existsSync } from "node:fs";
 import { readFile, stat } from "node:fs/promises";
 import { createServer, type Server } from "node:http";
 import { fileURLToPath } from "node:url";
@@ -59,10 +59,25 @@ const PAGE = `<!doctype html>
   </body>
 </html>`;
 
-/** Le bundle navigateur du noyau de rendu, produit par `pnpm build:browser`. */
-const BUNDLE_PATH = fileURLToPath(
-  new URL("../../../packages/renderer/dist-browser/couloir.js", import.meta.url),
-);
+/**
+ * Le bundle navigateur du noyau de rendu.
+ *
+ * Cherché à côté de l'exécutable une fois déployé, dans le dépôt en
+ * développement. `COULOIR_RENDERER_BUNDLE` permet de le placer ailleurs.
+ */
+const BUNDLE_PATH =
+  process.env["COULOIR_RENDERER_BUNDLE"] ??
+  firstExisting([
+    fileURLToPath(new URL("./couloir.js", import.meta.url)),
+    fileURLToPath(new URL("../../../packages/renderer/dist-browser/couloir.js", import.meta.url)),
+  ]);
+
+function firstExisting(candidates: string[]): string {
+  for (const candidate of candidates) {
+    if (existsSync(candidate)) return candidate;
+  }
+  return candidates[candidates.length - 1]!;
+}
 
 export function createLocalServer(options: LocalServerOptions): Server {
   return createServer((request, response) => {

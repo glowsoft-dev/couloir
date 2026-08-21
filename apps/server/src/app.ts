@@ -34,6 +34,8 @@ export interface AppOptions {
   consoleToken?: string;
   /** Connecteur d'emploi du temps proposé par défaut à la publication. */
   timetableUrl?: string;
+  /** Adresse par laquelle les écrans joignent le serveur. Voir console-api. */
+  publicUrl?: string;
   /**
    * Coupe la vérification des signatures.
    * Réservé aux tests qui portent sur autre chose : en production, une
@@ -321,11 +323,11 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
         assets: manifest.assets.map((asset) => ({
           ...asset,
           ...(poster ? { sha256: poster.sha256, bytes: poster.bytes, mime: poster.mime } : {}),
-          url: new URL(`/v1/assets/${asset.id}`, publicUrl(request)).toString(),
+          url: new URL(`/v1/assets/${asset.id}`, options.publicUrl ?? publicUrl(request)).toString(),
         })),
         dataSources: manifest.dataSources.map((source) => ({
           ...source,
-          url: new URL(new URL(source.url).pathname, publicUrl(request)).toString(),
+          url: new URL(new URL(source.url).pathname, options.publicUrl ?? publicUrl(request)).toString(),
         })),
       });
       return reply.send({ screenId, version });
@@ -392,6 +394,7 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
       media: media_,
       ...(options.consoleToken !== undefined ? { adminToken: options.consoleToken } : {}),
       ...(options.timetableUrl !== undefined ? { timetableUrl: options.timetableUrl } : {}),
+      ...(options.publicUrl !== undefined ? { publicUrl: options.publicUrl } : {}),
     });
   }
 
