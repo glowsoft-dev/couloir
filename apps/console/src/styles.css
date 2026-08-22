@@ -343,3 +343,11 @@ button.danger:hover:not(:disabled) { color: #fff; border-color: var(--signal); f
   max-height: 90vh; overflow-y: auto;
 }
 .overlay-card h2 { margin: 0 0 4px; font-size: 19px }
+
+/* ---------- actions sur un écran ---------- */
+.actions { display: flex; flex-wrap: wrap; gap: 6px }
+.actions button { font-size: 12.5px; padding: 6px 11px }
+.shot {
+  width: 100%; display: block; border-radius: 6px;
+  border: 1px solid var(--rule-strong);
+}

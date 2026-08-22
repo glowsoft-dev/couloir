@@ -10,6 +10,8 @@ import {
   HEADERS,
   type Manifest,
   API_PREFIX,
+  COMMAND_WAIT_SEC,
+  CommandResult,
   ROUTES,
   TelemetryBatch,
   demoManifest,
@@ -18,6 +20,7 @@ import {
   requiresSignature,
 } from "@couloir/protocol";
 import { ReplayGuard, verifyRequest } from "./auth.js";
+import { CommandBus } from "./commands.js";
 import { registerConsoleApi } from "./console-api.js";
 import { registerTimetableRoutes } from "./timetable/routes.js";
 import type { TimetableRepository } from "./timetable/repository.js";
@@ -44,6 +47,8 @@ export interface AppOptions {
   publicUrl?: string;
   /** Emploi du temps. Absent = les routes ne sont pas montées. */
   timetable?: TimetableRepository;
+  /** Canal de commandes. Partagé avec la console pour qu'elle puisse émettre. */
+  commands?: CommandBus;
   /**
    * Dossier de la console compilée.
    *
@@ -70,11 +75,26 @@ function etagOf(manifest: Manifest): string {
 
 export function buildApp(options: AppOptions = {}): FastifyInstance {
   const store: Store = options.store ?? new MemoryStore();
+  const commandBus = options.commands ?? new CommandBus();
   const media_ = options.media ?? new MediaStore("./data/media");
-  const app = Fastify({ logger: options.logger ?? false });
+  const app = Fastify({
+    logger: options.logger ?? false,
+    // Le canal de commandes tient une connexion ouverte par écran, et
+    // chaque agent en rouvre une aussitôt la précédente rendue. Sans cette
+    // option, l'arrêt du serveur attendrait indéfiniment un flux qui se
+    // renouvelle tout seul.
+    forceCloseConnections: true,
+  });
 
   app.decorate("store", store);
   app.decorate("media", media_);
+  app.decorate("commands", commandBus);
+
+  // `preClose`, pas `onClose` : Fastify attend d'abord la fin des requêtes
+  // en cours, et une interrogation longue en est une. Libérer les attentes
+  // après coup produirait un interblocage — l'arrêt attendrait la requête,
+  // qui n'attend que l'arrêt.
+  app.addHook("preClose", async () => commandBus.close());
 
   // Import de médias depuis la console. 512 Mo : une vidéo d'établissement
   // tient largement dedans, et au-delà c'est une erreur de manipulation.
@@ -318,6 +338,49 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
     return reply.code(206).send(media_.stream(media, range));
   });
 
+  // --- Canal de commandes ----------------------------------------------
+
+  /**
+   * Interrogation longue : l'écran demande ses commandes, le serveur retient
+   * la réponse jusqu'à en avoir une ou jusqu'au délai. Une liste vide est un
+   * succès, pas une erreur — l'agent reboucle sans rien interpréter.
+   */
+  app.get<{ Querystring: { wait?: string } }>(ROUTES.commands, async (request, reply) => {
+    const screenId = (request as { screenId?: string }).screenId;
+    if (!screenId) {
+      return reply.code(401).send({ code: "unauthenticated", message: "Appareil non identifié.", retryable: false });
+    }
+
+    const requested = Number(request.query.wait);
+    const waitSec = Number.isFinite(requested) ? Math.min(Math.max(requested, 1), 60) : COMMAND_WAIT_SEC;
+
+    return { commands: await commandBus.wait(screenId, waitSec) };
+  });
+
+  app.post(ROUTES.commandResult, async (request, reply) => {
+    const screenId = (request as { screenId?: string }).screenId;
+    if (!screenId) {
+      return reply.code(401).send({ code: "unauthenticated", message: "Appareil non identifié.", retryable: false });
+    }
+
+    const parsed = CommandResult.safeParse(request.body);
+    if (!parsed.success) {
+      return reply.code(400).send({
+        code: "invalid-body",
+        message: "Compte rendu de commande invalide.",
+        retryable: false,
+        details: parsed.error.flatten(),
+      });
+    }
+
+    commandBus.recordResult(screenId, parsed.data);
+    request.log.info(
+      { screenId, commandId: parsed.data.commandId, outcome: parsed.data.outcome },
+      "commande exécutée",
+    );
+    return reply.code(204).send();
+  });
+
   // --- Publication (développement) -------------------------------------
   // En attendant la console. Réservé au mode développement : c'est la
   // console qui publiera, avec ses rôles et son journal d'audit.
@@ -427,6 +490,7 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
       ...(options.timetableUrl !== undefined ? { timetableUrl: options.timetableUrl } : {}),
       ...(options.publicUrl !== undefined ? { publicUrl: options.publicUrl } : {}),
       ...(options.timetable ? { timetable: options.timetable } : {}),
+      commands: commandBus,
     });
   }
 
@@ -479,5 +543,6 @@ declare module "fastify" {
   interface FastifyInstance {
     store: Store;
     media: MediaStore;
+    commands: CommandBus;
   }
 }

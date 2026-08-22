@@ -1,7 +1,17 @@
 import { createWriteStream } from "node:fs";
 import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
-import { type DeviceCommand, HEADERS, Manifest, ROUTES, type TelemetryAck, type TelemetryBatch } from "@couloir/protocol";
+import {
+  COMMAND_WAIT_SEC,
+  CommandBatch,
+  type CommandResult,
+  type DeviceCommand,
+  HEADERS,
+  Manifest,
+  ROUTES,
+  type TelemetryAck,
+  type TelemetryBatch,
+} from "@couloir/protocol";
 import { signRequest } from "./keys.js";
 import type { NetPort } from "@couloir/agent";
 import type { FileStore } from "./store.js";
@@ -58,6 +68,25 @@ export class HttpNet implements NetPort {
     path: string,
     init: RequestInit & { body?: string } = {},
   ): Promise<Response> {
+    try {
+      return await this.attempt(path, init);
+    } catch (error) {
+      // Un redémarrage du serveur laisse des sockets morts dans la grappe
+      // de connexions : la requête suivante échoue avant même de partir. Un
+      // seul essai de plus ouvre une connexion neuve.
+      //
+      // Sans ça, un déploiement coûterait à CHAQUE écran un échec puis son
+      // espacement — quinze secondes, puis une minute, puis cinq. Un parc
+      // entier mettrait de longues minutes à revenir.
+      //
+      // Le rejeu est sûr : la requête n'a pas atteint le serveur, et nos
+      // écritures sont de toute façon idempotentes par identifiant.
+      if (!isTransportError(error)) throw error;
+      return await this.attempt(path, init);
+    }
+  }
+
+  private async attempt(path: string, init: RequestInit & { body?: string }): Promise<Response> {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), this.timeoutMs);
     try {
@@ -173,13 +202,78 @@ export class HttpNet implements NetPort {
   }
 
   /**
-   * Canal temps réel.
+   * Canal temps réel, par interrogation longue.
    *
-   * Pas encore branché sur MQTT : le poll périodique fait tout le travail et
-   * reste le filet de sécurité de toute façon. On renvoie donc un abonnement
-   * inerte plutôt que de simuler une connexion qui n'existe pas.
+   * On demande ses commandes au serveur, qui retient la réponse jusqu'à en
+   * avoir une ou jusqu'à l'expiration du délai. Puis on reboucle. C'est du
+   * HTTP ordinaire : même port, même signature, et ça traverse les
+   * mandataires d'un réseau d'école sans configuration.
+   *
+   * Une coupure ne casse rien — on réessaie en espaçant les tentatives, et le
+   * poll périodique du manifeste continue en parallèle.
    */
-  async subscribeCommands(_handler: (command: DeviceCommand) => void): Promise<() => void> {
-    return () => {};
+  async subscribeCommands(handler: (command: DeviceCommand) => void): Promise<() => void> {
+    const controller = new AbortController();
+    let failures = 0;
+
+    const loop = async () => {
+      while (!controller.signal.aborted) {
+        try {
+          const response = await fetch(this.url(`${ROUTES.commands}?wait=${COMMAND_WAIT_SEC}`), {
+            signal: controller.signal,
+            headers: this.headers("GET", `${ROUTES.commands}?wait=${COMMAND_WAIT_SEC}`),
+          });
+          if (!response.ok) throw new Error(`commandes : HTTP ${response.status}`);
+
+          failures = 0;
+          const batch = CommandBatch.parse(await response.json());
+          for (const command of batch.commands) handler(command);
+        } catch (error) {
+          if (controller.signal.aborted) return;
+          // Même logique que la synchronisation : on espace plutôt que de
+          // marteler un serveur qui ne répond pas.
+          failures = Math.min(failures + 1, 5);
+          await sleep(Math.min(2 ** failures, 30) * 1000, controller.signal);
+        }
+      }
+    };
+
+    void loop();
+    return () => controller.abort();
   }
+
+  async reportCommand(result: CommandResult): Promise<void> {
+    const body = JSON.stringify(result);
+    const response = await this.request(ROUTES.commandResult, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body,
+    });
+    if (!response.ok) throw new Error(`compte rendu : HTTP ${response.status}`);
+  }
+}
+
+/**
+ * Distingue une panne de transport d'une réponse d'erreur.
+ *
+ * Une réponse HTTP, même 500, a bien atteint le serveur : la rejouer serait
+ * douteux. Un échec de transport, non — et c'est le seul cas où l'on
+ * réessaie.
+ */
+function isTransportError(error: unknown): boolean {
+  if (!(error instanceof Error)) return false;
+  // Une requête volontairement interrompue par le délai n'est pas à rejouer.
+  if (error.name === "AbortError" || error.name === "TimeoutError") return false;
+  return error.name === "TypeError" || "cause" in error;
+}
+
+function sleep(ms: number, signal: AbortSignal): Promise<void> {
+  return new Promise((resolve) => {
+    const timer = setTimeout(resolve, ms);
+    timer.unref?.();
+    signal.addEventListener("abort", () => {
+      clearTimeout(timer);
+      resolve();
+    });
+  });
 }

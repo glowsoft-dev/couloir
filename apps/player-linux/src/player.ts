@@ -138,6 +138,15 @@ export class Player {
           this.log("info", `manifeste v${manifest.version} à l'écran`);
         },
         onFallback: (reason) => this.log("warn", `bascule sur la playlist de repli (${reason})`),
+        // Les commandes que le runtime ne peut pas traiter par ses portes :
+        // afficher un code en grand relève de la coque, qui seule connaît
+        // l'écran et son identité.
+        onCommand: async (command) => {
+          if (command.kind !== "identify") return undefined;
+          const seconds = Number(command.params["durationSec"]) || 30;
+          this.showIdentity(seconds);
+          return { outcome: "done" as const, message: `Affiché ${seconds} s` };
+        },
         log: (level, message, context) => this.log(level, message, context),
       },
     );

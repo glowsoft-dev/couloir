@@ -170,13 +170,23 @@ function makeRuntime(
   );
 }
 
-async function eventually(check: () => boolean | Promise<boolean>, timeoutMs = 5_000): Promise<void> {
+/**
+ * Attend qu'une condition devienne vraie.
+ *
+ * `label` n'est pas décoratif : sans lui, un échec ne dit pas QUELLE attente
+ * a expiré, et on relit le test à l'aveugle.
+ */
+async function eventually(
+  check: () => boolean | Promise<boolean>,
+  label = "condition",
+  timeoutMs = 5_000,
+): Promise<void> {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
     if (await check()) return;
     await new Promise((resolve) => setTimeout(resolve, 25));
   }
-  throw new Error("condition jamais atteinte");
+  throw new Error(`jamais atteint : ${label}`);
 }
 
 describe("le player, de bout en bout", () => {
@@ -187,7 +197,7 @@ describe("le player, de bout en bout", () => {
     const runtime = makeRuntime(parts);
     await runtime.start();
 
-    await eventually(() => runtime.getContext().activeVersion === 1);
+    await eventually(() => runtime.getContext().activeVersion === 1, "version 1 appliquée");
     expect(runtime.getManifest()?.screenId).toBe(parts.screenId);
 
     // Le média est réellement sur le disque, et son empreinte a été vérifiée.
@@ -213,25 +223,25 @@ describe("le player, de bout en bout", () => {
 
     // Rien n'a été appliqué, et l'écran bascule sur le contenu embarqué
     // plutôt que de rester indéfiniment en préparation.
-    await eventually(() => runtime.getContext().state === "fallback");
+    await eventually(() => runtime.getContext().state === "fallback", "bascule sur le repli");
     expect(runtime.getContext().activeVersion).toBe(0);
     expect(runtime.getManifest()).toBeNull();
 
     await runtime.stop();
   });
 
-  it("survit à une coupure réseau et se remet à jour au retour", async () => {
+  it("survit à une coupure réseau et se remet à jour au retour", { timeout: 20_000 }, async () => {
     const parts = await bootPlayer();
     publishManifest(parts.screenId);
 
     const runtime = makeRuntime(parts);
     await runtime.start();
-    await eventually(() => runtime.getContext().activeVersion === 1);
+    await eventually(() => runtime.getContext().activeVersion === 1, "version 1 appliquée");
 
     // On débranche.
     await harness.cut();
     await runtime.syncNow();
-    await eventually(() => runtime.getContext().state === "degraded");
+    await eventually(() => runtime.getContext().state === "degraded", "passage en dégradé");
 
     // L'invariant du projet : l'écran affiche toujours la même chose.
     expect(runtime.getContext().activeVersion).toBe(1);
@@ -241,8 +251,16 @@ describe("le player, de bout en bout", () => {
     await harness.restore();
     publishManifest(parts.screenId, 2);
 
+    // La première tentative après un redémarrage de serveur peut échouer sur
+    // une connexion gardée en cache vers un socket mort. L'agent réessaie
+    // avec son espacement normal — d'où une fenêtre plus large que les
+    // autres attentes de ce fichier.
     await runtime.syncNow();
-    await eventually(() => runtime.getContext().activeVersion === 2);
+    await eventually(
+      () => runtime.getContext().activeVersion === 2,
+      "version 2 appliquée après reprise",
+      12_000,
+    );
     expect(runtime.getManifest()?.version).toBe(2);
 
     await runtime.stop();
@@ -254,7 +272,7 @@ describe("le player, de bout en bout", () => {
 
     const runtime = makeRuntime(parts);
     await runtime.start();
-    await eventually(() => runtime.getContext().activeVersion === 1);
+    await eventually(() => runtime.getContext().activeVersion === 1, "version 1 appliquée");
 
     await harness.cut();
 
@@ -286,7 +304,7 @@ describe("le player, de bout en bout", () => {
     // Au retour, le lot part et n'est purgé qu'après acquittement.
     await harness.restore();
     await runtime.syncNow();
-    await eventually(async () => (await parts.queue.pendingCount()) === 0);
+    await eventually(async () => (await parts.queue.pendingCount()) === 0, "file de télémétrie vidée");
 
     await runtime.stop();
   });

@@ -1,5 +1,6 @@
 import type {
   Capabilities,
+  CommandResult,
   DeviceCommand,
   Manifest,
   TelemetryAck,
@@ -56,8 +57,13 @@ export interface NetPort {
   /** Récupère une source vivante (emploi du temps, actualités, météo). */
   fetchDataSource(url: string): Promise<unknown>;
   sendTelemetry(batch: TelemetryBatch): Promise<TelemetryAck>;
-  /** Canal temps réel. Le poll reste le filet de sécurité s'il tombe. */
+  /**
+   * Canal temps réel. Le poll du manifeste reste le filet de sécurité s'il
+   * tombe : aucune fonction essentielle n'en dépend.
+   */
   subscribeCommands(handler: (command: DeviceCommand) => void): Promise<() => void>;
+  /** Rend compte d'une commande exécutée, réussie ou non. */
+  reportCommand(result: CommandResult): Promise<void>;
 }
 
 /** Cache média sur disque. */

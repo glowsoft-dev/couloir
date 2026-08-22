@@ -43,6 +43,23 @@ export interface PublishItem {
   durationMs?: number;
 }
 
+export type CommandKind =
+  | "sync-now"
+  | "identify"
+  | "screenshot"
+  | "display-power"
+  | "clear-cache"
+  | "restart-app"
+  | "reboot";
+
+export interface CommandResult {
+  commandId: string;
+  outcome: "done" | "unsupported" | "failed";
+  message?: string;
+  /** Une capture d'écran, en base64. */
+  payload?: string;
+}
+
 export interface Emergency {
   id: string;
   title: string;
@@ -204,6 +221,12 @@ export const api = {
   /** Compose sans enregistrer : le même chemin que la publication. */
   previewSpec: (screenId: string, spec: PublishSpec) =>
     call<{ manifest: unknown }>(`/screens/${screenId}/preview`, json("POST", spec)),
+
+  command: (screenId: string, kind: CommandKind, params?: Record<string, unknown>) =>
+    call<{ command: { id: string; kind: CommandKind }; result: CommandResult }>(
+      `/screens/${screenId}/command`,
+      json("POST", { kind, ...(params ? { params } : {}) }),
+    ),
 
   emergency: {
     current: () => call<{ emergency: Emergency | null }>("/emergency"),

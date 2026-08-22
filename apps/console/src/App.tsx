@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { ScreenActions } from "./Actions.js";
 import { EmergencyBar } from "./Emergency.js";
 import { GridView } from "./Grid.js";
 import { PublishPanel } from "./Publish.js";
@@ -137,11 +138,16 @@ export function App() {
             </div>
             <div>
               {selected ? (
-                <PublishPanel
-                  screen={selected}
-                  classes={setup?.classes ?? []}
-                  onPublished={() => void refreshScreens()}
-                />
+                <>
+                  <ScreenActions screen={selected} />
+                  <div style={{ marginTop: 20 }}>
+                    <PublishPanel
+                      screen={selected}
+                      classes={setup?.classes ?? []}
+                      onPublished={() => void refreshScreens()}
+                    />
+                  </div>
+                </>
               ) : (
                 <section className="panel">
                   <header>
