@@ -20,6 +20,10 @@ export const ROUTES = {
   telemetry: `${API_PREFIX}/devices/me/telemetry`,
   /** Téléchargement d'un média, avec support des requêtes Range. */
   asset: `${API_PREFIX}/assets/:assetId`,
+  /** Interrogation longue : la réponse est retenue jusqu'à une commande. */
+  commands: `${API_PREFIX}/devices/me/commands`,
+  /** Compte rendu d'une commande exécutée. */
+  commandResult: `${API_PREFIX}/devices/me/commands/result`,
   health: "/health",
 } as const;
 
@@ -43,25 +47,21 @@ export const HEADERS = {
 export const SIGNED_ROUTES: readonly string[] = [
   `${API_PREFIX}/devices/me/manifest`,
   `${API_PREFIX}/devices/me/telemetry`,
+  `${API_PREFIX}/devices/me/commands`,
+  `${API_PREFIX}/devices/me/commands/result`,
 ];
 
 export function requiresSignature(pathname: string): boolean {
   return SIGNED_ROUTES.some((route) => pathname === route || pathname.startsWith(`${route}?`));
 }
 
-/** Sujets MQTT pour le canal temps réel. Le poll reste le filet de sécurité. */
-export const MQTT_TOPICS = {
-  /** Commandes descendantes : rafraîchir, redémarrer, identifier, urgence. */
-  commands: (screenId: string) => `couloir/screens/${screenId}/cmd`,
-  /** Présence, avec message de dernière volonté pour détecter les chutes. */
-  presence: (screenId: string) => `couloir/screens/${screenId}/presence`,
-} as const;
-
-export type DeviceCommand =
-  | { type: "sync-now" }
-  | { type: "identify"; durationSec: number }
-  | { type: "reboot" }
-  | { type: "restart-app" }
-  | { type: "clear-cache" }
-  | { type: "screenshot" }
-  | { type: "display-power"; on: boolean };
+/**
+ * Le canal temps réel passe par HTTP, pas par MQTT.
+ *
+ * Voir `commands.ts` : même port, même certificat, même signature Ed25519 que
+ * le reste du protocole, et ça traverse les mandataires d'un réseau d'école
+ * sans rien demander à personne. Un broker aurait imposé une seconde
+ * infrastructure et une seconde histoire d'authentification.
+ *
+ * Le poll périodique du manifeste reste le filet de sécurité.
+ */

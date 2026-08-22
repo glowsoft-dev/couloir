@@ -1,4 +1,10 @@
-import type { AgentState, Manifest, TelemetryBatch } from "@couloir/protocol";
+import type {
+  AgentState,
+  CommandOutcome,
+  DeviceCommand,
+  Manifest,
+  TelemetryBatch,
+} from "@couloir/protocol";
 import type { PlatformPorts } from "./ports.js";
 import { UnsupportedOperation } from "./ports.js";
 import { type AgentContext, type AgentEffect, type AgentSettings, initialContext, reduce } from "./state.js";
@@ -52,6 +58,16 @@ export interface RuntimeOptions {
   /** Appelé quand on bascule sur la playlist de repli embarquée. */
   onFallback?: (reason: "clock-unreliable" | "offline-too-long") => void;
   onStateChange?: (state: AgentState, context: AgentContext) => void;
+  /**
+   * Les commandes que le runtime ne sait pas traiter seul.
+   *
+   * `identify` par exemple : afficher un code en grand relève de la coque,
+   * qui seule connaît l'écran. Renvoyer `undefined` vaut « non pris en
+   * charge » et la console le dira.
+   */
+  onCommand?: (
+    command: DeviceCommand,
+  ) => Promise<{ outcome: CommandOutcome; message?: string } | undefined>;
   log?: (level: "info" | "warn" | "error", message: string, context?: Record<string, unknown>) => void;
 }
 
@@ -95,13 +111,96 @@ export class AgentRuntime {
     // s'établit pas, le poll périodique suffit à tout faire fonctionner.
     try {
       this.unsubscribe = await this.ports.net.subscribeCommands((command) => {
-        if (command.type === "sync-now") void this.dispatch({ type: "tick" });
+        void this.handleCommand(command);
       });
     } catch (error) {
       this.log("warn", "canal temps réel indisponible, on se rabat sur le poll", { error: String(error) });
     }
 
     await this.dispatch({ type: "boot", clockReliable: this.ports.clock.isReliable() });
+  }
+
+  /**
+   * Exécute une commande venue de la console et en rend compte.
+   *
+   * Le runtime traite ce qu'il peut atteindre par ses portes ; le reste part
+   * à la coque, qui seule sait par exemple afficher un code à l'écran.
+   *
+   * Un compte rendu part TOUJOURS, y compris pour un refus : sans lui la
+   * console resterait sur « en attente » sans jamais dire pourquoi.
+   */
+  private async handleCommand(command: DeviceCommand): Promise<void> {
+    let outcome: CommandOutcome = "done";
+    let message: string | undefined;
+    let payload: string | undefined;
+
+    try {
+      switch (command.kind) {
+        case "sync-now":
+          await this.dispatch({ type: "tick" });
+          break;
+
+        case "screenshot": {
+          const image = await this.ports.display.screenshot();
+          payload = Buffer.from(image).toString("base64");
+          break;
+        }
+
+        case "display-power":
+          await this.ports.display.setPower(command.params["on"] !== false);
+          break;
+
+        case "clear-cache": {
+          // On vide tout : le manifeste courant sera re-téléchargé au
+          // prochain cycle, et l'écran garde son affichage entre-temps.
+          const evicted = await this.ports.store.evictTo(0, []);
+          message = `${evicted.length} média(s) retiré(s)`;
+          await this.dispatch({ type: "tick" });
+          break;
+        }
+
+        case "restart-app":
+          await this.ports.system.restartApp();
+          break;
+
+        case "reboot":
+          await this.ports.system.reboot();
+          break;
+
+        default: {
+          const handled = await this.options.onCommand?.(command);
+          if (!handled) {
+            outcome = "unsupported";
+            message = "Commande non prise en charge par cette coque.";
+          } else {
+            outcome = handled.outcome;
+            if (handled.message !== undefined) message = handled.message;
+          }
+        }
+      }
+    } catch (error) {
+      // Une capacité absente est un résultat, pas une panne : la console
+      // doit pouvoir griser le bouton plutôt qu'afficher une erreur.
+      const unsupported = error instanceof UnsupportedOperation;
+      outcome = unsupported ? "unsupported" : "failed";
+      message = error instanceof Error ? error.message : String(error);
+    }
+
+    this.log(outcome === "failed" ? "error" : "info", `commande ${command.kind} : ${outcome}`, {
+      ...(message ? { message } : {}),
+    });
+
+    try {
+      await this.ports.net.reportCommand({
+        commandId: command.id,
+        outcome,
+        ...(message !== undefined ? { message } : {}),
+        ...(payload !== undefined ? { payload } : {}),
+        completedAt: new Date(this.ports.clock.nowMs()).toISOString().replace(/\.\d+Z$/, "Z"),
+      });
+    } catch (error) {
+      this.log("warn", "compte rendu de commande non transmis", { error: String(error) });
+    }
   }
 
   /** Recharge le dernier manifeste appliqué, s'il en existe un. */

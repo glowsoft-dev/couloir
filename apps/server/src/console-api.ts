@@ -1,10 +1,11 @@
 import { randomUUID } from "node:crypto";
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
-import { API_PREFIX } from "@couloir/protocol";
+import { API_PREFIX, CommandKind } from "@couloir/protocol";
 import { CompositionError, type PublishSpec, compose } from "./composer.js";
 import type { MediaStore } from "./media.js";
 import type { Store } from "./store.js";
+import type { CommandBus } from "./commands.js";
 import type { Manifest } from "@couloir/protocol";
 import type { TimetableRepository } from "./timetable/repository.js";
 
@@ -95,6 +96,8 @@ export interface ConsoleApiOptions {
   publicUrl?: string;
   /** Pour résoudre les classes à afficher dans la colonne des cours. */
   timetable?: TimetableRepository;
+  /** Canal de commandes. Absent = les boutons d'action restent inertes. */
+  commands?: CommandBus;
 }
 
 export function registerConsoleApi(app: FastifyInstance, options: ConsoleApiOptions): void {
@@ -198,6 +201,61 @@ export function registerConsoleApi(app: FastifyInstance, options: ConsoleApiOpti
     return reply.code(201).send({ media: stored });
   });
 
+  // --- Commandes vers un écran -----------------------------------------
+
+  /**
+   * Émet une commande et attend son compte rendu.
+   *
+   * On attend délibérément : « Identifier » sans retour laisserait l'opérateur
+   * dans le doute devant un écran qui n'a peut-être rien fait. Le délai est
+   * court — l'écran tient déjà une connexion ouverte.
+   */
+  app.post<{ Params: { screenId: string }; Body: { kind?: string; params?: Record<string, unknown> } }>(
+    `${CONSOLE_PREFIX}/screens/:screenId/command`,
+    async (request, reply) => {
+      const bus = options.commands;
+      if (!bus) {
+        return reply.code(503).send({
+          code: "no-command-channel",
+          message: "Le canal de commandes n'est pas actif sur ce serveur.",
+          retryable: false,
+        });
+      }
+
+      const parsed = CommandKind.safeParse(request.body?.kind);
+      if (!parsed.success) {
+        return reply.code(400).send({ code: "unknown-command", message: "Commande inconnue.", retryable: false });
+      }
+
+      const screen = await store.getScreen(request.params.screenId);
+      if (!screen) {
+        return reply.code(404).send({ code: "unknown-screen", message: "Écran inconnu.", retryable: false });
+      }
+
+      // Un écran qui n'écoute pas ne répondra jamais : autant le dire tout
+      // de suite plutôt que de faire patienter quinze secondes pour rien.
+      if (!bus.isListening(screen.id)) {
+        return reply.code(409).send({
+          code: "screen-not-listening",
+          message: "Cet écran ne répond pas. La commande n'a pas été envoyée.",
+          retryable: true,
+        });
+      }
+
+      const command = bus.issue(screen.id, parsed.data, request.body?.params ?? {});
+      const result = await waitForResult(bus, command.id, 15_000);
+
+      if (!result) {
+        return reply.code(504).send({
+          code: "no-answer",
+          message: "L'écran n'a pas répondu à temps.",
+          retryable: true,
+        });
+      }
+      return { command, result };
+    },
+  );
+
   // --- Mode urgence ----------------------------------------------------
 
   /**
@@ -237,6 +295,8 @@ export function registerConsoleApi(app: FastifyInstance, options: ConsoleApiOpti
       emergency,
     }));
 
+    // C'est ce réveil qui fait passer l'urgence de la minute à la seconde.
+    options.commands?.broadcast(touched.appliedIds, "sync-now");
     request.log.warn({ screens: touched.applied.length, title: emergency.title }, "message d'urgence");
     return { emergency, ...touched };
   });
@@ -248,6 +308,7 @@ export function registerConsoleApi(app: FastifyInstance, options: ConsoleApiOpti
         ? { ...manifest, version: manifest.version + 1, emergency: null }
         : null,
     );
+    options.commands?.broadcast(touched.appliedIds, "sync-now");
     request.log.info({ screens: touched.applied.length }, "fin du message d'urgence");
     return touched;
   });
@@ -343,6 +404,9 @@ export function registerConsoleApi(app: FastifyInstance, options: ConsoleApiOpti
         });
 
         await store.putManifest(manifest);
+        // On réveille l'écran plutôt que d'attendre son prochain cycle :
+        // publier doit se voir dans la seconde, pas dans la minute.
+        options.commands?.issue(screen.id, "sync-now");
         request.log.info({ screenId: screen.id, version: manifest.version }, "publication");
         return { screenId: screen.id, version: manifest.version };
       } catch (error) {
@@ -369,11 +433,12 @@ async function applyToScreens(
   store: Store,
   screenIds: string[] | undefined,
   transform: (manifest: Manifest) => Manifest | null,
-): Promise<{ applied: string[]; skipped: string[] }> {
+): Promise<{ applied: string[]; appliedIds: string[]; skipped: string[] }> {
   const screens = await store.listScreens();
   const targets = screenIds?.length ? screens.filter((s) => screenIds.includes(s.id)) : screens;
 
   const applied: string[] = [];
+  const appliedIds: string[] = [];
   const skipped: string[] = [];
 
   for (const screen of targets) {
@@ -386,9 +451,27 @@ async function applyToScreens(
     if (!next) continue;
     await store.putManifest(next);
     applied.push(screen.code);
+    appliedIds.push(screen.id);
   }
 
-  return { applied, skipped };
+  return { applied, appliedIds, skipped };
+}
+
+/**
+ * Attend le compte rendu d'une commande.
+ *
+ * Scrutation courte plutôt qu'un système d'événements : la fenêtre est de
+ * quelques secondes, l'écran a déjà une connexion ouverte, et le code reste
+ * lisible.
+ */
+async function waitForResult(bus: CommandBus, commandId: string, timeoutMs: number) {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    const result = bus.result(commandId);
+    if (result) return result;
+    await new Promise((resolve) => setTimeout(resolve, 120));
+  }
+  return null;
 }
 
 /** Horodatage au format attendu par le protocole. */

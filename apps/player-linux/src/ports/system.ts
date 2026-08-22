@@ -81,22 +81,62 @@ export class LinuxSystem implements SystemPort {
 export class LinuxDisplay implements DisplayPort {
   constructor(private readonly enabled: boolean) {}
 
+  /**
+   * Allume ou éteint la dalle.
+   *
+   * `vcgencmd` sur Raspberry Pi, `xset dpms` sur un Linux avec serveur X.
+   * Quand ni l'un ni l'autre n'existe, on refuse EXPLICITEMENT au lieu de
+   * laisser remonter l'échec de la commande : « non disponible » envoie
+   * l'opérateur vers la bonne conclusion, « échec » le ferait chercher une
+   * panne qui n'existe pas.
+   */
   async setPower(on: boolean): Promise<void> {
     if (!this.enabled) throw new UnsupportedOperation("pilotage de la dalle");
-    // `vcgencmd` sur Raspberry Pi ; `xset dpms` ailleurs.
-    await run(`vcgencmd display_power ${on ? 1 : 0}`).catch(() =>
-      run(`xset dpms force ${on ? "on" : "off"}`),
-    );
+
+    if (await hasBinary("vcgencmd")) {
+      await run(`vcgencmd display_power ${on ? 1 : 0}`);
+      return;
+    }
+    if (process.env["DISPLAY"] && (await hasBinary("xset"))) {
+      await run(`xset dpms force ${on ? "on" : "off"}`);
+      return;
+    }
+    throw new UnsupportedOperation("pilotage de la dalle (ni vcgencmd ni xset)");
   }
 
   async isOn(): Promise<boolean> {
-    if (!this.enabled) throw new UnsupportedOperation("état de la dalle");
+    if (!this.enabled || !(await hasBinary("vcgencmd"))) {
+      throw new UnsupportedOperation("état de la dalle");
+    }
     const { stdout } = await run("vcgencmd display_power");
     return stdout.trim().endsWith("=1");
   }
 
+  /**
+   * Capture ce qui est réellement à l'écran.
+   *
+   * On photographie la fenêtre X, pas une page rendue à part : c'est la
+   * seule façon de voir ce que voient les élèves, y compris si Chromium a
+   * planté ou affiche autre chose que prévu.
+   *
+   * L'outil est détecté à l'exécution. Sans serveur graphique — un boîtier
+   * de test, une VM — on refuse explicitement plutôt que de renvoyer une
+   * image vide qui ferait croire à un écran noir.
+   */
   async screenshot(): Promise<Uint8Array> {
-    throw new UnsupportedOperation("capture d'écran (à brancher sur Chromium)");
+    if (!process.env["DISPLAY"]) {
+      throw new UnsupportedOperation("capture d'écran (aucun serveur graphique)");
+    }
+
+    for (const [binary, args] of SCREENSHOT_TOOLS) {
+      if (!(await hasBinary(binary))) continue;
+      const { stdout } = await run(`${binary} ${args}`, { encoding: "buffer", maxBuffer: 32 * 1024 * 1024 });
+      return new Uint8Array(stdout as unknown as Buffer);
+    }
+
+    throw new UnsupportedOperation(
+      `capture d'écran (installez ${SCREENSHOT_TOOLS.map(([b]) => b).join(" ou ")})`,
+    );
   }
 }
 
@@ -122,6 +162,27 @@ export class LinuxClock implements ClockPort {
   async syncFromNetwork(): Promise<boolean> {
     this.reliable = await hasHardwareClock();
     return this.reliable;
+  }
+}
+
+/**
+ * Les outils de capture, par ordre de préférence.
+ *
+ * Tous écrivent le PNG sur la sortie standard : pas de fichier temporaire à
+ * nettoyer sur un boîtier qui tourne des mois.
+ */
+const SCREENSHOT_TOOLS: readonly [string, string][] = [
+  ["scrot", "--overwrite --silent /dev/stdout"],
+  ["import", "-window root png:-"],
+  ["maim", "--hidecursor"],
+];
+
+async function hasBinary(name: string): Promise<boolean> {
+  try {
+    await run(`command -v ${name}`);
+    return true;
+  } catch {
+    return false;
   }
 }
 

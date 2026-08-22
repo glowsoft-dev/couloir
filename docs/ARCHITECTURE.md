@@ -540,6 +540,56 @@ dans la minute. Le cahier des charges demande moins de dix secondes, ce qui
 suppose le canal temps réel — MQTT ou une interrogation longue. C'est un
 chantier à part, et le mode urgence fonctionne sans lui.
 
+## Le canal de commandes
+
+**Interrogation longue sur HTTP, pas MQTT.** Le cahier des charges prévoyait
+un broker ; le contexte l'a fait changer d'avis.
+
+L'écran demande ses commandes à `/v1/devices/me/commands`, le serveur retient
+la réponse jusqu'à en avoir une ou jusqu'au délai — vingt-cinq secondes, sous
+la minute des mandataires qui coupent les connexions inactives. Puis l'agent
+reboucle.
+
+| Ce que ça évite | Pourquoi ça compte dans une école |
+|---|---|
+| Un second port à ouvrir | les réseaux d'établissement sont fermés, et chaque ouverture est une demande |
+| Une seconde authentification | la signature Ed25519 existante couvre la route sans un mot de plus |
+| Un broker à exploiter | une infrastructure de moins à surveiller, sauvegarder et mettre à jour |
+| Les protocoles exotiques | ça traverse les mandataires HTTP sans configuration |
+
+Le coût : une connexion ouverte par écran. Node en tient des milliers ; à
+l'échelle d'un établissement c'est sans objet.
+
+### Ce que ça débloque
+
+Quatre fonctions qui existaient sans pouvoir être déclenchées : identifier un
+écran, le capturer, piloter sa dalle, le redémarrer. Et un `sync-now` poussé
+à la publication ramène l'arrivée d'un **message d'urgence de la minute à
+quelques dizaines de millisecondes** — mesuré à 43 ms, là où le cahier des
+charges demandait moins de dix secondes.
+
+### Trois pièges rencontrés
+
+**`preClose`, pas `onClose`.** Fastify attend d'abord la fin des requêtes en
+cours, et une interrogation longue en est une. Libérer les attentes après
+coup produit un interblocage : l'arrêt attend la requête, qui n'attend que
+l'arrêt.
+
+**`forceCloseConnections`.** Même en libérant les attentes, l'agent en rouvre
+une aussitôt : le serveur ne se vide jamais tout seul.
+
+**Un socket mort coûte cher.** Après un redémarrage du serveur, la grappe de
+connexions de l'agent garde des sockets fermés ; la requête suivante échoue
+avant de partir. Sans un second essai immédiat, chaque écran paierait un
+échec puis son espacement — quinze secondes, puis une minute, puis cinq. Un
+parc entier mettrait de longues minutes à revenir après un déploiement.
+
+### Une capacité absente n'est pas une panne
+
+`unsupported` est un résultat à part entière. Un boîtier sans serveur
+graphique répond « capture d'écran non disponible » plutôt que d'échouer :
+« échec » enverrait l'opérateur chercher un problème qui n'existe pas.
+
 ## Ce qui n'est pas encore fait
 
 Le socle tourne, mais il reste volontairement incomplet :
@@ -555,8 +605,6 @@ Le socle tourne, mais il reste volontairement incomplet :
 - **URL signées** — les médias sont servis sans signature ni expiration.
 - **Les autres coques** — Android et Electron restent à écrire. La coque
   Linux existe et sert de référence : elles n'ont qu'à implémenter `ports.ts`.
-- **MQTT** — `subscribeCommands` renvoie un abonnement inerte. Le poll fait
-  tout le travail et reste le filet de sécurité de toute façon.
 - **Les gabarits** — le rendu n'en connaît que la forme générale (bandeau,
   titre, texte). La bibliothèque annoncée au cahier des charges reste à faire.
 - **La console** — aucune interface.
