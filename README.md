@@ -10,7 +10,7 @@ distance depuis une seule application.
 
 ```bash
 pnpm install
-pnpm test          # 170 tests
+pnpm test          # 186 tests
 pnpm build
 pnpm build:browser # le bundle de rendu servi au navigateur
 pnpm build:console # la console compilée

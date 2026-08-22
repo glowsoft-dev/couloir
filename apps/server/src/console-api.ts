@@ -52,6 +52,21 @@ const PublishBody = z.object({
    * absent : l'écran les fait défiler, dans l'ordre de la console.
    */
   timetableClassIds: z.array(z.string().uuid()).optional(),
+  /**
+   * Plages d'extinction de la dalle, en heure locale.
+   *
+   * Une dalle qui reste allumée la nuit s'use et consomme pour personne. Un
+   * message d'urgence la rallume — c'est le rendu qui s'en charge.
+   */
+  displayOff: z
+    .array(
+      z.object({
+        daysOfWeek: z.array(z.number().int().min(1).max(7)).default([1, 2, 3, 4, 5]),
+        from: z.string().regex(/^\d{2}:\d{2}$/),
+        to: z.string().regex(/^\d{2}:\d{2}$/),
+      }),
+    )
+    .optional(),
 });
 
 const EmergencyBody = z.object({
@@ -200,6 +215,66 @@ export function registerConsoleApi(app: FastifyInstance, options: ConsoleApiOpti
     const stored = await media.put(randomUUID(), buffer, file.mimetype, file.filename);
     return reply.code(201).send({ media: stored });
   });
+
+  /**
+   * La composition actuellement en ligne.
+   *
+   * Sans elle, l'éditeur s'ouvre vide devant un écran qui affiche déjà
+   * quelque chose : on ne peut que remplacer à l'aveugle, jamais corriger.
+   */
+  app.get<{ Params: { screenId: string } }>(
+    `${CONSOLE_PREFIX}/screens/:screenId/composition`,
+    async (request) => {
+      const manifest = await store.getManifest(request.params.screenId);
+      return {
+        version: manifest?.version ?? null,
+        spec: manifest ? await store.getSpec(request.params.screenId) : null,
+      };
+    },
+  );
+
+  // --- Historique des publications --------------------------------------
+
+  app.get<{ Params: { screenId: string } }>(
+    `${CONSOLE_PREFIX}/screens/:screenId/history`,
+    async (request) => ({ versions: await store.listManifests(request.params.screenId) }),
+  );
+
+  /**
+   * Republie une version passée.
+   *
+   * On ne réécrit pas l'ancienne ligne : on en crée une nouvelle avec le
+   * même contenu. L'historique reste une suite de faits — « on est revenu à
+   * ce contenu tel jour » — plutôt qu'un état qu'on remonterait en effaçant
+   * ce qui s'est passé.
+   */
+  app.post<{ Params: { screenId: string; version: string } }>(
+    `${CONSOLE_PREFIX}/screens/:screenId/history/:version/restore`,
+    async (request, reply) => {
+      const target = Number(request.params.version);
+      const past = await store.getManifestVersion(request.params.screenId, target);
+      if (!past) {
+        return reply.code(404).send({
+          code: "unknown-version",
+          message: "Cette version n'existe plus.",
+          retryable: false,
+        });
+      }
+
+      const current = await store.getManifest(request.params.screenId);
+      const manifest = {
+        ...past,
+        version: (current?.version ?? target) + 1,
+        issuedAt: iso(new Date()),
+      };
+      const pastSpec = await store.getSpec(request.params.screenId, target);
+      await store.putManifest(manifest, pastSpec ?? undefined);
+      options.commands?.issue(request.params.screenId, "sync-now");
+
+      request.log.info({ screenId: request.params.screenId, from: target }, "retour à une version");
+      return { version: manifest.version, restoredFrom: target };
+    },
+  );
 
   // --- Commandes vers un écran -----------------------------------------
 
@@ -403,7 +478,10 @@ export function registerConsoleApi(app: FastifyInstance, options: ConsoleApiOpti
           baseUrl: resolvePublicUrl(options.publicUrl, request.headers.host),
         });
 
-        await store.putManifest(manifest);
+        // On enregistre la composition SAISIE, pas la composition résolue :
+        // rouvrir doit rendre « toutes les classes » et non la liste figée
+        // des classes qui existaient ce jour-là.
+        await store.putManifest(manifest, parsed.data);
         // On réveille l'écran plutôt que d'attendre son prochain cycle :
         // publier doit se voir dans la seconde, pas dans la minute.
         options.commands?.issue(screen.id, "sync-now");

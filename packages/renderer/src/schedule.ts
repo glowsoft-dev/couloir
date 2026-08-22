@@ -1,5 +1,5 @@
 import type { Manifest, Schedule, ScreenSettings } from "@couloir/protocol";
-import { isWithinDailyWindow, localMoment } from "./time.js";
+import { isWithinDailyWindow, localMoment, parseClock } from "./time.js";
 
 /**
  * Quelle playlist occupe une zone à un instant donné.
@@ -58,11 +58,26 @@ export function activePlaylistId(manifest: Manifest, zoneId: string, nowMs: numb
  * Le rendu s'en sert pour ne pas consommer inutilement, et la coque native
  * pour couper réellement l'alimentation de l'écran. Un message d'urgence
  * passe outre — il rallume.
+ *
+ * Les jours désignent le jour où la plage COMMENCE, pas celui où on se
+ * trouve. « Du lundi au vendredi, 19:00 → 07:30 » éteint donc le vendredi
+ * soir jusqu'au samedi matin, et laisse le dimanche soir allumé. C'est la
+ * seule lecture naturelle de la phrase, et c'est celle que la console
+ * affiche en toutes lettres sous le réglage.
  */
 export function isDisplayOffPeriod(settings: ScreenSettings, nowMs: number): boolean {
   const moment = localMoment(nowMs, settings.timezone);
+  const veille = ((moment.dayOfWeek + 5) % 7) + 1;
+
   return settings.displayOff.some((window) => {
-    if (window.daysOfWeek.length > 0 && !window.daysOfWeek.includes(moment.dayOfWeek)) return false;
-    return isWithinDailyWindow(moment.minutesOfDay, window.from, window.to);
+    if (!isWithinDailyWindow(moment.minutesOfDay, window.from, window.to)) return false;
+    if (window.daysOfWeek.length === 0) return true;
+
+    const start = parseClock(window.from);
+    const end = parseClock(window.to);
+    // Plage à cheval sur minuit, et on est avant l'heure de rallumage :
+    // c'est la plage ouverte hier soir qui court encore.
+    const commencéeLaVeille = start > end && moment.minutesOfDay < end;
+    return window.daysOfWeek.includes(commencéeLaVeille ? veille : moment.dayOfWeek);
   });
 }

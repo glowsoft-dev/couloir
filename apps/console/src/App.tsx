@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { ScreenActions } from "./Actions.js";
 import { EmergencyBar } from "./Emergency.js";
 import { GridView } from "./Grid.js";
+import { HistoryPanel } from "./History.js";
 import { PublishPanel } from "./Publish.js";
 import { PendingPanel, ScreenList } from "./Screens.js";
 import { SettingsView } from "./Settings.js";
@@ -46,6 +47,15 @@ export function App() {
   const [setup, setSetup] = useState<TimetableSetup | null>(null);
   const [emergency, setEmergency] = useState<Emergency | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  /**
+   * Incrémenté par un retour à une version passée.
+   *
+   * Il remonte l'éditeur, qui relit alors ce qui est réellement diffusé.
+   * Sans ça, la console continuerait d'afficher l'ancienne composition en
+   * annonçant l'ancienne version — elle mentirait sur l'état de l'écran, ce
+   * qui est pire que de ne rien afficher.
+   */
+  const [restored, setRestored] = useState(0);
   const [error, setError] = useState<string | null>(null);
 
   const refreshScreens = useCallback(async () => {
@@ -75,6 +85,15 @@ export function App() {
     }
   }, []);
 
+  /**
+   * Un seul écran rattaché : on le sélectionne. Faire cliquer quelqu'un sur
+   * l'unique élément d'une liste pour accéder à la seule chose qu'il peut
+   * faire n'apprend rien à personne.
+   */
+  useEffect(() => {
+    if (selectedId === null && screens.length === 1) setSelectedId(screens[0]!.id);
+  }, [screens, selectedId]);
+
   useEffect(() => {
     if (!authenticated) return;
     void refreshScreens();
@@ -88,6 +107,7 @@ export function App() {
   if (!authenticated) return <Gate onAuthenticated={() => setAuthenticated(true)} />;
 
   const selected = screens.find((screen) => screen.id === selectedId) ?? null;
+
   const offline = screens.filter((s) => !s.online).length;
 
   return (
@@ -130,6 +150,13 @@ export function App() {
       <div className="page">
         {error && <p className="notice error">{error}</p>}
 
+        <FirstRun
+          screens={screens}
+          pending={pending}
+          classes={setup?.classes.length ?? 0}
+          onGo={(destination) => setTab(destination)}
+        />
+
         {tab === "screens" && (
           <div className="split">
             <div>
@@ -139,21 +166,33 @@ export function App() {
             <div>
               {selected ? (
                 <>
+                  <PublishPanel
+                    key={`${selected.id}:${restored}`}
+                    screen={selected}
+                    classes={setup?.classes ?? []}
+                    onPublished={() => void refreshScreens()}
+                  />
+                  <HistoryPanel
+                    screen={selected}
+                    onRestored={() => {
+                      setRestored((n) => n + 1);
+                      void refreshScreens();
+                    }}
+                  />
                   <ScreenActions screen={selected} />
-                  <div style={{ marginTop: 20 }}>
-                    <PublishPanel
-                      screen={selected}
-                      classes={setup?.classes ?? []}
-                      onPublished={() => void refreshScreens()}
-                    />
-                  </div>
                 </>
               ) : (
                 <section className="panel">
                   <header>
                     <h2>Publication</h2>
                   </header>
-                  <p className="empty">Choisissez un écran à gauche.</p>
+                  <div className="body">
+                    <p className="empty">
+                      {screens.length === 0
+                        ? "Aucun écran n'est encore rattaché. Branchez un boîtier : son code d'appairage apparaîtra à gauche."
+                        : "Choisissez un écran à gauche pour voir et modifier ce qu'il affiche."}
+                    </p>
+                  </div>
                 </section>
               )}
             </div>
@@ -178,6 +217,68 @@ export function App() {
             </section>
           ))}
       </div>
+    </div>
+  );
+}
+
+/**
+ * Le chemin du premier jour.
+ *
+ * Une console vide ne dit pas par quoi commencer, et l'ordre compte : sans
+ * écran rattaché il n'y a rien à publier, sans classe la mise en page « cours »
+ * ne compose pas. On montre donc l'étape suivante, une seule à la fois, et
+ * le bandeau disparaît de lui-même dès que l'installation tient debout.
+ */
+function FirstRun({
+  screens,
+  pending,
+  classes,
+  onGo,
+}: {
+  screens: ScreenStatus[];
+  pending: PendingDevice[];
+  classes: number;
+  onGo: (tab: Tab) => void;
+}) {
+  const published = screens.some((screen) => screen.manifestVersion > 0);
+  if (screens.length > 0 && classes > 0 && published) return null;
+
+  const step =
+    screens.length === 0
+      ? pending.length > 0
+        ? {
+            text: `${pending.length} boîtier${pending.length > 1 ? "s attendent" : " attend"} d'être rattaché${pending.length > 1 ? "s" : ""} à un emplacement.`,
+            action: "Rattacher" as const,
+            tab: "screens" as Tab,
+          }
+        : {
+            text: "Branchez un boîtier sur un écran : il affichera un code d'appairage, et apparaîtra ici tout seul.",
+            action: null,
+            tab: "screens" as Tab,
+          }
+      : classes === 0
+        ? {
+            text: "Créez vos classes pour pouvoir afficher les cours à côté du contenu.",
+            action: "Créer les classes" as const,
+            tab: "settings" as Tab,
+          }
+        : {
+            text: "Vos écrans sont rattachés mais n'affichent encore rien. Choisissez-en un et publiez.",
+            action: "Publier" as const,
+            tab: "screens" as Tab,
+          };
+
+  return (
+    <div className="firstrun">
+      <span className="firstrun-mark" aria-hidden="true">
+        →
+      </span>
+      <p>{step.text}</p>
+      {step.action && (
+        <button type="button" className="primary" onClick={() => onGo(step.tab)}>
+          {step.action}
+        </button>
+      )}
     </div>
   );
 }

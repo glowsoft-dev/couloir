@@ -115,8 +115,23 @@ export interface Store {
   /** Les boîtiers qui affichent un code et attendent un rattachement. */
   listPendingDevices(nowMs?: number): Promise<PendingDevice[]>;
 
-  putManifest(manifest: Manifest): Promise<void>;
+  /**
+   * `spec` est la composition qui a produit ce manifeste — « plein écran,
+   * cette affiche, ce bandeau ». La conserver permet de rouvrir une
+   * publication pour en changer un détail, au lieu de tout resaisir.
+   */
+  putManifest(manifest: Manifest, spec?: unknown): Promise<void>;
   getManifest(screenId: ScreenId): Promise<Manifest | null>;
+  /**
+   * L'historique des publications, de la plus récente à la plus ancienne.
+   *
+   * Sans lui, publier serait irréversible : on ne pourrait revenir en
+   * arrière qu'en refaisant la composition de mémoire.
+   */
+  listManifests(screenId: ScreenId, limit?: number): Promise<{ version: number; issuedAt: string }[]>;
+  getManifestVersion(screenId: ScreenId, version: number): Promise<Manifest | null>;
+  /** La composition d'une version, si elle a été enregistrée. */
+  getSpec(screenId: ScreenId, version?: number): Promise<unknown | null>;
 
   /**
    * Enregistre un lot remonté par un écran.
@@ -165,6 +180,8 @@ export class MemoryStore implements Store {
   private readonly devices = new Map<string, DeviceRecord & { deviceTokenHash: string | null }>();
   private readonly screens = new Map<ScreenId, ScreenRecord>();
   private readonly manifests = new Map<ScreenId, Manifest>();
+  private readonly history = new Map<ScreenId, Manifest[]>();
+  private readonly specs = new Map<string, unknown>();
   private readonly seenEventIds = new Set<string>();
   private readonly lastBeat = new Map<ScreenId, { atMs: number; state: string }>();
 
@@ -268,18 +285,38 @@ export class MemoryStore implements Store {
       }));
   }
 
-  async putManifest(manifest: Manifest): Promise<void> {
+  async putManifest(manifest: Manifest, spec?: unknown): Promise<void> {
+    if (spec !== undefined) this.specs.set(`${manifest.screenId}:${manifest.version}`, spec);
     const problems = findBrokenReferences(manifest);
     if (problems.length > 0) {
       throw new Error(`manifeste incohérent :\n  - ${problems.join("\n  - ")}`);
     }
     this.manifests.set(manifest.screenId, manifest);
+    const past = this.history.get(manifest.screenId) ?? [];
+    this.history.set(manifest.screenId, [...past.filter((m) => m.version !== manifest.version), manifest]);
     const screen = this.screens.get(manifest.screenId);
     if (screen) screen.manifestVersion = manifest.version;
   }
 
   async getManifest(screenId: ScreenId): Promise<Manifest | null> {
     return this.manifests.get(screenId) ?? null;
+  }
+
+  async listManifests(screenId: ScreenId, limit = 20) {
+    return (this.history.get(screenId) ?? [])
+      .slice()
+      .sort((a, b) => b.version - a.version)
+      .slice(0, limit)
+      .map((m) => ({ version: m.version, issuedAt: m.issuedAt }));
+  }
+
+  async getManifestVersion(screenId: ScreenId, version: number): Promise<Manifest | null> {
+    return (this.history.get(screenId) ?? []).find((m) => m.version === version) ?? null;
+  }
+
+  async getSpec(screenId: ScreenId, version?: number): Promise<unknown | null> {
+    const target = version ?? this.manifests.get(screenId)?.version;
+    return target === undefined ? null : (this.specs.get(`${screenId}:${target}`) ?? null);
   }
 
   async recordTelemetry(screenId: ScreenId, batch: TelemetryBatch): Promise<string[]> {

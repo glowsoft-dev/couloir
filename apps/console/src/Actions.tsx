@@ -10,16 +10,70 @@ import { type CommandKind, type ScreenStatus, api } from "./api.js";
  *
  * Un écran muet voit tous ses boutons grisés — inutile de faire patienter
  * quinze secondes pour une commande qui ne partira jamais.
+ *
+ * On ne confirme QUE ce qui est irréversible et coûteux : couper une dalle
+ * ou redémarrer un boîtier laisse un couloir noir plusieurs minutes, et
+ * personne n'est devant pour constater l'erreur. Le reste part sans
+ * dialogue — une confirmation posée partout ne se lit plus nulle part.
  */
 
-const ACTIONS: { kind: CommandKind; label: string; params?: Record<string, unknown>; danger?: boolean }[] = [
-  { kind: "identify", label: "Identifier", params: { durationSec: 30 } },
-  { kind: "screenshot", label: "Capturer" },
-  { kind: "sync-now", label: "Synchroniser" },
-  { kind: "display-power", label: "Éteindre la dalle", params: { on: false } },
-  { kind: "clear-cache", label: "Vider le cache" },
-  { kind: "restart-app", label: "Relancer", danger: true },
-  { kind: "reboot", label: "Redémarrer", danger: true },
+interface Action {
+  kind: CommandKind;
+  label: string;
+  params?: Record<string, unknown>;
+  danger?: boolean;
+  /** Ce qu'on demande de confirmer, à la première personne du singulier. */
+  confirm?: (screen: ScreenStatus) => string;
+  /** Ce que fait le bouton, en clair, au survol comme au clavier. */
+  hint: string;
+}
+
+const ACTIONS: Action[] = [
+  {
+    kind: "identify",
+    label: "Identifier",
+    params: { durationSec: 30 },
+    hint: "Affiche le code et l'adresse de l'écran en grand pendant 30 secondes.",
+  },
+  {
+    kind: "screenshot",
+    label: "Capturer",
+    hint: "Renvoie une image de ce que l'écran affiche réellement.",
+  },
+  {
+    kind: "sync-now",
+    label: "Synchroniser",
+    hint: "Demande à l'écran d'aller chercher son contenu tout de suite.",
+  },
+  {
+    kind: "display-power",
+    label: "Éteindre la dalle",
+    params: { on: false },
+    danger: true,
+    confirm: (screen) =>
+      `Éteindre la dalle de ${screen.code} ? Le couloir restera noir jusqu'au prochain rallumage.`,
+    hint: "Coupe l'affichage. Un message d'urgence le rallume.",
+  },
+  {
+    kind: "clear-cache",
+    label: "Vider le cache",
+    hint: "Efface les médias téléchargés et les reprend depuis le serveur.",
+  },
+  {
+    kind: "restart-app",
+    label: "Relancer",
+    danger: true,
+    confirm: (screen) => `Relancer l'application de ${screen.code} ? L'écran sera noir quelques secondes.`,
+    hint: "Redémarre le logiciel sans redémarrer la machine.",
+  },
+  {
+    kind: "reboot",
+    label: "Redémarrer",
+    danger: true,
+    confirm: (screen) =>
+      `Redémarrer le boîtier de ${screen.code} ? Il sera injoignable une à deux minutes, et personne n'est sur place pour vérifier qu'il revient.`,
+    hint: "Redémarre la machine entière.",
+  },
 ];
 
 export function ScreenActions({ screen }: { screen: ScreenStatus }) {
@@ -27,7 +81,9 @@ export function ScreenActions({ screen }: { screen: ScreenStatus }) {
   const [feedback, setFeedback] = useState<{ text: string; error?: boolean } | null>(null);
   const [shot, setShot] = useState<string | null>(null);
 
-  async function run(kind: CommandKind, params?: Record<string, unknown>) {
+  async function run(action: Action) {
+    if (action.confirm && !globalThis.confirm(action.confirm(screen))) return;
+    const { kind, params } = action;
     setBusy(kind);
     setFeedback(null);
     try {
@@ -74,9 +130,10 @@ export function ScreenActions({ screen }: { screen: ScreenStatus }) {
             <button
               key={action.kind}
               type="button"
-              className={action.danger ? "ghost" : ""}
+              className={action.danger ? "ghost danger" : ""}
+              title={action.hint}
               disabled={!screen.online || busy !== null}
-              onClick={() => void run(action.kind, action.params)}
+              onClick={() => void run(action)}
             >
               {busy === action.kind ? "…" : action.label}
             </button>

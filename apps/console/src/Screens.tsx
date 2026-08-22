@@ -19,6 +19,19 @@ export function ScreenList({
   selectedId: string | null;
   onSelect: (screen: ScreenStatus) => void;
 }) {
+  const [query, setQuery] = useState("");
+
+  // Le filtre n'apparaît qu'à partir du moment où parcourir la liste des
+  // yeux devient pénible. Avant, c'est un champ de plus à ignorer.
+  const filterable = screens.length > 8;
+  const needle = query.trim().toLowerCase();
+  const shown =
+    filterable && needle
+      ? screens.filter((s) =>
+          [s.code, s.label, s.building, s.area].some((v) => v?.toLowerCase().includes(needle)),
+        )
+      : screens;
+
   return (
     <section className="panel">
       <header>
@@ -27,13 +40,28 @@ export function ScreenList({
         <span className="pill">{screens.length}</span>
       </header>
 
+      {filterable && (
+        <div className="body tight">
+          <input
+            type="search"
+            value={query}
+            placeholder="Filtrer par code, nom ou bâtiment"
+            aria-label="Filtrer les écrans"
+            onChange={(e) => setQuery(e.target.value)}
+          />
+        </div>
+      )}
+
       <div className="body tight">
         {screens.length === 0 ? (
           <p className="empty">
-            Aucun écran pour l'instant. Branchez un boîtier : il affichera un code d'appairage.
+            Aucun écran pour l'instant. Branchez un boîtier : il affichera un code d'appairage, et
+            il apparaîtra ici tout seul.
           </p>
+        ) : shown.length === 0 ? (
+          <p className="empty">Aucun écran ne correspond à « {query.trim()} ».</p>
         ) : (
-          screens.map((screen) => (
+          shown.map((screen) => (
             <button
               key={screen.id}
               type="button"
@@ -53,8 +81,12 @@ export function ScreenList({
               <span className="screen-meta">
                 {screen.online ? relativeTime(screen.lastHeartbeatAtMs) : "hors ligne"}
                 <br />
-                v{screen.manifestVersion}
-                {screen.platform ? ` · ${screen.platform}` : ""}
+                {/* « v0 » ne veut rien dire pour personne : on nomme l'état. */}
+                {screen.manifestVersion === 0 ? (
+                  <span className="warn-text">rien de publié</span>
+                ) : (
+                  `version ${screen.manifestVersion}`
+                )}
               </span>
             </button>
           ))

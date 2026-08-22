@@ -590,6 +590,91 @@ parc entier mettrait de longues minutes à revenir après un déploiement.
 graphique répond « capture d'écran non disponible » plutôt que d'échouer :
 « échec » enverrait l'opérateur chercher un problème qui n'existe pas.
 
+## L'ergonomie de la console
+
+Trois décisions structurent le parcours quotidien, et elles se tiennent
+ensemble.
+
+### Rouvrir plutôt que refaire
+
+L'éditeur s'ouvrait vide devant un écran qui affichait déjà quelque chose.
+On ne pouvait donc que remplacer à l'aveugle : pour changer un bandeau, il
+fallait recomposer la diffusion entière de mémoire.
+
+Le manifeste ne permet pas de remonter au choix d'origine — il en est le
+résultat, en identifiants de médias et en durées. On conserve donc la
+composition telle qu'elle a été saisie, dans une colonne `spec` ajoutée aux
+manifestes (migration 003). `GET /v1/console/screens/:id/composition` la
+rend, et l'éditeur s'ouvre dessus.
+
+On enregistre la composition **saisie**, pas la composition résolue :
+rouvrir doit rendre « toutes les classes » et non la liste figée des classes
+qui existaient ce jour-là.
+
+La colonne est nullable, et les publications antérieures à la migration
+n'en ont pas. La console le dit alors franchement — « cet écran diffuse la
+version 7, publiée avant que les compositions ne soient conservées » —
+plutôt que de présenter un éditeur vide qui laisserait croire à un écran
+sans contenu.
+
+### L'annulation à la place de la confirmation
+
+Revenir à une version passée ne réécrit rien : on republie l'ancien contenu
+sous un nouveau numéro. L'historique reste une suite de faits — « on est
+revenu à ce contenu tel jour » — plutôt qu'un état qu'on remonterait en
+effaçant ce qui s'est passé. Conséquence utile : une annulation s'annule
+elle-même.
+
+Publier étant devenu réversible, publier ne demande pas confirmation. Le
+message de succès porte un lien « Revenir à la version N », offert au moment
+où l'on s'aperçoit de l'erreur. Une boîte de dialogue posée partout se clique
+sans être lue au bout de trois jours ; un lien lisible au bon moment se lit.
+
+On confirme donc uniquement ce qui est irréversible **et** invisible depuis
+la console : éteindre une dalle, relancer l'application, redémarrer un
+boîtier. Ces trois-là laissent un couloir noir sans personne pour le
+constater.
+
+Un retour arrière remonte l'éditeur, qui relit ce qui est réellement
+diffusé. Sans ça la console continuerait d'afficher l'ancienne composition
+en annonçant l'ancienne version : elle mentirait sur l'état de l'écran, ce
+qui est pire que de ne rien afficher.
+
+### Nommer l'état plutôt que le numéroter
+
+« v0 » ne veut rien dire pour personne : la liste affiche « rien de publié ».
+Un bouton grisé dit pourquoi il l'est. Un badge « brouillon » signale que ce
+qu'on voit à l'écran n'est pas ce qu'on vient de modifier. Le chemin du
+premier jour montre l'étape suivante — une seule à la fois — et disparaît de
+lui-même dès que l'installation tient debout.
+
+### L'extinction programmée, et un piège de calendrier
+
+Une dalle allumée la nuit s'use et consomme pour personne. Les plages se
+règlent par écran et voyagent dans le manifeste ; la coque native coupe
+réellement l'alimentation quand elle sait le faire.
+
+Les jours cochés désignent le jour où la plage **commence**, pas celui où
+l'on se trouve. La distinction n'est pas théorique : avec l'ancienne
+sémantique, « du lundi au vendredi, 19:00 → 07:30 » rallumait l'écran le
+samedi à minuit, parce que le samedi n'était pas coché. Personne ne lit la
+phrase ainsi. La console affiche maintenant le récapitulatif en toutes
+lettres — « éteint les lundi, mardi, mercredi, jeudi et vendredi à partir de
+19:00, jusqu'à 07:30 le lendemain matin » — et `packages/renderer/src/schedule.test.ts`
+tient cette phrase, y compris le cas du samedi matin.
+
+L'urgence passe avant l'extinction : elle rallume l'écran. La console le
+promet sous le réglage, et deux tests du réalisateur le garantissent.
+
+### Le téléphone
+
+La console se consulte debout dans un couloir, un boîtier dans une main :
+appairer un écran et l'identifier doivent tenir sur un écran de poche. En
+dessous de 640 px la barre supérieure se replie, les onglets passent en
+pleine largeur, et les cibles tactiles montent à 44 px. La grille d'emploi
+du temps défile dans son propre conteneur — la page, elle, ne défile jamais
+latéralement.
+
 ## Ce qui n'est pas encore fait
 
 Le socle tourne, mais il reste volontairement incomplet :
@@ -597,7 +682,8 @@ Le socle tourne, mais il reste volontairement incomplet :
 - **Les comptes** — la console est protégée par un jeton partagé, pas par des
   comptes nominatifs avec rôles et journal d'audit.
 - **La programmation calendaire** — on publie, ça part tout de suite. Les
-  plages horaires et les campagnes datées restent à faire.
+  campagnes datées restent à faire. L'extinction de la dalle, elle, se
+  programme.
 - **Le plan interactif** — la console liste les écrans, elle ne les situe pas
   encore sur un plan d'étage.
 - **TLS** — les échanges ne sont pas chiffrés en développement. La signature
@@ -607,11 +693,14 @@ Le socle tourne, mais il reste volontairement incomplet :
   Linux existe et sert de référence : elles n'ont qu'à implémenter `ports.ts`.
 - **Les gabarits** — le rendu n'en connaît que la forme générale (bandeau,
   titre, texte). La bibliothèque annoncée au cahier des charges reste à faire.
-- **La console** — aucune interface.
 - **Le connecteur du site** — `/connectors/news` est un bouchon. Le vrai
   connecteur WordPress reste à écrire.
-- **La publication** — `/dev/publish-demo` tient lieu de console. Réservé au
-  mode développement.
+- **Les groupes d'écrans** — on publie écran par écran. Publier sur « tout le
+  bâtiment B » d'un geste reste à faire.
+- **Les preuves de diffusion** — la télémétrie les remonte et les conserve,
+  aucun rapport ne les exploite encore.
+- **L'import d'emploi du temps** — la saisie est manuelle. Un import CSV et
+  les vues par salle ou par enseignant restent à faire.
 
 
 ---

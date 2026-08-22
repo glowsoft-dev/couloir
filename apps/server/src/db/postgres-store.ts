@@ -200,7 +200,7 @@ export class PostgresStore implements Store {
     }));
   }
 
-  async putManifest(manifest: Manifest): Promise<void> {
+  async putManifest(manifest: Manifest, spec?: unknown): Promise<void> {
     const problems = findBrokenReferences(manifest);
     if (problems.length > 0) {
       throw new Error(`manifeste incohérent :\n  - ${problems.join("\n  - ")}`);
@@ -209,9 +209,15 @@ export class PostgresStore implements Store {
     await this.sql.begin(async (tx) => {
       // Historisé, pour permettre le retour à la version précédente.
       await tx`
-        INSERT INTO manifests (screen_id, version, document)
-        VALUES (${manifest.screenId}, ${manifest.version}, ${tx.json(manifest as never)})
-        ON CONFLICT (screen_id, version) DO UPDATE SET document = EXCLUDED.document
+        INSERT INTO manifests (screen_id, version, document, spec)
+        VALUES (
+          ${manifest.screenId},
+          ${manifest.version},
+          ${tx.json(manifest as never)},
+          ${spec === undefined ? null : tx.json(spec as never)}
+        )
+        ON CONFLICT (screen_id, version)
+        DO UPDATE SET document = EXCLUDED.document, spec = COALESCE(EXCLUDED.spec, manifests.spec)
       `;
       await tx`
         UPDATE screens
@@ -229,6 +235,39 @@ export class PostgresStore implements Store {
       LIMIT 1
     `;
     return rows[0] ? Manifest.parse(rows[0].document) : null;
+  }
+
+  async listManifests(screenId: ScreenId, limit = 20) {
+    const rows = await this.sql<{ version: number; created_at: Date }[]>`
+      SELECT version, created_at FROM manifests
+      WHERE screen_id = ${screenId}
+      ORDER BY version DESC
+      LIMIT ${limit}
+    `;
+    return rows.map((row) => ({
+      version: row.version,
+      issuedAt: row.created_at.toISOString().replace(/\.\d+Z$/, "Z"),
+    }));
+  }
+
+  async getManifestVersion(screenId: ScreenId, version: number): Promise<Manifest | null> {
+    const rows = await this.sql<{ document: unknown }[]>`
+      SELECT document FROM manifests WHERE screen_id = ${screenId} AND version = ${version}
+    `;
+    return rows[0] ? Manifest.parse(rows[0].document) : null;
+  }
+
+  async getSpec(screenId: ScreenId, version?: number): Promise<unknown | null> {
+    const rows =
+      version === undefined
+        ? await this.sql<{ spec: unknown }[]>`
+            SELECT spec FROM manifests WHERE screen_id = ${screenId}
+            ORDER BY version DESC LIMIT 1
+          `
+        : await this.sql<{ spec: unknown }[]>`
+            SELECT spec FROM manifests WHERE screen_id = ${screenId} AND version = ${version}
+          `;
+    return rows[0]?.spec ?? null;
   }
 
   async recordTelemetry(screenId: ScreenId, batch: TelemetryBatch): Promise<string[]> {
