@@ -12,7 +12,7 @@
  * version. Je m'y suis laissé prendre.
  */
 import { spawn, spawnSync } from "node:child_process";
-import { mkdirSync, rmSync } from "node:fs";
+import { createWriteStream, mkdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -83,16 +83,21 @@ function lancer(nom, commande, args, env) {
 }
 
 /**
- * Les journaux ne s'affichent que sur demande.
+ * Les journaux vont toujours dans un fichier, et à l'écran sur demande.
  *
- * Deux écrans et un serveur en JSON noient l'écran, et on cherche à voir
- * l'interface, pas les battements de cœur. `--journaux` les fait revenir.
+ * Deux écrans et un serveur en JSON noient le terminal, et on cherche à voir
+ * l'interface, pas les battements de cœur. Mais les cacher entièrement fait
+ * qu'au moment où quelque chose cloche, il ne reste aucune trace de ce qui
+ * s'est passé. Ils sont donc toujours écrits.
  */
 const journauxVisibles = process.argv.includes("--journaux");
+const FICHIER_JOURNAL = join(racine, "journal.log");
+let fluxJournal = null;
+
 function journaliser(nom, données) {
-  if (!journauxVisibles) return;
   for (const ligne of String(données).split("\n").filter(Boolean)) {
-    console.log(`${c.gris(`[${nom}]`)} ${ligne}`);
+    fluxJournal?.write(`[${nom}] ${ligne}\n`);
+    if (journauxVisibles) console.log(`${c.gris(`[${nom}]`)} ${ligne}`);
   }
 }
 
@@ -124,6 +129,9 @@ if (neuf) {
   }
   fait();
 }
+
+mkdirSync(racine, { recursive: true });
+fluxJournal = createWriteStream(FICHIER_JOURNAL, { flags: "a" });
 
 étape("base de données");
 exécuter("docker", ["compose", "up", "-d", "postgres"], { stdio: "ignore" });
@@ -167,21 +175,39 @@ for (const écran of ÉCRANS) {
   fait(`http://127.0.0.1:${écran.port}`);
 }
 
-// Les boîtiers qui attendent d'être rattachés, avec leur code.
 const attente = await fetch(`http://localhost:${PORT_SERVEUR}/v1/console/screens`, {
   headers: { Authorization: `Bearer ${JETON}` },
 })
   .then((r) => r.json())
   .catch(() => ({ pending: [], screens: [] }));
 
+/**
+ * Quel port affiche quel écran.
+ *
+ * On le demande à l'écran lui-même : l'ordre d'appairage n'a aucune raison de
+ * suivre l'ordre de démarrage, si bien que « écran 1 » peut très bien être
+ * B·2·02. Sans cette ligne on publie sur un écran en regardant l'autre, on
+ * conclut que la publication ne marche pas, et on reclique.
+ */
+for (const écran of ÉCRANS) {
+  écran.identité = await fetch(`http://127.0.0.1:${écran.port}/state`)
+    .then((r) => r.json())
+    .then((é) => é.screenCode ?? (é.pairing ? `à rattacher · ${é.pairing.code}` : null))
+    .catch(() => null);
+}
+
 console.log(`
 ${c.gras("Ouvrez trois onglets")}
 
-  ${c.gras("Console")}    http://localhost:${PORT_SERVEUR}          ${c.gris(`jeton : ${JETON}`)}
-${ÉCRANS.map((é, i) => `  ${c.gras(`Écran ${i + 1}`)}   http://127.0.0.1:${é.port}`).join("\n")}
+  ${c.gras("Console")}   http://localhost:${PORT_SERVEUR}   ${c.gris(`jeton : ${JETON}`)}
+${ÉCRANS.map(
+  (é) =>
+    `  ${c.gras("Écran")}     http://127.0.0.1:${é.port}   ${é.identité ? c.vert(é.identité) : c.gris("pas encore rattaché")}`,
+).join("\n")}
 
-  ${c.gris("Les deux écrans sont de vrais lecteurs : ils téléchargent les médias,")}
-  ${c.gris("vérifient les empreintes et gardent leur contenu hors connexion.")}
+  ${c.gris("Chaque onglet écran porte son code dans le titre : on sait toujours")}
+  ${c.gris("lequel on regarde. Ce sont de vrais lecteurs, pas des aperçus — ils")}
+  ${c.gris("téléchargent les médias et gardent leur contenu hors connexion.")}
 `);
 
 if (attente.pending?.length) {
@@ -195,7 +221,8 @@ if (attente.pending?.length) {
 }
 
 console.log(`${c.gris("Scénarios à éprouver : docs/tester.md")}`);
-console.log(`${c.gris("--journaux pour voir les journaux · --neuf pour repartir de zéro · Ctrl-C pour arrêter")}\n`);
+console.log(`${c.gris(`Journaux : ${FICHIER_JOURNAL}`)}`);
+console.log(`${c.gris("--journaux pour les voir défiler · --neuf pour repartir de zéro · Ctrl-C pour arrêter")}\n`);
 
 // On ne rend pas la main : les enfants tournent tant que la console est ouverte.
 await new Promise(() => {});

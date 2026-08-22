@@ -272,7 +272,7 @@ export function PublishPanel({
             </span>
           )}
           {dirty && (
-            <span className="pill warn" title="Ces changements ne sont pas encore diffusés">
+            <span className="pill brouillon" title="Ces changements ne sont pas encore diffusés">
               brouillon
             </span>
           )}

@@ -59,6 +59,27 @@ export function startPlayer(container: HTMLElement, options: PlayerHostOptions):
     tick();
   });
 
+  /**
+   * Le nom de l'onglet, c'est le code de l'écran.
+   *
+   * Sans ça toutes les pages s'appellent « Couloir » : trois onglets ouverts
+   * et on ne sait plus lequel regarde quel couloir. On publie alors sur un
+   * écran en observant l'autre, on conclut que la publication ne marche pas,
+   * et on reclique. C'est exactement ce qui est arrivé.
+   *
+   * Utile aussi en vrai : on ouvre la page d'un écran depuis un portable pour
+   * vérifier ce qu'il diffuse, et l'onglet dit lequel c'est.
+   */
+  function nommerOnglet(next: PlayerState): void {
+    if (typeof document === "undefined") return;
+    const titre = next.screenCode
+      ? next.screenCode
+      : next.pairing
+        ? `À rattacher · ${next.pairing.code}`
+        : "Couloir";
+    if (document.title !== titre) document.title = titre;
+  }
+
   async function poll(): Promise<void> {
     if (stopped) return;
     try {
@@ -69,6 +90,7 @@ export function startPlayer(container: HTMLElement, options: PlayerHostOptions):
         // identifiants de diapositives ne survivent pas forcément.
         if (next.manifest?.version !== state?.manifest?.version) rotations = new Map();
         state = next;
+        nommerOnglet(next);
       }
     } catch {
       // L'agent n'est pas joignable : on continue avec le dernier état connu

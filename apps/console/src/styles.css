@@ -104,6 +104,14 @@ code, .mono { font-family: "IBM Plex Mono", ui-monospace, monospace; }
 .pill.accent { border-color: var(--accent); color: var(--accent); }
 .pill.warn { border-color: var(--warn); color: var(--warn); }
 
+/* Un brouillon n'est pas une anomalie : c'est un travail en cours. L'ambre
+   sert partout ailleurs à signaler ce qui ne va pas — un écran muet, une
+   dalle éteinte. L'employer ici faisait lire « erreur » là où il fallait
+   lire « pas encore diffusé ». */
+.pill.brouillon {
+  border-style: dashed; border-color: var(--rule-strong); color: var(--ink-soft);
+}
+
 /* ---------- appairage ---------- */
 .pending {
   display: flex; align-items: center; gap: 12px;
