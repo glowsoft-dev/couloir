@@ -105,6 +105,10 @@ export const RENDERER_CSS = `
 .couloir-row time { font-variant-numeric: tabular-nums; color: var(--accent); font-weight: 600 }
 .couloir-row .room { color: var(--ink-soft); font-size: .85em }
 .couloir-row--changed { color: var(--signal) }
+/* Annulé : barré, mais TOUJOURS affiché. Le faire disparaître priverait
+   l'élève de l'information qui l'intéresse le plus. */
+.couloir-row--cancelled time, .couloir-row--cancelled > span:nth-child(2) { text-decoration: line-through }
+.couloir-row--cancelled { opacity: .78 }
 .couloir-row--changed time, .couloir-row--changed .room { color: var(--signal) }
 .couloir-badge {
   font-size: .7em; letter-spacing: .1em; text-transform: uppercase; font-weight: 700;

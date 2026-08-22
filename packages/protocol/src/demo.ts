@@ -53,7 +53,7 @@ export function demoManifest(screenId: string, version = 1): Manifest {
       { id: "repli", slideIds: ["repli-identite"] },
     ],
     slides: [
-      { kind: "data", id: "actu-du-jour", sourceId: "actus-site", view: "news-list", durationMs: 14_000 },
+      { kind: "data", id: "actu-du-jour", sourceId: "actus-site", view: "news-list", params: {}, durationMs: 14_000 },
       { kind: "media", id: "affiche-portes-ouvertes", assetId: "affiche-po-2026", durationMs: 9_000 },
       {
         kind: "template",
@@ -67,7 +67,7 @@ export function demoManifest(screenId: string, version = 1): Manifest {
         assetIds: [],
         durationMs: 11_000,
       },
-      { kind: "data", id: "cours-du-jour", sourceId: "edt", view: "timetable-day", durationMs: 20_000 },
+      { kind: "data", id: "cours-du-jour", sourceId: "edt", view: "timetable-day", params: {}, durationMs: 20_000 },
       {
         kind: "widget",
         id: "ticker",
