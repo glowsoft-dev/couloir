@@ -10,6 +10,7 @@ distance depuis une seule application.
 
 ```bash
 pnpm install
+pnpm demo          # tout, d'un coup : serveur + 2 écrans + console
 pnpm test          # 186 tests
 pnpm build
 pnpm build:browser # le bundle de rendu servi au navigateur
@@ -23,6 +24,12 @@ pnpm dev:console   # la console en rechargement à chaud, :5174
 **Une seule adresse.** Le serveur sert la console lui-même : l'interface à la
 racine, l'API sous `/v1`. Un seul domaine, un seul certificat, un seul endroit
 à ouvrir. `pnpm dev:console` n'est qu'un confort de développement.
+
+Pour éprouver le système sans matériel, `pnpm demo` monte un couloir complet
+sur le poste — serveur, deux écrans simulés, console — et affiche les trois
+adresses à ouvrir. Les scénarios qui valent le détour sont dans
+[docs/tester.md](docs/tester.md) : couper le réseau, redémarrer un écran
+pendant la panne, déclencher une urgence, revenir à une version passée.
 
 La console a besoin d'un jeton, défini au lancement du serveur :
 

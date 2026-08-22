@@ -10,24 +10,22 @@ services:
     # 5432 est souvent déjà pris par un autre projet sur la machine :
     # on expose ailleurs pour ne rien perturber.
     ports: ["5442:5432"]
+    # Montage lié, pas volume nommé : `docker compose down -v` ne l'efface
+    # donc pas. Pour repartir de zéro, `pnpm demo --neuf` supprime le
+    # dossier lui-même.
     volumes: ["./data/postgres:/var/lib/postgresql/data"]
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U couloir"]
       interval: 5s
       retries: 10
 
-  # Stockage des médias, compatible S3.
-  minio:
-    image: minio/minio:latest
-    command: server /data --console-address ":9001"
-    environment:
-      MINIO_ROOT_USER: couloir
-      MINIO_ROOT_PASSWORD: couloirsecret
-    ports: ["9000:9000", "9001:9001"]
-    volumes: ["./data/minio:/data"]
-
-  # Canal de commandes temps réel vers les écrans.
-  mosquitto:
-    image: eclipse-mosquitto:2
-    ports: ["1883:1883"]
-    command: mosquitto -c /mosquitto-no-auth.conf
+# Deux services ont été retirés d'ici, parce qu'aucune ligne de code ne les
+# appelait et que `infra:up` les démarrait quand même :
+#
+#   mosquitto — le canal temps réel passe par HTTP (voir protocol/commands.ts).
+#               Même port, même certificat, même signature que le reste, et ça
+#               traverse les mandataires d'un réseau d'école sans rien demander.
+#
+#   minio     — les médias sont sur disque. `MediaStore` est écrit pour qu'un
+#               stockage compatible S3 ne change que cette classe ; le jour où
+#               ce sera utile, le service reviendra avec le code qui s'en sert.

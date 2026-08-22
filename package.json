@@ -20,7 +20,8 @@
     "build:browser": "pnpm --filter @couloir/renderer build:browser",
     "dev:console": "pnpm --filter @couloir/console dev",
     "build:console": "pnpm --filter @couloir/console build",
-    "start": "pnpm build && pnpm build:browser && pnpm build:console && pnpm --filter @couloir/server start"
+    "start": "pnpm build && pnpm build:browser && pnpm build:console && pnpm --filter @couloir/server start",
+    "demo": "node scripts/demo.mjs"
   },
   "devDependencies": {
     "@types/node": "^22.10.5",
