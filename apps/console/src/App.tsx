@@ -1,10 +1,14 @@
 import { useCallback, useEffect, useState } from "react";
+import { GridView } from "./Grid.js";
 import { PublishPanel } from "./Publish.js";
 import { PendingPanel, ScreenList } from "./Screens.js";
+import { SettingsView } from "./Settings.js";
+import { TodayView } from "./Today.js";
 import {
   ApiError,
   type PendingDevice,
   type ScreenStatus,
+  type TimetableSetup,
   api,
   forgetToken,
   storeToken,
@@ -12,20 +16,35 @@ import {
 } from "./api.js";
 
 /**
- * La console.
+ * La console d'administration.
  *
- * Deux colonnes : le parc à gauche, ce qu'on lui envoie à droite. Le parc se
- * rafraîchit tout seul — un écran qui tombe doit se voir sans qu'on pense à
- * recharger la page.
+ * Un seul endroit pour tout piloter : les écrans, ce qu'ils affichent, et
+ * l'emploi du temps qui les alimente. Servie par le serveur lui-même, donc
+ * une seule adresse à retenir et un seul certificat à gérer.
+ *
+ * L'onglet par défaut est « Aujourd'hui » : c'est celui qu'on ouvre tous les
+ * matins pour signaler trois absences, pas la configuration annuelle.
  */
+
+type Tab = "today" | "screens" | "grid" | "settings";
+
+const TABS: { id: Tab; label: string }[] = [
+  { id: "today", label: "Aujourd'hui" },
+  { id: "screens", label: "Écrans" },
+  { id: "grid", label: "Grille" },
+  { id: "settings", label: "Réglages" },
+];
+
 export function App() {
   const [authenticated, setAuthenticated] = useState(storedToken() !== null);
+  const [tab, setTab] = useState<Tab>("today");
   const [screens, setScreens] = useState<ScreenStatus[]>([]);
   const [pending, setPending] = useState<PendingDevice[]>([]);
+  const [setup, setSetup] = useState<TimetableSetup | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const refresh = useCallback(async () => {
+  const refreshScreens = useCallback(async () => {
     try {
       const result = await api.screens();
       setScreens(result.screens);
@@ -41,18 +60,30 @@ export function App() {
     }
   }, []);
 
+  const refreshSetup = useCallback(async () => {
+    try {
+      setSetup(await api.timetable.setup());
+    } catch {
+      // L'emploi du temps n'est monté que si le serveur a une base : la
+      // console reste utilisable pour les écrans sans lui.
+      setSetup(null);
+    }
+  }, []);
+
   useEffect(() => {
     if (!authenticated) return;
-    void refresh();
+    void refreshScreens();
+    void refreshSetup();
     // Cinq secondes : un écran qui tombe se voit dans la foulée sans que la
     // page ait besoin d'être rechargée.
-    const timer = setInterval(() => void refresh(), 5_000);
+    const timer = setInterval(() => void refreshScreens(), 5_000);
     return () => clearInterval(timer);
-  }, [authenticated, refresh]);
+  }, [authenticated, refreshScreens, refreshSetup]);
 
   if (!authenticated) return <Gate onAuthenticated={() => setAuthenticated(true)} />;
 
   const selected = screens.find((screen) => screen.id === selectedId) ?? null;
+  const offline = screens.filter((s) => !s.online).length;
 
   return (
     <div className="app">
@@ -60,11 +91,24 @@ export function App() {
         <span className="brand">
           Couloir <span>console</span>
         </span>
-        <span className="pill">{screens.filter((s) => s.online).length} en ligne</span>
-        {screens.some((s) => !s.online) && (
-          <span className="pill warn">{screens.filter((s) => !s.online).length} muets</span>
-        )}
+
+        <nav className="tabs">
+          {TABS.map((entry) => (
+            <button
+              key={entry.id}
+              type="button"
+              className="tab"
+              aria-current={tab === entry.id}
+              onClick={() => setTab(entry.id)}
+            >
+              {entry.label}
+            </button>
+          ))}
+        </nav>
+
         <span className="spacer" />
+        <span className="pill">{screens.length - offline} en ligne</span>
+        {offline > 0 && <span className="pill warn">{offline} muets</span>}
         <button
           type="button"
           className="ghost"
@@ -77,25 +121,51 @@ export function App() {
         </button>
       </div>
 
-      <div className="layout">
-        <div>
-          {error && <p className="notice error">{error}</p>}
-          <ScreenList screens={screens} selectedId={selectedId} onSelect={(s) => setSelectedId(s.id)} />
-          <PendingPanel pending={pending} onPaired={() => void refresh()} />
-        </div>
+      <div className="page">
+        {error && <p className="notice error">{error}</p>}
 
-        <div>
-          {selected ? (
-            <PublishPanel screen={selected} onPublished={() => void refresh()} />
+        {tab === "screens" && (
+          <div className="split">
+            <div>
+              <ScreenList screens={screens} selectedId={selectedId} onSelect={(s) => setSelectedId(s.id)} />
+              <PendingPanel pending={pending} onPaired={() => void refreshScreens()} />
+            </div>
+            <div>
+              {selected ? (
+                <PublishPanel
+                  screen={selected}
+                  classes={setup?.classes ?? []}
+                  onPublished={() => void refreshScreens()}
+                />
+              ) : (
+                <section className="panel">
+                  <header>
+                    <h2>Publication</h2>
+                  </header>
+                  <p className="empty">Choisissez un écran à gauche.</p>
+                </section>
+              )}
+            </div>
+          </div>
+        )}
+
+        {tab !== "screens" &&
+          (setup ? (
+            <>
+              {tab === "today" && <TodayView setup={setup} onChanged={() => void refreshSetup()} />}
+              {tab === "grid" && <GridView setup={setup} onChanged={() => void refreshSetup()} />}
+              {tab === "settings" && <SettingsView setup={setup} onChanged={() => void refreshSetup()} />}
+            </>
           ) : (
             <section className="panel">
               <header>
-                <h2>Publication</h2>
+                <h2>Emploi du temps</h2>
               </header>
-              <p className="empty">Choisissez un écran à gauche.</p>
+              <p className="empty">
+                Indisponible : le serveur tourne sans base de données. Lancez-le avec PostgreSQL.
+              </p>
             </section>
-          )}
-        </div>
+          ))}
       </div>
     </div>
   );

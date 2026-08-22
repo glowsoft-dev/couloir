@@ -1,11 +1,15 @@
 import { createHash } from "node:crypto";
+import { existsSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import Fastify, { type FastifyInstance } from "fastify";
 import multipart from "@fastify/multipart";
+import fastifyStatic from "@fastify/static";
 import {
   EnrollClaimRequest,
   EnrollStartRequest,
   HEADERS,
   type Manifest,
+  API_PREFIX,
   ROUTES,
   TelemetryBatch,
   demoManifest,
@@ -40,6 +44,14 @@ export interface AppOptions {
   publicUrl?: string;
   /** Emploi du temps. Absent = les routes ne sont pas montées. */
   timetable?: TimetableRepository;
+  /**
+   * Dossier de la console compilée.
+   *
+   * Servie par le serveur lui-même : une seule adresse, un seul certificat,
+   * un seul endroit à ouvrir. Deux serveurs distincts obligeraient à retenir
+   * deux URL et à gérer du CORS pour rien.
+   */
+  consoleDir?: string;
   /**
    * Coupe la vérification des signatures.
    * Réservé aux tests qui portent sur autre chose : en production, une
@@ -418,7 +430,43 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
     });
   }
 
+  // --- La console ------------------------------------------------------
+  // Enregistrée en dernier : elle capte tout ce que les routes précédentes
+  // n'ont pas pris, et sert `index.html` pour que la navigation interne
+  // fonctionne au rechargement.
+
+  const consoleDir = options.consoleDir ?? defaultConsoleDir();
+  if (consoleDir && existsSync(consoleDir)) {
+    // `wildcard: true` résout les fichiers À LA REQUÊTE. Avec `false`,
+    // Fastify indexe le dossier au démarrage : reconstruire la console
+    // pendant que le serveur tourne servait alors la page de repli à la
+    // place des fichiers, avec un type MIME faux.
+    void app.register(fastifyStatic, { root: consoleDir, wildcard: true });
+
+    app.setNotFoundHandler((request, reply) => {
+      // Les chemins d'API restent des 404 francs : renvoyer la console à un
+      // player qui se trompe d'adresse le laisserait deviner longtemps.
+      if (request.url.startsWith(API_PREFIX) || request.url.startsWith("/connectors")) {
+        return reply.code(404).send({
+          code: "not-found",
+          message: "Route inconnue.",
+          retryable: false,
+        });
+      }
+      return reply.sendFile("index.html");
+    });
+  }
+
   return app;
+}
+
+/** La console compilée, telle qu'elle est déposée à côté du serveur. */
+function defaultConsoleDir(): string | null {
+  const candidates = [
+    fileURLToPath(new URL("./console", import.meta.url)),
+    fileURLToPath(new URL("../../console/dist", import.meta.url)),
+  ];
+  return candidates.find((candidate) => existsSync(candidate)) ?? null;
 }
 
 /** L'adresse par laquelle le player joint le serveur, telle qu'il la voit. */
