@@ -5,6 +5,7 @@ import { PostgresStore } from "./db/postgres-store.js";
 import { PostgresTimetable } from "./timetable/repository.js";
 import type { TimetableRepository } from "./timetable/repository.js";
 import { MediaStore } from "./media.js";
+import { DepotComptes } from "./comptes/depot.js";
 import { seedDemoScreen } from "./seed.js";
 import { MemoryStore, type Store } from "./store.js";
 
@@ -29,6 +30,7 @@ await media.load();
 
 let store: Store;
 let timetable: TimetableRepository | undefined;
+let comptes: DepotComptes | undefined;
 let closeDatabase = async () => {};
 
 if (useMemory) {
@@ -41,16 +43,49 @@ if (useMemory) {
   if (applied.length === 0) console.log("[couloir] schéma déjà à jour");
   store = new PostgresStore(sql);
   timetable = new PostgresTimetable(sql);
+  comptes = new DepotComptes(sql);
   closeDatabase = () => store.close();
+
+  // Les sessions expirées ne servent qu'à faire grossir la table. Une fois
+  // par heure suffit largement : rien ne dépend de leur disparition, la
+  // validité est vérifiée à chaque requête.
+  const purge = setInterval(
+    () => void comptes?.purgerSessions().catch(() => {}),
+    60 * 60 * 1000,
+  );
+  purge.unref();
 }
 
 // L'adresse par laquelle les ÉCRANS joignent le serveur — pas celle de la
 // console. Les deux diffèrent dès qu'il y a plus d'une machine.
 const publicUrl = process.env["COULOIR_PUBLIC_URL"] ?? `http://localhost:${PORT}`;
 
+/**
+ * La clé de secours.
+ *
+ * Elle ne publie rien : elle crée le premier administrateur, et rouvre la
+ * porte le jour où le dernier a perdu son mot de passe.
+ */
 const consoleToken = process.env["COULOIR_CONSOLE_TOKEN"];
 if (!consoleToken) {
   console.warn("[couloir] COULOIR_CONSOLE_TOKEN absent : la console restera fermée");
+}
+
+/**
+ * Le cookie de session n'est posé qu'en HTTPS, sauf indication contraire.
+ *
+ * Un cookie `Secure` est purement et simplement ignoré sur HTTP : sans cette
+ * bascule, la console de développement serait impossible à utiliser. On la
+ * déduit de l'adresse publique plutôt que de la laisser au hasard d'une
+ * variable qu'on oublierait de poser en production.
+ */
+const cookieSécurisé =
+  process.env["COULOIR_COOKIE_NON_SECURISE"] === "1" ? false : publicUrl.startsWith("https://");
+
+if (comptes && (await comptes.compter()) === 0) {
+  console.warn(
+    "[couloir] aucun compte : ouvrez la console pour créer le premier administrateur",
+  );
 }
 
 const app = buildApp({
@@ -58,6 +93,8 @@ const app = buildApp({
   media,
   logger: true,
   devRoutes: process.env["COULOIR_DEV"] === "1",
+  cookieSécurisé,
+  ...(comptes ? { comptes } : {}),
   ...(consoleToken ? { consoleToken } : {}),
   ...(timetable ? { timetable } : {}),
   timetableUrl: process.env["COULOIR_TIMETABLE_URL"] ?? `${publicUrl}/v1/timetable/day`,

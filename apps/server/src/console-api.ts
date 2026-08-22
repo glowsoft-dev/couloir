@@ -8,6 +8,9 @@ import type { Store } from "./store.js";
 import type { CommandBus } from "./commands.js";
 import type { Manifest } from "@couloir/protocol";
 import type { TimetableRepository } from "./timetable/repository.js";
+import type { DepotComptes } from "./comptes/depot.js";
+import { NOM_COOKIE, enregistrerRoutesComptes, journaliserAction, pouvoirRequis } from "./comptes/routes.js";
+import { peut } from "./comptes/roles.js";
 
 /**
  * L'API de la console.
@@ -131,10 +134,20 @@ export interface ConsoleApiOptions {
   timetable?: TimetableRepository;
   /** Canal de commandes. Absent = les boutons d'action restent inertes. */
   commands?: CommandBus;
+  /**
+   * Les comptes nominatifs. Absent = pas de base, la clé de secours seule
+   * ouvre la console, comme avant.
+   */
+  comptes?: DepotComptes;
+  /** Faux en développement : un cookie `Secure` ne survit pas à HTTP. */
+  cookieSécurisé?: boolean;
 }
 
 export function registerConsoleApi(app: FastifyInstance, options: ConsoleApiOptions): void {
   const { store, media } = options;
+
+  /** Ouvertes à tous : sans elles, personne ne pourrait jamais entrer. */
+  const LIBRES = new Set([`${CONSOLE_PREFIX}/session`, `${CONSOLE_PREFIX}/amorce`]);
 
   app.addHook("preHandler", async (request, reply) => {
     if (!request.url.startsWith(CONSOLE_PREFIX)) return;
@@ -147,15 +160,79 @@ export function registerConsoleApi(app: FastifyInstance, options: ConsoleApiOpti
       });
     }
 
-    const header = request.headers.authorization;
-    if (!jetonValide(header, options.adminToken)) {
+    const chemin = request.url.split("?")[0]!;
+    const clefDeSecours = jetonValide(request.headers.authorization, options.adminToken);
+
+    // Sans base de comptes, la clé de secours reste la seule clé, et elle
+    // ouvre tout. C'est le mode d'avant, conservé pour que le serveur en
+    // mémoire — démonstrations, tests — continue de fonctionner.
+    if (!options.comptes) {
+      if (!clefDeSecours) {
+        return reply.code(401).send({
+          code: "unauthorized",
+          message: "Jeton d'accès invalide.",
+          retryable: false,
+        });
+      }
+      request.identité = { utilisateur: null, clefDeSecours: true, auteur: "jeton partagé" };
+      return;
+    }
+
+    const jetonDeSession = request.cookies[NOM_COOKIE];
+    const utilisateur = jetonDeSession
+      ? await options.comptes.utilisateurDeSession(jetonDeSession)
+      : null;
+
+    request.identité = {
+      utilisateur,
+      clefDeSecours,
+      auteur: utilisateur?.nom ?? (clefDeSecours ? "clé de secours" : "inconnu"),
+    };
+
+    if (LIBRES.has(chemin)) return;
+
+    /**
+     * La clé de secours ne publie rien.
+     *
+     * Elle sert à créer le premier administrateur, et à rouvrir la porte le
+     * jour où le dernier a perdu son mot de passe. Quelqu'un qui la
+     * connaîtrait ne peut donc pas s'en servir pour afficher quoi que ce soit
+     * dans un couloir — il ne peut que se donner un compte, ce qui laisse
+     * une trace au journal.
+     */
+    if (!utilisateur) {
+      const pouvoir = pouvoirRequis(request.method, chemin);
+      if (clefDeSecours && pouvoir === "administrer") return;
       return reply.code(401).send({
-        code: "unauthorized",
-        message: "Jeton d'accès invalide.",
+        code: "non-authentifie",
+        message: clefDeSecours
+          ? "La clé de secours ne donne accès qu'aux comptes. Connectez-vous avec le vôtre."
+          : "Connectez-vous pour accéder à la console.",
+        retryable: false,
+      });
+    }
+
+    const pouvoir = pouvoirRequis(request.method, chemin);
+    if (!peut(utilisateur.role, pouvoir)) {
+      return reply.code(403).send({
+        code: "role-insuffisant",
+        message:
+          pouvoir === "administrer"
+            ? "Les comptes et le journal sont réservés aux administrateurs."
+            : "Votre compte est en lecture seule.",
         retryable: false,
       });
     }
   });
+
+  if (options.comptes) {
+    enregistrerRoutesComptes(app, {
+      depot: options.comptes,
+      prefixe: CONSOLE_PREFIX,
+      ...(options.adminToken ? { clefDeSecours: options.adminToken } : {}),
+      cookieSécurisé: options.cookieSécurisé ?? false,
+    });
+  }
 
   // --- Le parc ---------------------------------------------------------
 
@@ -289,6 +366,15 @@ export function registerConsoleApi(app: FastifyInstance, options: ConsoleApiOpti
       await store.putManifest(manifest, pastSpec ?? undefined);
       options.commands?.issue(request.params.screenId, "sync-now");
 
+      if (options.comptes) {
+        // Le code d'étiquette plutôt que l'identifiant : c'est ce qu'on lit
+        // dans le couloir, et c'est ce qu'on cherchera dans le journal.
+        const écran = await store.getScreen(request.params.screenId);
+        await journaliserAction(request, options.comptes, "retour à une version", écran?.code, {
+          depuis: target,
+          vers: manifest.version,
+        });
+      }
       request.log.info({ screenId: request.params.screenId, from: target }, "retour à une version");
       return { version: manifest.version, restoredFrom: target };
     },
@@ -336,6 +422,12 @@ export function registerConsoleApi(app: FastifyInstance, options: ConsoleApiOpti
       }
 
       const command = bus.issue(screen.id, parsed.data, request.body?.params ?? {});
+      // On journalise ce qui change l'état d'un boîtier, pas ce qui le
+      // consulte : redémarrer et couper une dalle laissent un couloir noir,
+      // synchroniser et capturer ne changent rien.
+      if (options.comptes && ["reboot", "restart-app", "display-power", "clear-cache"].includes(parsed.data)) {
+        await journaliserAction(request, options.comptes, `commande : ${parsed.data}`, screen.code);
+      }
       const result = await waitForResult(bus, command.id, 15_000);
 
       if (!result) {
@@ -390,6 +482,11 @@ export function registerConsoleApi(app: FastifyInstance, options: ConsoleApiOpti
 
     // C'est ce réveil qui fait passer l'urgence de la minute à la seconde.
     options.commands?.broadcast(touched.appliedIds, "sync-now");
+    if (options.comptes) {
+      await journaliserAction(request, options.comptes, "déclenchement d'une urgence", emergency.title, {
+        ecrans: touched.applied.length,
+      });
+    }
     request.log.warn({ screens: touched.applied.length, title: emergency.title }, "message d'urgence");
     return { emergency, ...touched };
   });
@@ -402,6 +499,11 @@ export function registerConsoleApi(app: FastifyInstance, options: ConsoleApiOpti
         : null,
     );
     options.commands?.broadcast(touched.appliedIds, "sync-now");
+    if (options.comptes) {
+      await journaliserAction(request, options.comptes, "levée de l'urgence", undefined, {
+        ecrans: touched.applied.length,
+      });
+    }
     request.log.info({ screens: touched.applied.length }, "fin du message d'urgence");
     return touched;
   });
@@ -503,6 +605,12 @@ export function registerConsoleApi(app: FastifyInstance, options: ConsoleApiOpti
         // On réveille l'écran plutôt que d'attendre son prochain cycle :
         // publier doit se voir dans la seconde, pas dans la minute.
         options.commands?.issue(screen.id, "sync-now");
+        if (options.comptes) {
+          await journaliserAction(request, options.comptes, "publication", screen.code, {
+            version: manifest.version,
+            miseEnPage: spec.layout,
+          });
+        }
         request.log.info({ screenId: screen.id, version: manifest.version }, "publication");
         return { screenId: screen.id, version: manifest.version };
       } catch (error) {

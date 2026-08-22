@@ -7,16 +7,19 @@ import { PublishPanel } from "./Publish.js";
 import { PendingPanel, ScreenList } from "./Screens.js";
 import { SettingsView } from "./Settings.js";
 import { TodayView } from "./Today.js";
+import { Comptes } from "./Comptes.js";
+import { Entree } from "./Entree.js";
 import {
   ApiError,
   type Emergency,
   type PendingDevice,
   type ScreenStatus,
   type TimetableSetup,
+  type Utilisateur,
   api,
-  forgetToken,
-  storeToken,
-  storedToken,
+  libelléDuRole,
+  peutAdministrer,
+  peutPublier,
 } from "./api.js";
 
 /**
@@ -30,17 +33,25 @@ import {
  * matins pour signaler trois absences, pas la configuration annuelle.
  */
 
-type Tab = "today" | "screens" | "grid" | "settings";
+type Tab = "today" | "screens" | "grid" | "settings" | "comptes";
 
-const TABS: { id: Tab; label: string }[] = [
+const TABS: { id: Tab; label: string; administrateur?: boolean }[] = [
   { id: "today", label: "Aujourd'hui" },
   { id: "screens", label: "Écrans" },
   { id: "grid", label: "Grille" },
   { id: "settings", label: "Réglages" },
+  { id: "comptes", label: "Comptes", administrateur: true },
 ];
 
 export function App() {
-  const [authenticated, setAuthenticated] = useState(storedToken() !== null);
+  /**
+   * Qui est connecté.
+   *
+   * `undefined` tant qu'on ne sait pas — la console demande au serveur au
+   * chargement, parce que la session vit dans un cookie que le JavaScript de
+   * la page ne peut pas lire. C'est justement ce qui la protège.
+   */
+  const [moi, setMoi] = useState<Utilisateur | null | undefined>(undefined);
   const [tab, setTab] = useState<Tab>("today");
   const [screens, setScreens] = useState<ScreenStatus[]>([]);
   const [pending, setPending] = useState<PendingDevice[]>([]);
@@ -67,8 +78,8 @@ export function App() {
       setError(null);
     } catch (cause) {
       if (cause instanceof ApiError && cause.status === 401) {
-        forgetToken();
-        setAuthenticated(false);
+        // Session expirée ou fermée ailleurs : on repasse par l'entrée.
+        setMoi(null);
         return;
       }
       setError(cause instanceof Error ? cause.message : String(cause));
@@ -95,16 +106,27 @@ export function App() {
   }, [screens, selectedId]);
 
   useEffect(() => {
-    if (!authenticated) return;
+    void api
+      .moi()
+      .then((r) => setMoi(r.utilisateur))
+      .catch(() => setMoi(null));
+  }, []);
+
+  useEffect(() => {
+    if (!moi) return;
     void refreshScreens();
     void refreshSetup();
     // Cinq secondes : un écran qui tombe se voit dans la foulée sans que la
     // page ait besoin d'être rechargée.
     const timer = setInterval(() => void refreshScreens(), 5_000);
     return () => clearInterval(timer);
-  }, [authenticated, refreshScreens, refreshSetup]);
+  }, [moi, refreshScreens, refreshSetup]);
 
-  if (!authenticated) return <Gate onAuthenticated={() => setAuthenticated(true)} />;
+  if (moi === undefined) return <div className="gate"><h1>Couloir</h1><p>Un instant…</p></div>;
+  if (moi === null) return <Entree onEntré={setMoi} />;
+
+  const administrateur = peutAdministrer(moi.role);
+  const publie = peutPublier(moi.role);
 
   const selected = screens.find((screen) => screen.id === selectedId) ?? null;
 
@@ -118,7 +140,7 @@ export function App() {
         </span>
 
         <nav className="tabs">
-          {TABS.map((entry) => (
+          {TABS.filter((entry) => !entry.administrateur || administrateur).map((entry) => (
             <button
               key={entry.id}
               type="button"
@@ -132,15 +154,21 @@ export function App() {
         </nav>
 
         <span className="spacer" />
-        <EmergencyBar active={emergency} onChanged={() => void refreshScreens()} />
+        {/* Un lecteur ne déclenche pas d'urgence : le serveur le refuserait,
+            et un bouton qui refuse est pire qu'un bouton absent. */}
+        {publie && <EmergencyBar active={emergency} onChanged={() => void refreshScreens()} />}
         <span className="pill">{screens.length - offline} en ligne</span>
         {offline > 0 && <span className="pill warn">{offline} muets</span>}
+
+        <span className="moi" title={`${moi.courriel} · ${libelléDuRole(moi.role)}`}>
+          {moi.nom}
+          {!publie && <span className="pill">lecture seule</span>}
+        </span>
         <button
           type="button"
           className="ghost"
           onClick={() => {
-            forgetToken();
-            setAuthenticated(false);
+            void api.deconnexion().finally(() => setMoi(null));
           }}
         >
           Se déconnecter
@@ -199,7 +227,10 @@ export function App() {
           </div>
         )}
 
+        {tab === "comptes" && administrateur && <Comptes moi={moi} />}
+
         {tab !== "screens" &&
+          tab !== "comptes" &&
           (setup ? (
             <>
               {tab === "today" && <TodayView setup={setup} onChanged={() => void refreshSetup()} />}
@@ -280,58 +311,5 @@ function FirstRun({
         </button>
       )}
     </div>
-  );
-}
-
-function Gate({ onAuthenticated }: { onAuthenticated: () => void }) {
-  const [token, setToken] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-
-  async function submit(event: React.FormEvent) {
-    event.preventDefault();
-    setBusy(true);
-    setError(null);
-    storeToken(token.trim());
-    try {
-      // On vérifie tout de suite plutôt que de laisser découvrir l'erreur
-      // au premier clic utile.
-      await api.screens();
-      onAuthenticated();
-    } catch (cause) {
-      forgetToken();
-      setError(cause instanceof Error ? cause.message : String(cause));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  return (
-    <form className="gate" onSubmit={submit}>
-      <h1>Couloir</h1>
-      <p>Console de pilotage des écrans.</p>
-
-      {error && <p className="notice error">{error}</p>}
-
-      <div className="field">
-        <label htmlFor="token">Jeton d'accès</label>
-        <input
-          id="token"
-          type="password"
-          value={token}
-          autoComplete="off"
-          onChange={(e) => setToken(e.target.value)}
-        />
-      </div>
-
-      <button type="submit" className="primary" disabled={!token.trim() || busy}>
-        {busy ? "Vérification…" : "Entrer"}
-      </button>
-
-      <p className="hint">
-        Jeton partagé, défini par <span className="mono">COULOIR_CONSOLE_TOKEN</span> sur le serveur.
-        Les comptes nominatifs viendront.
-      </p>
-    </form>
   );
 }

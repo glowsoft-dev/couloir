@@ -3,6 +3,8 @@ import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import Fastify, { type FastifyInstance } from "fastify";
 import multipart from "@fastify/multipart";
+import fastifyCookie from "@fastify/cookie";
+import type { DepotComptes } from "./comptes/depot.js";
 import fastifyStatic from "@fastify/static";
 import {
   EnrollClaimRequest,
@@ -65,6 +67,15 @@ export interface AppOptions {
   trustUnsignedDevices?: boolean;
   /** Ouvre les routes de publication de développement. */
   devRoutes?: boolean;
+  /**
+   * Les comptes nominatifs.
+   *
+   * Absent — serveur en mémoire, tests — la clé de secours reste la seule
+   * clé et ouvre tout, comme avant les comptes.
+   */
+  comptes?: DepotComptes;
+  /** Faux en développement : un cookie `Secure` ne survit pas à HTTP. */
+  cookieSécurisé?: boolean;
 }
 
 /** ETag calculé sur le contenu : deux manifestes identiques donnent le même. */
@@ -483,6 +494,9 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
   }
 
   if (options.consoleToken !== undefined || options.devRoutes) {
+    // Le greffon cookie ne sert qu'à la console : les écrans s'authentifient
+    // par signature, ils n'en ont aucun.
+    void app.register(fastifyCookie);
     registerConsoleApi(app, {
       store,
       media: media_,
@@ -491,6 +505,8 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
       ...(options.publicUrl !== undefined ? { publicUrl: options.publicUrl } : {}),
       ...(options.timetable ? { timetable: options.timetable } : {}),
       commands: commandBus,
+      ...(options.comptes ? { comptes: options.comptes } : {}),
+      ...(options.cookieSécurisé !== undefined ? { cookieSécurisé: options.cookieSécurisé } : {}),
     });
   }
 

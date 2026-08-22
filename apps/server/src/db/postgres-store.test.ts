@@ -50,7 +50,7 @@ beforeAll(async () => {
   try {
     // Base dédiée : ces tests vident les tables entre chaque cas, et ils ne
     // doivent surtout pas le faire sur la base de développement.
-    const candidate = await ensureTestDatabase();
+    const candidate = await ensureTestDatabase("entrepot");
     await candidate.unsafe("SELECT 1");
     await migrate(candidate);
     sql = candidate;

@@ -168,26 +168,33 @@ export class ApiError extends Error {
   }
 }
 
-const TOKEN_KEY = "couloir.token";
+/**
+ * La clé de secours, gardée le temps d'une page.
+ *
+ * Elle ne sert qu'à créer le premier administrateur ou à réparer un compte.
+ * Volontairement en mémoire et non dans `localStorage` : elle ne doit pas
+ * traîner sur le poste après la fermeture de l'onglet. La session, elle,
+ * voyage dans un cookie que le JavaScript de la page ne peut pas lire.
+ */
+let clefDeSecours: string | null = null;
 
-export function storedToken(): string | null {
-  return localStorage.getItem(TOKEN_KEY);
+export function poserClefDeSecours(clef: string | null): void {
+  clefDeSecours = clef;
 }
 
-export function storeToken(token: string): void {
-  localStorage.setItem(TOKEN_KEY, token);
-}
-
-export function forgetToken(): void {
-  localStorage.removeItem(TOKEN_KEY);
+export function clefDeSecoursPosée(): boolean {
+  return clefDeSecours !== null;
 }
 
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
-  const token = storedToken();
   const response = await fetch(path, {
     ...init,
+    // Le cookie de session est `SameSite=Strict` : il faut le demander
+    // explicitement, `fetch` ne l'envoie pas de lui-même sur toutes les
+    // configurations.
+    credentials: "same-origin",
     headers: {
-      ...(token ? { authorization: `Bearer ${token}` } : {}),
+      ...(clefDeSecours ? { authorization: `Bearer ${clefDeSecours}` } : {}),
       ...(init.body && !(init.body instanceof FormData) ? { "content-type": "application/json" } : {}),
       ...(init.headers as Record<string, string> | undefined),
     },
@@ -208,7 +215,72 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
 const call = <T>(path: string, init?: RequestInit) => request<T>(`/v1/console${path}`, init);
 const json = (method: string, body: unknown) => ({ method, body: JSON.stringify(body) });
 
+export interface Utilisateur {
+  id: string;
+  courriel: string;
+  nom: string;
+  role: Role;
+  actif: boolean;
+  creeLe: string;
+  derniereConnexion: string | null;
+}
+
+export type Role = "administrateur" | "editeur" | "lecteur";
+
+export interface EntreeJournal {
+  id: string;
+  au: string;
+  auteur: string;
+  action: string;
+  cible: string | null;
+  details: unknown;
+}
+
+export function libelléDuRole(role: Role): string {
+  return { administrateur: "Administrateur", editeur: "Éditeur", lecteur: "Lecteur" }[role];
+}
+
+export function descriptionDuRole(role: Role): string {
+  return {
+    administrateur: "Publie, et gère les comptes.",
+    editeur: "Publie sur les écrans, tient l'emploi du temps, déclenche une urgence.",
+    lecteur: "Consulte sans rien modifier.",
+  }[role];
+}
+
+/** Ce que le rôle autorise. Sert à masquer, pas à protéger : le serveur tranche. */
+export function peutPublier(role: Role | undefined): boolean {
+  return role === "administrateur" || role === "editeur";
+}
+
+export function peutAdministrer(role: Role | undefined): boolean {
+  return role === "administrateur";
+}
+
 export const api = {
+  /** Faut-il demander de se connecter, ou de créer le premier compte ? */
+  amorce: () => call<{ comptesExistants: boolean }>("/amorce"),
+
+  connexion: (courriel: string, motDePasse: string) =>
+    call<{ utilisateur: Utilisateur }>("/session", json("POST", { courriel, motDePasse })),
+
+  deconnexion: () => call<{ fermée: boolean }>("/session", { method: "DELETE" }),
+
+  moi: () => call<{ utilisateur: Utilisateur }>("/moi"),
+
+  premierCompte: (input: { courriel: string; nom: string; motDePasse: string }) =>
+    call<{ utilisateur: Utilisateur }>("/utilisateurs/premier", json("POST", input)),
+
+  utilisateurs: {
+    lister: () => call<{ utilisateurs: Utilisateur[] }>("/utilisateurs"),
+    creer: (input: { courriel: string; nom: string; motDePasse: string; role: Role }) =>
+      call<{ utilisateur: Utilisateur }>("/utilisateurs", json("POST", input)),
+    modifier: (id: string, patch: { role?: Role; actif?: boolean; motDePasse?: string }) =>
+      call<{ utilisateur: Utilisateur }>(`/utilisateurs/${id}`, json("PATCH", patch)),
+  },
+
+  journal: () => call<{ entrees: EntreeJournal[] }>("/journal"),
+
   screens: () => call<{ screens: ScreenStatus[]; pending: PendingDevice[] }>("/screens"),
   screen: (id: string) => call<{ screen: ScreenStatus; manifest: unknown }>(`/screens/${id}`),
 

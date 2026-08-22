@@ -27,9 +27,20 @@ export const DEFAULT_DATABASE_URL = "postgres://couloir:couloir@localhost:5442/c
 export const TEST_DATABASE_URL =
   process.env["DATABASE_URL_TEST"] ?? "postgres://couloir:couloir@localhost:5442/couloir_test";
 
-/** Crée la base de test si elle n'existe pas encore. */
-export async function ensureTestDatabase(): Promise<Sql> {
-  const name = new URL(TEST_DATABASE_URL).pathname.slice(1);
+/**
+ * Crée la base de test si elle n'existe pas encore.
+ *
+ * `suffixe` donne à chaque fichier de tests sa propre base. Ce n'est pas du
+ * luxe : Vitest exécute les fichiers en parallèle, et chacun vide les tables
+ * entre deux cas. Sur une base commune, un fichier efface les données d'un
+ * autre en pleine exécution — l'échec tombe alors ailleurs que la cause, et
+ * il ne se reproduit pas quand on relance le fichier seul.
+ */
+export async function ensureTestDatabase(suffixe?: string): Promise<Sql> {
+  const base = new URL(TEST_DATABASE_URL);
+  const name = base.pathname.slice(1) + (suffixe ? `_${suffixe}` : "");
+  const url = new URL(`/${name}`, TEST_DATABASE_URL).toString();
+
   const admin = postgres(new URL("/postgres", TEST_DATABASE_URL).toString(), { max: 1 });
   try {
     const existing = await admin`SELECT 1 FROM pg_database WHERE datname = ${name}`;
@@ -38,7 +49,7 @@ export async function ensureTestDatabase(): Promise<Sql> {
   } finally {
     await admin.end({ timeout: 5 });
   }
-  return postgres(TEST_DATABASE_URL, { max: 4, onnotice: () => {} });
+  return postgres(url, { max: 4, onnotice: () => {} });
 }
 
 export function connect(options: DatabaseOptions = {}): Sql {

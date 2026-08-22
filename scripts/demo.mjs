@@ -199,7 +199,7 @@ for (const écran of ÉCRANS) {
 console.log(`
 ${c.gras("Ouvrez trois onglets")}
 
-  ${c.gras("Console")}   http://localhost:${PORT_SERVEUR}   ${c.gris(`jeton : ${JETON}`)}
+  ${c.gras("Console")}   http://localhost:${PORT_SERVEUR}
 ${ÉCRANS.map(
   (é) =>
     `  ${c.gras("Écran")}     http://127.0.0.1:${é.port}   ${é.identité ? c.vert(é.identité) : c.gris("pas encore rattaché")}`,
@@ -209,6 +209,22 @@ ${ÉCRANS.map(
   ${c.gris("lequel on regarde. Ce sont de vrais lecteurs, pas des aperçus — ils")}
   ${c.gris("téléchargent les médias et gardent leur contenu hors connexion.")}
 `);
+
+// Les comptes changent la première question posée à l'ouverture : créer
+// l'administrateur, ou se connecter.
+const comptes = await fetch(`http://localhost:${PORT_SERVEUR}/v1/console/amorce`)
+  .then((r) => r.json())
+  .then((r) => r.comptesExistants)
+  .catch(() => null);
+
+if (comptes === false) {
+  console.log(`${c.gras("À l'ouverture de la console")} — créez le compte administrateur.
+  La clé de secours demandée est ${c.jaune(JETON)}.
+  ${c.gris("Elle ne sert qu'à ça, et à réparer un compte : elle ne publie rien.")}
+`);
+} else if (comptes === true) {
+  console.log(`${c.gris("Connectez-vous avec le compte créé précédemment.")}\n`);
+}
 
 if (attente.pending?.length) {
   console.log(`${c.gras("À faire en premier")} — rattacher les écrans, onglet ${c.gras("Écrans")} :\n`);

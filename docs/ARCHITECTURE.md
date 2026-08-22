@@ -675,12 +675,93 @@ pleine largeur, et les cibles tactiles montent à 44 px. La grille d'emploi
 du temps défile dans son propre conteneur — la page, elle, ne défile jamais
 latéralement.
 
+## Les comptes
+
+Jusqu'ici la console était protégée par un jeton unique, partagé. Trois
+conséquences : personne ne pouvait être retiré sans changer le secret de tout
+le monde, personne ne pouvait être limité à ce qui le concerne, et rien ne
+disait qui avait publié quoi.
+
+### Trois rôles, pas davantage
+
+`administrateur` publie et gère les comptes. `editeur` publie, tient l'emploi
+du temps, déclenche une urgence. `lecteur` consulte.
+
+Un système de permissions fines se paie en réglages que personne ne comprend
+et que tout le monde finit par mettre au maximum. Dans une école la question
+n'est jamais « peut-il modifier le champ durée » mais « est-ce qu'on lui
+confie les écrans ».
+
+Le pouvoir exigé se **déduit** du chemin et de la méthode, il n'est pas
+déclaré route par route : une règle unique ne peut pas être oubliée en
+ajoutant une route, alors qu'une annotation à recopier finit toujours par
+manquer quelque part.
+
+### La clé de secours ne publie rien
+
+`COULOIR_CONSOLE_TOKEN` reste, mais son rôle a changé. Elle crée le premier
+administrateur d'une installation neuve, et rouvre la porte le jour où le
+dernier a perdu son mot de passe. Elle ne voit aucun écran et ne publie rien.
+
+Quelqu'un qui la connaîtrait ne peut donc pas s'en servir pour afficher quoi
+que ce soit dans un couloir — il ne peut que se donner un compte, ce qui
+laisse une trace au journal. C'est un compromis assumé : une installation
+scolaire sans service informatique a besoin d'un chemin de retour, et un
+chemin de retour qui n'affiche rien vaut mieux qu'un chemin de retour absent.
+
+### Ce qui protège vraiment
+
+**Les mots de passe** passent par scrypt — dans Node, lent à dessein, et
+coûteux en mémoire, ce qui rend l'attaque par carte graphique peu rentable.
+Les paramètres sont écrits dans l'empreinte : on pourra durcir le coût dans
+cinq ans et rehacher au vol, à la connexion suivante, sans invalider un seul
+compte.
+
+**Les sessions** sont opaques et stockées **hachées**. Un jeton en clair en
+base se lit dans une sauvegarde ou un vidage ; haché, il ne sert plus à rien
+une fois volé.
+
+**Le cookie** est `httpOnly` — le JavaScript de la page ne peut pas le lire,
+donc une injection dans la console n'emporte pas la session — et
+`SameSite=Strict`, ce qui règle la falsification de requête sans jeton
+anti-CSRF. Il n'est `Secure` qu'en HTTPS : sur HTTP un cookie `Secure` n'est
+pas posé du tout, et la console de développement deviendrait inutilisable.
+
+**Une adresse inconnue ne se distingue pas d'un mot de passe faux** — ni par
+le message, ni par le temps de réponse : on hache même quand le compte
+n'existe pas, sans quoi la liste des comptes se devine au chronomètre.
+
+**Changer un mot de passe ferme toutes les sessions** de la personne, et
+désactiver un compte ferme les siennes immédiatement.
+
+**On ne se retire pas soi-même** : sans ce garde, le dernier administrateur se
+rétrograde et plus personne ne peut créer de compte.
+
+### Le journal
+
+On n'y écrit que ce qui change quelque chose pour quelqu'un : publier, revenir
+en arrière, déclencher une urgence, redémarrer un boîtier, toucher aux
+comptes. Consulter n'y figure pas — un journal noyé n'est lu par personne.
+
+Les comptes se désactivent au lieu de se supprimer, et le journal garde une
+copie du nom : « qui » est justement ce qu'il doit retenir, y compris une fois
+la personne partie.
+
+### Une base de test par fichier
+
+Détail d'outillage, mais il a coûté une heure. Vitest exécute les fichiers en
+parallèle et chacun vide les tables entre deux cas : sur une base commune, un
+fichier efface les données d'un autre en pleine exécution. L'échec tombe alors
+ailleurs que la cause, et ne se reproduit pas quand on relance le fichier
+seul. `ensureTestDatabase(suffixe)` donne à chacun la sienne.
+
 ## Ce qui n'est pas encore fait
 
 Le socle tourne, mais il reste volontairement incomplet :
 
-- **Les comptes** — la console est protégée par un jeton partagé, pas par des
-  comptes nominatifs avec rôles et journal d'audit.
+- **La réinitialisation par courriel** — un mot de passe perdu se fait
+  remplacer par un administrateur, de vive voix. Le serveur n'envoie aucun
+  message.
 - **La programmation calendaire** — on publie, ça part tout de suite. Les
   campagnes datées restent à faire. L'extinction de la dalle, elle, se
   programme.

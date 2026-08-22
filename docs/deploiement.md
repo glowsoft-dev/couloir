@@ -110,8 +110,8 @@ Ce choix se prend avec le service informatique de l'école, pas à sa place.
 
 ## Ce qui n'est pas encore là
 
-- **Les comptes nominatifs.** Un jeton partagé protège la console. Qui a
-  publié quoi n'est écrit nulle part.
+- **La réinitialisation de mot de passe par courriel.** Un administrateur en
+  donne un nouveau de vive voix ; le serveur n'envoie aucun message.
 - **Les URL de médias signées.** Un média est servi à qui connaît son
   identifiant, sans expiration.
 - **La sauvegarde automatique.** Les commandes ci-dessus sont à mettre dans

@@ -468,3 +468,51 @@ button.danger:hover:not(:disabled) { color: #fff; border-color: var(--signal); f
   .firstrun { flex-direction: column; align-items: flex-start; }
   .firstrun button { width: 100%; }
 }
+
+/* ---------- identité dans la barre ---------- */
+
+.moi {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 12.5px; color: var(--ink-soft);
+  padding-left: 14px; border-left: 1px solid var(--rule);
+}
+
+/* ---------- comptes ---------- */
+
+.compte-row {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 12px;
+  padding: 13px 0; border-top: 1px solid var(--rule);
+}
+.compte-row:first-of-type { border-top: 0; }
+/* Désactivé se voit, sans disparaître : le compte existe encore, et le
+   journal continue de le nommer. */
+.compte-row.inactif { opacity: 0.6; }
+
+.compte-identite { flex: 1; min-width: 190px; display: flex; flex-direction: column; gap: 2px; }
+.compte-nom { display: flex; align-items: center; gap: 8px; font-size: 13.5px; }
+.compte-courriel {
+  font-family: "IBM Plex Mono", monospace; font-size: 11.5px; color: var(--ink-soft);
+}
+.compte-identite .hint { margin-top: 0; }
+
+.compte-row select { width: auto; padding: 5px 8px; font-size: 12.5px; }
+.compte-row button { font-size: 12px; padding: 6px 10px; }
+
+.mdp-inline { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.mdp-inline input { width: 190px; padding: 5px 8px; font-size: 12.5px; }
+
+/* Étiquette réservée aux lecteurs d'écran : le sélecteur de rôle a besoin
+   d'un nom, la colonne n'a pas besoin d'un titre de plus. */
+.sr {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+
+.gate .link { display: block; margin-top: 12px; margin-left: 0; }
+.gate .field + .field { margin-top: 14px; }
+
+@media (max-width: 640px) {
+  .moi { padding-left: 0; border-left: 0; }
+  .compte-row { gap: 8px; }
+  .compte-row select, .compte-row button { min-height: 40px; }
+}
