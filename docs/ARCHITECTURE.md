@@ -465,6 +465,44 @@ de données du manifeste, un player doit pouvoir la joindre. Ce qui en sort ne
 contient aucune donnée d'élève : des matières, des salles, et le nom d'usage
 d'un enseignant — exactement ce qui figurait déjà sur les panneaux papier.
 
+## Une seule adresse
+
+Le serveur sert la console lui-même : l'interface à la racine, l'API sous
+`/v1`. Deux serveurs distincts obligeraient à retenir deux URL, à gérer deux
+certificats et du CORS pour rien.
+
+Le repli SPA renvoie `index.html` pour toute route inconnue — mais **pas**
+pour les chemins d'API : renvoyer la console à un player qui se trompe
+d'adresse le laisserait deviner longtemps. Les 404 d'API restent francs.
+
+Les fichiers sont résolus **à la requête**, pas indexés au démarrage :
+reconstruire la console pendant que le serveur tourne servait sinon la page
+de repli à la place des fichiers, avec un type MIME faux.
+
+## L'administration
+
+Quatre onglets, et l'ordre n'est pas neutre.
+
+| Onglet | À quelle fréquence |
+|---|---|
+| **Aujourd'hui** | tous les matins — c'est l'onglet par défaut |
+| **Écrans** | à la pose, puis quand on publie |
+| **Grille** | deux fois par an |
+| **Réglages** | une fois par an |
+
+« Aujourd'hui » est ouvert d'emblée parce que c'est le geste du quotidien :
+signaler trois absences et deux changements de salle, puis repartir. Le
+formulaire s'ouvre à côté de la liste, sans boîte de dialogue.
+
+**L'aperçu de l'écran** est dessiné comme le vrai rendu, à droite de la
+saisie : on pose un changement et on le voit tel que les élèves le verront.
+Sans ça il faudrait aller dans un couloir pour vérifier une faute de frappe.
+
+Dans l'éditeur de grille, le raccourci qui rend la saisie d'une année
+supportable : **dupliquer un cours sur les autres jours**. Une matière revient
+rarement une seule fois par semaine. Les créneaux déjà pris sont laissés tels
+quels plutôt qu'écrasés.
+
 ## Ce qui n'est pas encore fait
 
 Le socle tourne, mais il reste volontairement incomplet :
@@ -485,9 +523,6 @@ Le socle tourne, mais il reste volontairement incomplet :
 - **Les gabarits** — le rendu n'en connaît que la forme générale (bandeau,
   titre, texte). La bibliothèque annoncée au cahier des charges reste à faire.
 - **La console** — aucune interface.
-- **L'éditeur de grille** — la saisie passe par l'API, pas encore par une
-  interface. C'est la prochaine pièce, et la plus attendue : personne ne
-  saisira une année scolaire en `curl`.
 - **Le connecteur du site** — `/connectors/news` est un bouchon. Le vrai
   connecteur WordPress reste à écrire.
 - **La publication** — `/dev/publish-demo` tient lieu de console. Réservé au

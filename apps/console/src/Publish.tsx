@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { type Media, type PublishItem, type ScreenStatus, api, humanSize } from "./api.js";
+import { type Media, type PublishItem, type SchoolClass, type ScreenStatus, api, humanSize } from "./api.js";
 
 /**
  * Le panneau de publication.
@@ -12,11 +12,21 @@ import { type Media, type PublishItem, type ScreenStatus, api, humanSize } from 
 
 type Draft = PublishItem & { key: string; title: string };
 
-export function PublishPanel({ screen, onPublished }: { screen: ScreenStatus; onPublished: () => void }) {
+export function PublishPanel({
+  screen,
+  classes,
+  onPublished,
+}: {
+  screen: ScreenStatus;
+  classes: SchoolClass[];
+  onPublished: () => void;
+}) {
   const [media, setMedia] = useState<Media[]>([]);
   const [items, setItems] = useState<Draft[]>([]);
   const [layout, setLayout] = useState<"plein-ecran" | "principal-et-cours">("plein-ecran");
   const [ticker, setTicker] = useState("");
+  /** Vide = toutes les classes défilent. Une seule = écran fixe. */
+  const [classIds, setClassIds] = useState<string[]>([]);
   const [message, setMessage] = useState<{ text: string; error?: boolean } | null>(null);
   const [busy, setBusy] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
@@ -75,6 +85,7 @@ export function PublishPanel({ screen, onPublished }: { screen: ScreenStatus; on
         layout,
         items: items.map(({ key, title, ...item }) => item),
         ...(ticker.trim() ? { ticker: ticker.trim() } : {}),
+        ...(layout === "principal-et-cours" && classIds.length > 0 ? { timetableClassIds: classIds } : {}),
       });
       setMessage({ text: `Publié en version ${version}. L'écran l'affichera dans la minute.` });
       onPublished();
@@ -113,6 +124,48 @@ export function PublishPanel({ screen, onPublished }: { screen: ScreenStatus; on
             <option value="principal-et-cours">Contenu + colonne des cours</option>
           </select>
         </div>
+
+        {layout === "principal-et-cours" && (
+          <div className="field">
+            <label>Classes affichées dans la colonne</label>
+            {classes.length === 0 ? (
+              <p className="hint">Aucune classe. Créez-en dans l'onglet Réglages.</p>
+            ) : (
+              <>
+                <div className="day-picker">
+                  {classes.map((schoolClass) => {
+                    const selected = classIds.includes(schoolClass.id);
+                    return (
+                      <button
+                        key={schoolClass.id}
+                        type="button"
+                        className="day-chip"
+                        aria-pressed={selected}
+                        title={schoolClass.label}
+                        onClick={() =>
+                          setClassIds((current) =>
+                            selected
+                              ? current.filter((id) => id !== schoolClass.id)
+                              : [...current, schoolClass.id],
+                          )
+                        }
+                      >
+                        {schoolClass.code}
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className="hint">
+                  {classIds.length === 0
+                    ? "Aucune sélection : toutes les classes défilent."
+                    : classIds.length === 1
+                      ? "Une seule classe : l'écran l'affiche en permanence."
+                      : `${classIds.length} classes, affichées à tour de rôle.`}
+                </p>
+              </>
+            )}
+          </div>
+        )}
 
         <div className="field">
           <label>Bibliothèque</label>

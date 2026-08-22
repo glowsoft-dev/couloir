@@ -49,18 +49,6 @@ code, .mono { font-family: "IBM Plex Mono", ui-monospace, monospace; }
 .brand span { color: var(--accent); }
 .topbar .spacer { margin-left: auto; }
 
-.layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 20px;
-  padding: 20px;
-  max-width: 1280px;
-  width: 100%;
-  margin: 0 auto;
-}
-@media (min-width: 900px) {
-  .layout { grid-template-columns: minmax(0, 1fr) minmax(0, 420px); align-items: start; }
-}
 
 /* ---------- blocs ---------- */
 .panel {
@@ -198,3 +186,108 @@ button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .gate h1 { font-size: 22px; margin: 0 0 6px; }
 .gate p { color: var(--ink-soft); margin: 0 0 20px; }
 .hint { font-size: 12px; color: var(--ink-faint); margin-top: 8px; }
+
+/* ---------- navigation ---------- */
+.tabs { display: flex; gap: 2px; margin-left: 18px; }
+.tab {
+  background: none; border: 0; border-radius: 6px;
+  padding: 6px 12px; color: var(--ink-soft); font-weight: 500;
+}
+.tab:hover { background: var(--surface-2); color: var(--ink); border-color: transparent }
+.tab[aria-current="true"] { background: var(--surface-2); color: var(--accent) }
+
+.page { max-width: 1280px; width: 100%; margin: 0 auto; padding: 20px; }
+.split { display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; align-items: start; }
+@media (min-width: 900px) {
+  .split { grid-template-columns: minmax(0, 1fr) minmax(0, 420px); }
+}
+
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+
+/* ---------- grille hebdomadaire ---------- */
+.grid-scroll { overflow-x: auto; }
+.grid { border-collapse: separate; border-spacing: 3px; width: 100%; }
+.grid th {
+  font-size: 10px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--ink-faint); padding: 4px; text-align: center; font-weight: 600;
+}
+.grid-period { text-align: right !important; white-space: nowrap; padding-right: 8px !important; }
+.grid-period .mono { font-size: 10px; color: var(--ink-faint); font-weight: 400 }
+
+.cell {
+  width: 100%; min-height: 52px; padding: 6px 8px;
+  display: flex; flex-direction: column; justify-content: center; gap: 2px;
+  background: var(--ground); border: 1px dashed var(--rule); border-radius: 5px;
+  text-align: left; position: relative;
+}
+.cell:hover { border-color: var(--accent); border-style: solid }
+.cell.filled { background: var(--surface-2); border-style: solid; border-color: var(--rule-strong) }
+.cell-subject { font-size: 12.5px; line-height: 1.25; }
+.cell-room { font-size: 10.5px; color: var(--ink-faint); }
+.cell-empty { color: var(--ink-faint); font-size: 16px; text-align: center; opacity: .35 }
+.cell-parity {
+  position: absolute; top: 3px; right: 4px;
+  font-size: 9px; font-weight: 700; color: var(--accent);
+}
+
+.day-picker { display: flex; flex-wrap: wrap; gap: 6px; }
+.day-chip { padding: 5px 11px; font-size: 12px; }
+/* Le survol générique repeint le texte en vert : sur une pastille déjà
+   verte, il la rendait illisible. La règle de survol est donc rétablie
+   explicitement pour l'état sélectionné. */
+.day-chip[aria-pressed="true"],
+.day-chip[aria-pressed="true"]:hover {
+  background: var(--accent);
+  color: var(--accent-ink);
+  border-color: var(--accent);
+}
+
+/* ---------- changements du jour ---------- */
+.lesson-row {
+  display: grid; grid-template-columns: 46px minmax(0, 1fr) auto;
+  gap: 10px; align-items: center;
+  padding: 9px 0; border-top: 1px solid var(--rule);
+}
+.lesson-row:first-of-type { border-top: 0 }
+.lesson-row .time { color: var(--accent); font-size: 12px; font-weight: 500 }
+.lesson-name { font-size: 13.5px; line-height: 1.3 }
+.applied { display: flex; align-items: center; gap: 4px }
+.pill.signal { border-color: var(--signal); color: var(--signal) }
+
+.period-row, .holiday-row {
+  display: grid; gap: 6px; align-items: center;
+  padding: 5px 0; border-top: 1px solid var(--rule);
+}
+.period-row { grid-template-columns: minmax(0, 1fr) 108px 108px 30px }
+.holiday-row { grid-template-columns: minmax(0, 1fr) 138px 138px 30px }
+.period-row:first-of-type, .holiday-row:first-of-type { border-top: 0 }
+.period-row input, .holiday-row input { padding: 5px 8px; font-size: 12.5px }
+
+/* ---------- aperçu de l'écran ----------
+   Dessiné comme le vrai rendu : on saisit un changement et on le voit tel
+   que les élèves le verront, sans aller dans un couloir. */
+.preview {
+  background: #0E1211; border: 1px solid var(--rule-strong); border-radius: 6px;
+  padding: 16px; min-height: 200px;
+}
+.preview-class {
+  font-size: 10px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase;
+  color: var(--accent); margin: 0 0 12px;
+}
+.preview-notice { color: var(--ink-soft); font-size: 14px; margin: 0 }
+.preview-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 5px }
+.preview-row {
+  display: grid; grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 10px; align-items: baseline;
+  font-size: 13px; padding-bottom: 5px; border-bottom: 1px solid var(--rule);
+}
+.preview-row time { color: var(--accent); font-variant-numeric: tabular-nums; font-weight: 600 }
+.preview-room { color: var(--ink-faint); font-size: 11.5px }
+.preview-row--changed, .preview-row--changed time, .preview-row--changed .preview-room { color: var(--signal) }
+/* Annulé : barré, mais toujours affiché — comme sur l'écran. */
+.preview-row--cancelled time, .preview-row--cancelled > span:nth-child(2) { text-decoration: line-through }
+.preview-row--cancelled { opacity: .78 }
+.preview-badge {
+  font-size: 9px; letter-spacing: .08em; text-transform: uppercase; font-weight: 700;
+  border: 1px solid currentColor; border-radius: 3px; padding: 1px 5px; margin-left: 7px;
+}
