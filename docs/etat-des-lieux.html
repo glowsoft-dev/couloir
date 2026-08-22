@@ -192,10 +192,10 @@ li::marker{color:var(--ink-faint)}
 <p class="deck">L'état réel du projet, vérifié dans le code — pas ce qui était prévu.</p>
 
 <div class="tally">
-  <div class="c-ok"><b>32</b><span>utilisables</span></div>
-  <div class="c-half"><b>6</b><span>écrits, pas branchés</span></div>
-  <div class="c-none"><b>13</b><span>pas commencés</span></div>
-  <div><b>162</b><span>tests verts</span></div>
+  <div class="c-ok"><b>42</b><span>utilisables</span></div>
+  <div class="c-half"><b>1</b><span>écrit, pas branché</span></div>
+  <div class="c-none"><b>12</b><span>pas commencés</span></div>
+  <div><b>186</b><span>tests verts</span></div>
 </div>
 
 <div class="legend" style="margin-top:22px">
@@ -223,19 +223,19 @@ li::marker{color:var(--ink-faint)}
       <b>Maquette du rendu</b>
       <span class="why"><code>pnpm dev:renderer</code> — un écran de démonstration avec des boutons pour basculer entre rotation normale, données périmées, urgence, repérage, repli et extinction. Sert à vérifier une mise en page, pas un écran réel.</span>
     </div></div>
-    <div class="item none"><div class="bar"></div><div class="text">
-      <b>Aperçu complet avant publication</b>
-      <span class="why">Ce qui manque vraiment : voir l'écran entier — zones, rotation, bandeau — au format exact de l'écran visé, avant de cliquer sur Publier. Aujourd'hui on publie, puis on va regarder.</span>
+    <div class="item ok"><div class="bar"></div><div class="text">
+      <b>Aperçu fidèle avant publication</b>
+      <span class="why">L'écran entier — zones, rotation, bandeau, horloge — au format exact de la dalle visée, recomposé à chaque modification. Ce n'est pas une imitation : c'est le vrai moteur de rendu, alimenté par un manifeste composé sur le même chemin que la publication. Deux chemins distincts finiraient par diverger, et l'aperçu se mettrait à mentir.</span>
     </div></div>
-    <div class="item half"><div class="bar"></div><div class="text">
+    <div class="item ok"><div class="bar"></div><div class="text">
       <b>Capture de l'écran à distance</b>
-      <span class="why">Prévue dans le protocole et déclarée dans les capacités, mais la coque Linux répond « non disponible ». Il faut la brancher sur Chromium.</span>
+      <span class="why">Un bouton demande au boîtier une image de ce qu'il affiche réellement, et l'affiche dans la console. Sur une machine sans serveur graphique, la réponse est « non disponible sur cette plateforme » — un refus explicite, pas une panne à diagnostiquer.</span>
     </div></div>
   </div>
 
   <div class="note">
-    <b>Le plus rentable</b>
-    <p>L'aperçu complet avant publication est court à faire : le rendu tourne déjà dans un navigateur et la console sait construire un manifeste. Il suffit de brancher les deux dans un cadre au bon format. C'est une demi-journée, et ça supprime l'aller-retour dans le couloir.</p>
+    <b>Ce qui bloque n'est plus du logiciel</b>
+    <p>Le serveur tourne sur un poste de travail, aucun boîtier n'a été acheté, et il n'existe pas de liste des emplacements. Ces trois-là ne se règlent pas en écrivant du code.</p>
   </div>
 </section>
 
@@ -266,9 +266,17 @@ li::marker{color:var(--ink-faint)}
       <b>Authentifier chaque appareil</b>
       <span class="why">Signature Ed25519 : la clé privée ne quitte jamais le boîtier. Révoquer un boîtier volé revient à le détacher de son écran.</span>
     </div></div>
-    <div class="item half"><div class="bar"></div><div class="text">
+    <div class="item ok"><div class="bar"></div><div class="text">
+      <b>Console utilisable au téléphone</b>
+      <span class="why">Elle se consulte debout dans un couloir, un boîtier dans une main. En dessous de 640 px la barre se replie, les onglets passent en pleine largeur et les cibles tactiles montent à 44 px. Rien ne déborde latéralement.</span>
+    </div></div>
+    <div class="item ok"><div class="bar"></div><div class="text">
+      <b>Filtrer la liste des écrans</b>
+      <span class="why">Par code, nom ou bâtiment — à partir de neuf écrans, quand parcourir la liste des yeux devient pénible. Avant, c'est un champ de plus à ignorer.</span>
+    </div></div>
+    <div class="item ok"><div class="bar"></div><div class="text">
       <b>Faire clignoter un écran pour le retrouver</b>
-      <span class="why">Le boîtier sait afficher son code en grand pendant trente secondes. Mais rien ne peut le lui demander : le canal de commandes n'est pas branché.</span>
+      <span class="why">Un bouton dans la console, et l'écran affiche son code et son adresse en grand pendant trente secondes. De quoi identifier une dalle à quatre mètres de haut sans monter.</span>
     </div></div>
     <div class="item none"><div class="bar"></div><div class="text">
       <b>Groupes d'écrans</b>
@@ -320,17 +328,25 @@ li::marker{color:var(--ink-faint)}
       <b>Republier et incrémenter</b>
       <span class="why">Chaque publication crée une version. L'écran ignore une version qui n'augmente pas.</span>
     </div></div>
-    <div class="item half"><div class="bar"></div><div class="text">
+    <div class="item ok"><div class="bar"></div><div class="text">
+      <b>Rouvrir ce qui est déjà diffusé</b>
+      <span class="why">L'éditeur s'ouvre sur la composition en ligne, jamais sur du vide. Pour changer un bandeau, on change le bandeau — on ne recompose pas la diffusion entière de mémoire. Un badge « brouillon » signale que ce qu'on voit à l'écran n'est pas ce qu'on vient de modifier.</span>
+    </div></div>
+    <div class="item ok"><div class="bar"></div><div class="text">
+      <b>Réordonner les contenus</b>
+      <span class="why">Monter, descendre, retirer. L'ordre affiché est l'ordre de diffusion.</span>
+    </div></div>
+    <div class="item ok"><div class="bar"></div><div class="text">
       <b>Mode urgence</b>
-      <span class="why">Le protocole le porte, le rendu l'affiche en plein écran contrasté, et il passe avant l'extinction programmée. Mais aucune route ni aucun bouton ne permet de le déclencher.</span>
+      <span class="why">Un bouton rouge en haut de la console, un titre, un message : tous les écrans basculent. Mesuré à 43 millisecondes entre le clic et l'affichage, là où le cahier des charges demandait moins de dix secondes. L'urgence passe avant tout, y compris devant une dalle programmée pour être éteinte — elle la rallume.</span>
     </div></div>
-    <div class="item half"><div class="bar"></div><div class="text">
+    <div class="item ok"><div class="bar"></div><div class="text">
       <b>Extinction programmée de la dalle</b>
-      <span class="why">Le rendu gère les plages horaires, la coque Linux sait couper la dalle. Rien dans la console ne permet de les régler.</span>
+      <span class="why">Des plages réglables par écran, avec le récapitulatif en toutes lettres sous le réglage : « éteint les lundi, mardi, mercredi, jeudi et vendredi à partir de 19:00, jusqu'à 07:30 le lendemain matin ». Les jours cochés désignent le soir où la plage commence, si bien qu'une extinction du vendredi soir court jusqu'au samedi matin.</span>
     </div></div>
-    <div class="item half"><div class="bar"></div><div class="text">
-      <b>Retour à la version précédente</b>
-      <span class="why">L'historique des manifestes est conservé en base. Aucun bouton pour y revenir.</span>
+    <div class="item ok"><div class="bar"></div><div class="text">
+      <b>Revenir à une version précédente</b>
+      <span class="why">L'historique se déplie sous chaque écran, et un lien « Revenir à la version 3 » apparaît dans le message de succès juste après une publication. Rien n'est effacé : on republie l'ancien contenu sous un nouveau numéro, si bien qu'une annulation s'annule elle-même.</span>
     </div></div>
     <div class="item none"><div class="bar"></div><div class="text">
       <b>Programmation calendaire</b>
@@ -505,6 +521,6 @@ li::marker{color:var(--ink-faint)}
   </div>
 </section>
 
-<p class="endnote">État vérifié dans le code le 22 août 2026 — 162 tests automatisés, dont la résilience réseau, la persistance et le moteur d'emploi du temps.</p>
+<p class="endnote">État vérifié dans le code le 22 août 2026 — 186 tests automatisés, dont la résilience réseau, la persistance, le moteur d'emploi du temps et les plages d'extinction.</p>
 
 </main>
