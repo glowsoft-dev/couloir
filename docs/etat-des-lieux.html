@@ -1,0 +1,510 @@
+<title>Ce qui marche aujourd'hui</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+
+<style>
+:root{
+  --paper:#EFF1EE;
+  --surface:#FBFCFA;
+  --surface-2:#E6E9E4;
+  --ink:#161A18;
+  --ink-soft:#5B635E;
+  --ink-faint:#868E89;
+  --rule:#D5DAD4;
+  --rule-strong:#B9C0B8;
+  --ok:#0B5D45;
+  --ok-soft:#DCE9E2;
+  --half:#8A6A12;
+  --half-soft:#F2EAD3;
+  --none:#868E89;
+  --none-soft:#E6E9E4;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#101312;
+    --surface:#181C1A;
+    --surface-2:#212623;
+    --ink:#E7EBE7;
+    --ink-soft:#9CA5A0;
+    --ink-faint:#78817C;
+    --rule:#2A302D;
+    --rule-strong:#3C433F;
+    --ok:#54BE95;
+    --ok-soft:#172A23;
+    --half:#D2B45E;
+    --half-soft:#282213;
+    --none:#78817C;
+    --none-soft:#212623;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#101312;
+  --surface:#181C1A;
+  --surface-2:#212623;
+  --ink:#E7EBE7;
+  --ink-soft:#9CA5A0;
+  --ink-faint:#78817C;
+  --rule:#2A302D;
+  --rule-strong:#3C433F;
+  --ok:#54BE95;
+  --ok-soft:#172A23;
+  --half:#D2B45E;
+  --half-soft:#282213;
+  --none:#78817C;
+  --none-soft:#212623;
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0;
+  background:var(--paper);
+  color:var(--ink);
+  font-family:"Source Serif 4","Iowan Old Style",Georgia,serif;
+  font-size:17px;
+  line-height:1.62;
+  -webkit-font-smoothing:antialiased;
+}
+.doc{max-width:74ch;margin:0 auto;padding:46px 22px 100px}
+
+.eyebrow{
+  font-family:"IBM Plex Mono",ui-monospace,monospace;
+  font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--ok);margin:0 0 16px;
+}
+h1{
+  font-family:"Archivo",system-ui,sans-serif;
+  font-size:clamp(34px,6.5vw,52px);
+  font-weight:700;letter-spacing:-.028em;line-height:1.03;
+  margin:0;text-wrap:balance;
+}
+.deck{font-size:clamp(18px,2.4vw,20px);color:var(--ink-soft);margin:14px 0 0;max-width:40ch}
+
+/* --- compteurs --- */
+.tally{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+  gap:1px;background:var(--rule);border:1px solid var(--rule);
+  border-radius:9px;overflow:hidden;margin:32px 0 0;
+}
+.tally div{background:var(--surface);padding:13px 15px}
+.tally b{
+  display:block;font-family:"Archivo",system-ui,sans-serif;
+  font-size:26px;font-weight:700;line-height:1;margin-bottom:5px;
+  font-variant-numeric:tabular-nums;
+}
+.tally span{
+  font-family:"Archivo",system-ui,sans-serif;
+  font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-faint);
+}
+.tally .c-ok b{color:var(--ok)}
+.tally .c-half b{color:var(--half)}
+.tally .c-none b{color:var(--none)}
+
+section{padding:46px 0 0;scroll-margin-top:20px}
+h2{
+  font-family:"Archivo",system-ui,sans-serif;
+  font-size:25px;font-weight:600;letter-spacing:-.018em;line-height:1.15;
+  margin:0 0 5px;text-wrap:balance;
+}
+.rule{height:2px;background:var(--ink);opacity:.9;margin:0 0 8px}
+.sub{color:var(--ink-soft);margin:0 0 20px;font-size:16.5px}
+h3{
+  font-family:"Archivo",system-ui,sans-serif;
+  font-size:11px;font-weight:600;letter-spacing:.13em;text-transform:uppercase;
+  color:var(--ink-faint);margin:26px 0 8px;
+}
+p{margin:0 0 14px}
+a{color:var(--ok)}
+strong{font-weight:600}
+code,.mono{font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:.87em}
+p code,li code{background:var(--surface-2);padding:1px 5px;border-radius:4px;white-space:nowrap}
+
+/* --- listes d'état ---
+   L'état est porté par une barre de couleur ET par un mot : la couleur
+   seule exclurait quiconque ne la distingue pas. */
+.items{
+  border:1px solid var(--rule);border-radius:9px;overflow:hidden;
+  background:var(--surface);margin:0 0 16px;
+}
+.item{
+  display:grid;grid-template-columns:4px minmax(0,1fr);
+  border-top:1px solid var(--rule);
+}
+.item:first-child{border-top:none}
+.bar{background:var(--rule-strong)}
+.item.ok .bar{background:var(--ok)}
+.item.half .bar{background:var(--half)}
+.item.none .bar{background:var(--none)}
+.item .text{padding:11px 15px;font-size:15.5px;line-height:1.5}
+.item .text b{
+  font-family:"Archivo",system-ui,sans-serif;font-weight:600;font-size:15px;
+  display:block;margin-bottom:1px;
+}
+.item .why{color:var(--ink-soft);font-size:14.5px}
+
+.legend{display:flex;flex-wrap:wrap;gap:14px;margin:0 0 22px}
+.key{display:flex;align-items:center;gap:7px;font-size:13.5px;color:var(--ink-soft)}
+.dot{width:11px;height:11px;border-radius:3px}
+.dot.ok{background:var(--ok)}
+.dot.half{background:var(--half)}
+.dot.none{background:var(--none)}
+
+.note{
+  border-left:3px solid var(--ok);background:var(--ok-soft);
+  padding:14px 18px;border-radius:0 8px 8px 0;margin:0 0 18px;font-size:16px;
+}
+.note.warn{border-left-color:var(--half);background:var(--half-soft)}
+.note p:last-child{margin-bottom:0}
+.note b{
+  font-family:"Archivo",system-ui,sans-serif;
+  font-size:9.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--ok);display:block;margin-bottom:5px;
+}
+.note.warn b{color:var(--half)}
+
+.tw{overflow-x:auto;border:1px solid var(--rule);border-radius:9px;background:var(--surface);margin:0 0 18px}
+table{border-collapse:collapse;width:100%;font-size:14.5px;min-width:420px}
+th{
+  font-family:"Archivo",system-ui,sans-serif;
+  font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--ink-faint);text-align:left;padding:11px 14px;
+  border-bottom:1px solid var(--rule-strong);white-space:nowrap;
+}
+td{padding:10px 14px;border-bottom:1px solid var(--rule);vertical-align:top;line-height:1.45}
+tr:last-child td{border-bottom:none}
+td.num{font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
+
+ul{margin:0 0 16px;padding-left:22px}
+li{margin:0 0 6px}
+li::marker{color:var(--ink-faint)}
+
+.endnote{
+  font-family:"Archivo",system-ui,sans-serif;
+  font-size:13.5px;color:var(--ink-faint);
+  margin-top:44px;padding-top:16px;border-top:1px solid var(--rule);
+}
+</style>
+
+<main class="doc">
+
+<p class="eyebrow">Couloir · 22 août 2026</p>
+<h1>Ce qui marche aujourd'hui</h1>
+<p class="deck">L'état réel du projet, vérifié dans le code — pas ce qui était prévu.</p>
+
+<div class="tally">
+  <div class="c-ok"><b>32</b><span>utilisables</span></div>
+  <div class="c-half"><b>6</b><span>écrits, pas branchés</span></div>
+  <div class="c-none"><b>13</b><span>pas commencés</span></div>
+  <div><b>162</b><span>tests verts</span></div>
+</div>
+
+<div class="legend" style="margin-top:22px">
+  <span class="key"><span class="dot ok"></span> On peut s'en servir</span>
+  <span class="key"><span class="dot half"></span> Le code existe, rien ne le déclenche</span>
+  <span class="key"><span class="dot none"></span> Rien n'est écrit</span>
+</div>
+
+<!-- ============ prévisualisation ============ -->
+<section id="apercu">
+  <h2>La prévisualisation</h2>
+  <div class="rule"></div>
+  <p class="sub">Ta question. Réponse : on en a une, mais partielle — et le manque est précis.</p>
+
+  <div class="items">
+    <div class="item ok"><div class="bar"></div><div class="text">
+      <b>Aperçu de la colonne des cours</b>
+      <span class="why">Dans l'onglet « Aujourd'hui », à droite de la saisie. Dessiné comme le vrai rendu : on pose un changement de salle, on le voit barré ou surligné comme les élèves le verront.</span>
+    </div></div>
+    <div class="item ok"><div class="bar"></div><div class="text">
+      <b>Voir ce qu'un écran affiche vraiment</b>
+      <span class="why">En ouvrant l'adresse locale du boîtier dans un navigateur. C'est fidèle au pixel — c'est la même page que Chromium affiche —, mais il faut être sur le même réseau et connaître l'adresse.</span>
+    </div></div>
+    <div class="item ok"><div class="bar"></div><div class="text">
+      <b>Maquette du rendu</b>
+      <span class="why"><code>pnpm dev:renderer</code> — un écran de démonstration avec des boutons pour basculer entre rotation normale, données périmées, urgence, repérage, repli et extinction. Sert à vérifier une mise en page, pas un écran réel.</span>
+    </div></div>
+    <div class="item none"><div class="bar"></div><div class="text">
+      <b>Aperçu complet avant publication</b>
+      <span class="why">Ce qui manque vraiment : voir l'écran entier — zones, rotation, bandeau — au format exact de l'écran visé, avant de cliquer sur Publier. Aujourd'hui on publie, puis on va regarder.</span>
+    </div></div>
+    <div class="item half"><div class="bar"></div><div class="text">
+      <b>Capture de l'écran à distance</b>
+      <span class="why">Prévue dans le protocole et déclarée dans les capacités, mais la coque Linux répond « non disponible ». Il faut la brancher sur Chromium.</span>
+    </div></div>
+  </div>
+
+  <div class="note">
+    <b>Le plus rentable</b>
+    <p>L'aperçu complet avant publication est court à faire : le rendu tourne déjà dans un navigateur et la console sait construire un manifeste. Il suffit de brancher les deux dans un cadre au bon format. C'est une demi-journée, et ça supprime l'aller-retour dans le couloir.</p>
+  </div>
+</section>
+
+<!-- ============ écrans ============ -->
+<section id="ecrans">
+  <h2>Les écrans</h2>
+  <div class="rule"></div>
+  <p class="sub">Poser un boîtier, le rattacher à un emplacement, savoir s'il va bien.</p>
+
+  <div class="items">
+    <div class="item ok"><div class="bar"></div><div class="text">
+      <b>Enrôler un boîtier sans clavier</b>
+      <span class="why">Il affiche un code à six caractères sans ambiguïté — ni O/0, ni I/1 — qu'on saisit depuis un téléphone. Usage unique, expiration à 24 h.</span>
+    </div></div>
+    <div class="item ok"><div class="bar"></div><div class="text">
+      <b>Rattacher depuis la console</b>
+      <span class="why">Bâtiment, étage, numéro : le code d'étiquette <span class="mono">A·1·12</span> se construit tout seul. Les boîtiers en attente apparaissent d'eux-mêmes, sans recopier le code.</span>
+    </div></div>
+    <div class="item ok"><div class="bar"></div><div class="text">
+      <b>Voir l'état du parc</b>
+      <span class="why">En ligne ou muet, déduit du dernier battement de cœur — un écran débranché n'a aucun moyen de dire qu'il est parti. Rafraîchi toutes les cinq secondes.</span>
+    </div></div>
+    <div class="item ok"><div class="bar"></div><div class="text">
+      <b>Remplacer un boîtier</b>
+      <span class="why">Y compris par un d'une autre plateforme : le nouveau hérite de l'emplacement, des playlists et de l'historique. L'ancien est détaché dans la même transaction.</span>
+    </div></div>
+    <div class="item ok"><div class="bar"></div><div class="text">
+      <b>Authentifier chaque appareil</b>
+      <span class="why">Signature Ed25519 : la clé privée ne quitte jamais le boîtier. Révoquer un boîtier volé revient à le détacher de son écran.</span>
+    </div></div>
+    <div class="item half"><div class="bar"></div><div class="text">
+      <b>Faire clignoter un écran pour le retrouver</b>
+      <span class="why">Le boîtier sait afficher son code en grand pendant trente secondes. Mais rien ne peut le lui demander : le canal de commandes n'est pas branché.</span>
+    </div></div>
+    <div class="item none"><div class="bar"></div><div class="text">
+      <b>Groupes d'écrans</b>
+      <span class="why">Publier sur « tout le bâtiment A » d'un coup. Aucune table, aucune interface.</span>
+    </div></div>
+    <div class="item none"><div class="bar"></div><div class="text">
+      <b>Plan interactif de l'école</b>
+      <span class="why">Les écrans sont listés, pas situés sur un plan d'étage.</span>
+    </div></div>
+    <div class="item none"><div class="bar"></div><div class="text">
+      <b>QR code d'appairage</b>
+      <span class="why">Le code s'affiche en texte. Le scanner au téléphone irait plus vite.</span>
+    </div></div>
+  </div>
+</section>
+
+<!-- ============ affichage ============ -->
+<section id="affichage">
+  <h2>Ce qu'on peut afficher</h2>
+  <div class="rule"></div>
+  <p class="sub">Composer une rotation et l'envoyer sur un écran.</p>
+
+  <div class="items">
+    <div class="item ok"><div class="bar"></div><div class="text">
+      <b>Deux mises en page</b>
+      <span class="why">Plein écran, ou contenu principal avec la colonne des cours à droite. Chaque zone tourne indépendamment.</span>
+    </div></div>
+    <div class="item ok"><div class="bar"></div><div class="text">
+      <b>Images et vidéos</b>
+      <span class="why">Import par la console, empreinte calculée par le serveur, téléchargement vérifié sur le boîtier. Une vidéo dure le temps qu'elle dure.</span>
+    </div></div>
+    <div class="item ok"><div class="bar"></div><div class="text">
+      <b>Blocs de texte</b>
+      <span class="why">Composés dans la console : sur-titre, titre, texte. Sans passer par un fichier.</span>
+    </div></div>
+    <div class="item ok"><div class="bar"></div><div class="text">
+      <b>Bandeau défilant</b>
+      <span class="why">Une phrase en bas d'écran, avec l'heure à droite.</span>
+    </div></div>
+    <div class="item ok"><div class="bar"></div><div class="text">
+      <b>Règles de lisibilité imposées</b>
+      <span class="why">Durée minimale calculée sur le volume de texte, tailles dérivées de la hauteur de la dalle. On compose assis à 50 cm, on lit debout à 4 m en marchant.</span>
+    </div></div>
+    <div class="item ok"><div class="bar"></div><div class="text">
+      <b>Zones vides qui s'effacent</b>
+      <span class="why">Quand l'emploi du temps se retire faute de données fraîches, la zone principale s'étire au lieu de laisser un rectangle vide.</span>
+    </div></div>
+    <div class="item ok"><div class="bar"></div><div class="text">
+      <b>Republier et incrémenter</b>
+      <span class="why">Chaque publication crée une version. L'écran ignore une version qui n'augmente pas.</span>
+    </div></div>
+    <div class="item half"><div class="bar"></div><div class="text">
+      <b>Mode urgence</b>
+      <span class="why">Le protocole le porte, le rendu l'affiche en plein écran contrasté, et il passe avant l'extinction programmée. Mais aucune route ni aucun bouton ne permet de le déclencher.</span>
+    </div></div>
+    <div class="item half"><div class="bar"></div><div class="text">
+      <b>Extinction programmée de la dalle</b>
+      <span class="why">Le rendu gère les plages horaires, la coque Linux sait couper la dalle. Rien dans la console ne permet de les régler.</span>
+    </div></div>
+    <div class="item half"><div class="bar"></div><div class="text">
+      <b>Retour à la version précédente</b>
+      <span class="why">L'historique des manifestes est conservé en base. Aucun bouton pour y revenir.</span>
+    </div></div>
+    <div class="item none"><div class="bar"></div><div class="text">
+      <b>Programmation calendaire</b>
+      <span class="why">« Ce contenu du 1<sup>er</sup> au 15 septembre », « celui-là le matin seulement ». On publie, ça part tout de suite.</span>
+    </div></div>
+    <div class="item none"><div class="bar"></div><div class="text">
+      <b>Bibliothèque de gabarits</b>
+      <span class="why">Le rendu sait afficher un gabarit, mais il n'y en a qu'un. Annonce, événement, mise à l'honneur, citation restent à dessiner.</span>
+    </div></div>
+    <div class="item none"><div class="bar"></div><div class="text">
+      <b>Transcodage vidéo</b>
+      <span class="why">Le fichier importé part tel quel. Le serveur sait déjà choisir le bon dérivé selon les capacités du boîtier — il n'y a simplement rien à choisir.</span>
+    </div></div>
+    <div class="item none"><div class="bar"></div><div class="text">
+      <b>Actualités du site de l'école</b>
+      <span class="why">Le connecteur est un bouchon qui renvoie des données d'exemple.</span>
+    </div></div>
+  </div>
+</section>
+
+<!-- ============ emploi du temps ============ -->
+<section id="edt">
+  <h2>L'emploi du temps</h2>
+  <div class="rule"></div>
+  <p class="sub">Le nôtre, saisi dans la console. Plus de dépendance au logiciel de l'école.</p>
+
+  <div class="items">
+    <div class="item ok"><div class="bar"></div><div class="text">
+      <b>Classes, créneaux, vacances, année scolaire</b>
+      <span class="why">Tout ce qui se saisit une fois par an, regroupé dans l'onglet Réglages.</span>
+    </div></div>
+    <div class="item ok"><div class="bar"></div><div class="text">
+      <b>Grille hebdomadaire par classe</b>
+      <span class="why">On clique une case, on tape matière, enseignant et salle. Le raccourci « aussi ces jours-là » duplique le cours sur les autres jours — une matière revient rarement une seule fois par semaine.</span>
+    </div></div>
+    <div class="item ok"><div class="bar"></div><div class="text">
+      <b>Quinzaine A / B</b>
+      <span class="why">Comptée depuis une date d'ancrage, pas depuis le numéro de semaine ISO : les établissements ne s'accordent pas sur le point de départ.</span>
+    </div></div>
+    <div class="item ok"><div class="bar"></div><div class="text">
+      <b>Changements du jour</b>
+      <span class="why">Annulé, salle changée, enseignant remplacé — en deux clics, avec une mention libre. Un cours annulé <strong>reste affiché</strong>, barré : le faire disparaître priverait l'élève de l'information qui l'intéresse le plus.</span>
+    </div></div>
+    <div class="item ok"><div class="bar"></div><div class="text">
+      <b>Trois façons de l'afficher</b>
+      <span class="why">Une classe fixe, toutes les classes qui défilent, ou mêlées aux affiches et actualités. Une seule source réseau quelle que soit la formule.</span>
+    </div></div>
+    <div class="item ok"><div class="bar"></div><div class="text">
+      <b>Vacances annoncées</b>
+      <span class="why">L'écran dit « Vacances de la Toussaint » au lieu d'afficher une liste vide qui ressemblerait à une panne.</span>
+    </div></div>
+    <div class="item none"><div class="bar"></div><div class="text">
+      <b>Import d'une grille existante</b>
+      <span class="why">Tout se saisit à la main. Un import CSV ferait gagner des heures au démarrage.</span>
+    </div></div>
+    <div class="item none"><div class="bar"></div><div class="text">
+      <b>Vue par salle ou par enseignant</b>
+      <span class="why">Seule la vue par classe existe. « Qui occupe la B 204 cet après-midi » n'est pas répondable.</span>
+    </div></div>
+  </div>
+</section>
+
+<!-- ============ résilience ============ -->
+<section id="resilience">
+  <h2>La résilience</h2>
+  <div class="rule"></div>
+  <p class="sub">La partie la plus testée du projet, et la seule vérifiée sur un vrai Linux.</p>
+
+  <div class="items">
+    <div class="item ok"><div class="bar"></div><div class="text">
+      <b>Sept jours sans réseau</b>
+      <span class="why">La rotation continue à l'identique. Les données vivantes vieillissent chacune à leur rythme et se retirent ou s'affichent avec leur date, selon leur réglage.</span>
+    </div></div>
+    <div class="item ok"><div class="bar"></div><div class="text">
+      <b>Redémarrage sans réseau</b>
+      <span class="why">Identité, manifeste et cache retrouvés sur le disque. Aucun nouveau code d'appairage, aucun contenu perdu. Vérifié dans une VM Debian.</span>
+    </div></div>
+    <div class="item ok"><div class="bar"></div><div class="text">
+      <b>Reprise des téléchargements</b>
+      <span class="why">Un fichier coupé à 90 % repart de son point d'arrêt, pas de zéro.</span>
+    </div></div>
+    <div class="item ok"><div class="bar"></div><div class="text">
+      <b>Aucune preuve de diffusion perdue</b>
+      <span class="why">Journalisée sur le boîtier avec l'heure réelle, renvoyée par lots au retour, purgée seulement après acquittement du serveur. Un lot rejoué ne crée aucun doublon.</span>
+    </div></div>
+    <div class="item ok"><div class="bar"></div><div class="text">
+      <b>Jamais de manifeste incomplet</b>
+      <span class="why">On ne bascule que lorsque tous les médias sont présents et leur empreinte vérifiée. Sinon on garde la version précédente.</span>
+    </div></div>
+    <div class="item ok"><div class="bar"></div><div class="text">
+      <b>Dispersion au retour du réseau</b>
+      <span class="why">Chaque écran attend un délai aléatoire avant de se manifester : quarante boîtiers qui redémarrent ensemble ne tombent pas sur le serveur à la même seconde.</span>
+    </div></div>
+  </div>
+</section>
+
+<!-- ============ exploitation ============ -->
+<section id="exploitation">
+  <h2>L'exploitation</h2>
+  <div class="rule"></div>
+  <p class="sub">Ce qu'il faut pour faire tourner un parc au quotidien.</p>
+
+  <div class="items">
+    <div class="item ok"><div class="bar"></div><div class="text">
+      <b>Tout depuis une seule adresse</b>
+      <span class="why">Le serveur sert la console lui-même : l'interface à la racine, l'API en dessous. Un domaine, un certificat, un endroit à ouvrir.</span>
+    </div></div>
+    <div class="item ok"><div class="bar"></div><div class="text">
+      <b>Base de données et migrations</b>
+      <span class="why">PostgreSQL, migrations en SQL brut rejouées à chaque démarrage. Le serveur redémarre sans rien oublier.</span>
+    </div></div>
+    <div class="item ok"><div class="bar"></div><div class="text">
+      <b>Installer un boîtier</b>
+      <span class="why">Un script exécuté en atelier : compte de service, navigateur en kiosque, deux services systemd. Testé pour de vrai sur Debian 12 en arm64.</span>
+    </div></div>
+    <div class="item ok"><div class="bar"></div><div class="text">
+      <b>Un artefact déployable</b>
+      <span class="why">Deux fichiers autonomes à déposer sur le boîtier, rien à installer. Ce qui rend supportable la mise à jour d'un parc de quarante écrans.</span>
+    </div></div>
+    <div class="item ok"><div class="bar"></div><div class="text">
+      <b>Battements de cœur enregistrés</b>
+      <span class="why">État, version, disque, température, dalle allumée — stockés avec leur heure réelle, y compris ceux rattrapés après une coupure.</span>
+    </div></div>
+    <div class="item half"><div class="bar"></div><div class="text">
+      <b>Preuves de diffusion</b>
+      <span class="why">Chaque passage est enregistré en base. Mais aucun rapport ne les exploite : impossible aujourd'hui de dire à un partenaire combien de fois sa campagne est passée.</span>
+    </div></div>
+    <div class="item none"><div class="bar"></div><div class="text">
+      <b>Alertes</b>
+      <span class="why">Aucun courriel ni message quand un écran se tait, chauffe ou redémarre en boucle. Il faut regarder la console.</span>
+    </div></div>
+    <div class="item none"><div class="bar"></div><div class="text">
+      <b>Campagnes partenaires</b>
+      <span class="why">Dates, quotas, écrans ciblés, rapport de diffusion. Rien n'existe.</span>
+    </div></div>
+    <div class="item none"><div class="bar"></div><div class="text">
+      <b>Mises à jour à distance du parc</b>
+      <span class="why">Il faut se connecter à chaque boîtier.</span>
+    </div></div>
+  </div>
+</section>
+
+<!-- ============ ce qui bloque ============ -->
+<section id="bloquant">
+  <h2>Ce qui empêche une vraie pose</h2>
+  <div class="rule"></div>
+  <p class="sub">Trois choses, et deux ne dépendent pas du logiciel.</p>
+
+  <div class="tw">
+    <table>
+      <thead><tr><th>Obstacle</th><th>Ce qu'il faut</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>Le serveur tourne sur un poste de développement</strong></td>
+          <td>L'héberger quelque part, avec un nom de domaine et du chiffrement. Un boîtier dans un couloir ne peut parler à rien aujourd'hui. Environ une journée.</td>
+        </tr>
+        <tr>
+          <td><strong>Aucun matériel n'existe</strong></td>
+          <td>Un Raspberry Pi 5 avec son module d'horloge, environ 150 €. La VM a raccourci la liste de ce qui peut mal tourner, mais HDMI, CEC et l'horloge ne se vérifient que sur un vrai boîtier.</td>
+        </tr>
+        <tr>
+          <td><strong>Aucune liste d'emplacements</strong></td>
+          <td>Le tour du bâtiment : où va chaque écran, avec quelle prise. C'est ce qui fige la nomenclature et le budget.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="note warn">
+    <b>La dette à surveiller</b>
+    <p>La console est protégée par un <strong>jeton partagé</strong>, pas par des comptes. Ça tient tant qu'une seule personne s'en sert. Dès qu'il y en a deux, il faut des comptes nominatifs, des rôles et un journal d'audit — d'autant que le cahier des charges les promet.</p>
+  </div>
+</section>
+
+<p class="endnote">État vérifié dans le code le 22 août 2026 — 162 tests automatisés, dont la résilience réseau, la persistance et le moteur d'emploi du temps.</p>
+
+</main>

@@ -503,6 +503,43 @@ supportable : **dupliquer un cours sur les autres jours**. Une matière revient
 rarement une seule fois par semaine. Les créneaux déjà pris sont laissés tels
 quels plutôt qu'écrasés.
 
+## L'aperçu avant publication
+
+Le **vrai noyau de rendu**, pas une imitation : la console importe le même
+paquet que celui qui tourne dans les couloirs. Un aperçu redessiné à la main
+finirait par mentir le jour où le rendu évolue sans lui.
+
+Deux décisions le rendent fidèle :
+
+- **le même composeur.** L'aperçu passe par une route qui compose le
+  manifeste sans l'enregistrer, en partageant la résolution des classes avec
+  la publication. Deux chemins distincts divergeraient tôt ou tard ;
+- **la taille réelle, réduite après coup.** La scène fait 1280×720 et subit
+  une transformation d'échelle. Les tailles de texte du rendu dérivent de la
+  hauteur de la dalle : la rendre petite produirait un écran différent de
+  celui du couloir, alors que la réduire conserve les proportions.
+
+Les sources vivantes sont récupérées comme le ferait l'agent, si bien que les
+cours affichés dans l'aperçu sont ceux du jour.
+
+## Le mode urgence
+
+Le message est posé dans le manifeste de chaque écran visé, **avec une
+version incrémentée** : sans ça l'agent l'ignorerait, puisqu'il refuse toute
+version qui n'augmente pas. Le retrait incrémente à son tour.
+
+| Décision | Pourquoi |
+|---|---|
+| Ne disparaît que sur action explicite | un écran qui se remettrait aux actualités pendant une évacuation serait pire que tout |
+| `validUntil` est un garde-fou, pas une durée | un écran rallumé trois jours plus tard ne doit pas ressortir une alerte périmée |
+| Les écrans sans contenu publié sont **signalés** | savoir quels couloirs sont restés muets fait partie de l'information d'urgence |
+| Modèles pré-rédigés | on ne compose pas une phrase quand quelqu'un entre en courant |
+
+**Limite assumée** : le message arrive à la prochaine synchronisation, donc
+dans la minute. Le cahier des charges demande moins de dix secondes, ce qui
+suppose le canal temps réel — MQTT ou une interrogation longue. C'est un
+chantier à part, et le mode urgence fonctionne sans lui.
+
 ## Ce qui n'est pas encore fait
 
 Le socle tourne, mais il reste volontairement incomplet :

@@ -5,6 +5,7 @@ import { API_PREFIX } from "@couloir/protocol";
 import { CompositionError, type PublishSpec, compose } from "./composer.js";
 import type { MediaStore } from "./media.js";
 import type { Store } from "./store.js";
+import type { Manifest } from "@couloir/protocol";
 import type { TimetableRepository } from "./timetable/repository.js";
 
 /**
@@ -50,6 +51,18 @@ const PublishBody = z.object({
    * absent : l'écran les fait défiler, dans l'ordre de la console.
    */
   timetableClassIds: z.array(z.string().uuid()).optional(),
+});
+
+const EmergencyBody = z.object({
+  title: z.string().min(1).max(120),
+  body: z.string().max(400).optional(),
+  /** Vide = tout le parc. */
+  screenIds: z.array(z.string().uuid()).optional(),
+  /**
+   * Au-delà, un écran qui reçoit le message en différé l'ignore. Ce n'est
+   * PAS une durée d'affichage : seule une action explicite le retire.
+   */
+  validHours: z.number().int().min(1).max(72).default(12),
 });
 
 const PairBody = z.object({
@@ -185,6 +198,117 @@ export function registerConsoleApi(app: FastifyInstance, options: ConsoleApiOpti
     return reply.code(201).send({ media: stored });
   });
 
+  // --- Mode urgence ----------------------------------------------------
+
+  /**
+   * Prend possession des écrans avec un message plein écran.
+   *
+   * Le message est posé dans le manifeste de chaque écran visé, avec une
+   * version incrémentée : sans ça, l'agent l'ignorerait, puisqu'il refuse
+   * toute version qui n'augmente pas.
+   *
+   * Il ne disparaît jamais tout seul. `validUntil` sert uniquement de
+   * garde-fou pour un écran rallumé trois jours plus tard — il ne doit pas
+   * ressortir une alerte d'évacuation périmée.
+   */
+  app.post(`${CONSOLE_PREFIX}/emergency`, async (request, reply) => {
+    const parsed = EmergencyBody.safeParse(request.body);
+    if (!parsed.success) {
+      return reply.code(400).send({
+        code: "invalid-body",
+        message: "Le message d'urgence est incomplet.",
+        retryable: false,
+        details: parsed.error.flatten(),
+      });
+    }
+
+    const now = new Date();
+    const emergency = {
+      id: randomUUID(),
+      title: parsed.data.title.trim(),
+      ...(parsed.data.body?.trim() ? { body: parsed.data.body.trim() } : {}),
+      issuedAt: iso(now),
+      validUntil: iso(new Date(now.getTime() + parsed.data.validHours * 3_600_000)),
+    };
+
+    const touched = await applyToScreens(store, parsed.data.screenIds, (manifest) => ({
+      ...manifest,
+      version: manifest.version + 1,
+      emergency,
+    }));
+
+    request.log.warn({ screens: touched.applied.length, title: emergency.title }, "message d'urgence");
+    return { emergency, ...touched };
+  });
+
+  /** Sortie explicite : un message d'urgence ne s'efface jamais tout seul. */
+  app.delete(`${CONSOLE_PREFIX}/emergency`, async (request) => {
+    const touched = await applyToScreens(store, undefined, (manifest) =>
+      manifest.emergency
+        ? { ...manifest, version: manifest.version + 1, emergency: null }
+        : null,
+    );
+    request.log.info({ screens: touched.applied.length }, "fin du message d'urgence");
+    return touched;
+  });
+
+  /** L'état courant, pour que la console sache quoi montrer. */
+  app.get(`${CONSOLE_PREFIX}/emergency`, async () => {
+    const screens = await store.listScreens();
+    for (const screen of screens) {
+      const manifest = await store.getManifest(screen.id);
+      if (manifest?.emergency) return { emergency: manifest.emergency };
+    }
+    return { emergency: null };
+  });
+
+  // --- Aperçu ----------------------------------------------------------
+
+  /**
+   * Compose le manifeste SANS l'enregistrer.
+   *
+   * L'aperçu passe par le même composeur que la publication : il est donc
+   * fidèle par construction. Un aperçu qui emprunterait un autre chemin
+   * finirait par mentir le jour où les deux divergent.
+   */
+  app.post<{ Params: { screenId: string } }>(
+    `${CONSOLE_PREFIX}/screens/:screenId/preview`,
+    async (request, reply) => {
+      const parsed = PublishBody.safeParse(request.body);
+      if (!parsed.success) {
+        return reply.code(400).send({
+          code: "invalid-body",
+          message: "La composition est incomplète.",
+          retryable: false,
+          details: parsed.error.flatten(),
+        });
+      }
+
+      const screen = await store.getScreen(request.params.screenId);
+      if (!screen) {
+        return reply.code(404).send({ code: "unknown-screen", message: "Écran inconnu.", retryable: false });
+      }
+
+      try {
+        const spec = await resolveSpec(parsed.data, options);
+        const manifest = compose({
+          screenId: screen.id,
+          version: 0,
+          issuedAt: new Date().toISOString().replace(/\.\d+Z$/, "Z"),
+          spec,
+          media: media.index(),
+          baseUrl: resolvePublicUrl(options.publicUrl, request.headers.host),
+        });
+        return { manifest };
+      } catch (error) {
+        if (error instanceof CompositionError) {
+          return reply.code(400).send({ code: "composition", message: error.message, retryable: false });
+        }
+        throw error;
+      }
+    },
+  );
+
   // --- Publication -----------------------------------------------------
 
   app.post<{ Params: { screenId: string } }>(
@@ -205,30 +329,7 @@ export function registerConsoleApi(app: FastifyInstance, options: ConsoleApiOpti
         return reply.code(404).send({ code: "unknown-screen", message: "Écran inconnu.", retryable: false });
       }
 
-      // Les classes sont résolues au moment de publier : la console n'envoie
-      // que des identifiants, et une classe renommée n'oblige pas à
-      // republier tous les écrans.
-      let timetableClasses: { id: string; label: string }[] | undefined;
-      if (parsed.data.layout === "principal-et-cours" && options.timetable) {
-        const all = await options.timetable.listClasses();
-        const wanted = parsed.data.timetableClassIds;
-        timetableClasses = wanted?.length
-          ? all.filter((c) => wanted.includes(c.id))
-          : all;
-        if (timetableClasses.length === 0) {
-          return reply.code(400).send({
-            code: "no-class",
-            message: "Aucune classe à afficher. Créez-en une avant de publier cette mise en page.",
-            retryable: false,
-          });
-        }
-      }
-
-      const spec: PublishSpec = {
-        ...parsed.data,
-        timetableUrl: parsed.data.timetableUrl ?? options.timetableUrl,
-        ...(timetableClasses ? { timetableClasses } : {}),
-      };
+      const spec = await resolveSpec(parsed.data, options);
 
       try {
         const existing = await store.getManifest(screen.id);
@@ -254,6 +355,80 @@ export function registerConsoleApi(app: FastifyInstance, options: ConsoleApiOpti
       }
     },
   );
+}
+
+/**
+ * Applique une transformation aux manifestes des écrans visés.
+ *
+ * Un écran sans contenu publié ne peut pas recevoir de message : il n'a pas
+ * de manifeste où le poser. On le signale plutôt que de le passer sous
+ * silence — savoir quels couloirs n'ont pas été touchés fait partie de
+ * l'information d'urgence.
+ */
+async function applyToScreens(
+  store: Store,
+  screenIds: string[] | undefined,
+  transform: (manifest: Manifest) => Manifest | null,
+): Promise<{ applied: string[]; skipped: string[] }> {
+  const screens = await store.listScreens();
+  const targets = screenIds?.length ? screens.filter((s) => screenIds.includes(s.id)) : screens;
+
+  const applied: string[] = [];
+  const skipped: string[] = [];
+
+  for (const screen of targets) {
+    const manifest = await store.getManifest(screen.id);
+    if (!manifest) {
+      skipped.push(screen.code);
+      continue;
+    }
+    const next = transform(manifest);
+    if (!next) continue;
+    await store.putManifest(next);
+    applied.push(screen.code);
+  }
+
+  return { applied, skipped };
+}
+
+/** Horodatage au format attendu par le protocole. */
+function iso(date: Date): string {
+  return date.toISOString().replace(/\.\d+Z$/, "Z");
+}
+
+/**
+ * Complète la demande de la console avec ce que seul le serveur connaît.
+ *
+ * Les classes sont résolues au moment de publier : la console n'envoie que
+ * des identifiants, et une classe renommée n'oblige pas à republier tous les
+ * écrans.
+ *
+ * Partagé entre la publication ET l'aperçu, délibérément : deux chemins
+ * distincts finiraient par diverger, et l'aperçu se mettrait à mentir.
+ */
+async function resolveSpec(
+  body: z.infer<typeof PublishBody>,
+  options: ConsoleApiOptions,
+): Promise<PublishSpec> {
+  let timetableClasses: { id: string; label: string }[] | undefined;
+
+  if (body.layout === "principal-et-cours" && options.timetable) {
+    const all = await options.timetable.listClasses();
+    const wanted = body.timetableClassIds;
+    timetableClasses = wanted?.length ? all.filter((c) => wanted.includes(c.id)) : all;
+    if (timetableClasses.length === 0) {
+      throw new CompositionError(
+        "Aucune classe à afficher. Créez-en une avant de publier cette mise en page.",
+      );
+    }
+  }
+
+  const timetableUrl = body.timetableUrl ?? options.timetableUrl;
+  return {
+    ...body,
+    ...(timetableUrl !== undefined ? { timetableUrl } : {}),
+    ...(timetableClasses ? { timetableClasses } : {}),
+  };
 }
 
 /**

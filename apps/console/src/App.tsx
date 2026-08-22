@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { EmergencyBar } from "./Emergency.js";
 import { GridView } from "./Grid.js";
 import { PublishPanel } from "./Publish.js";
 import { PendingPanel, ScreenList } from "./Screens.js";
@@ -6,6 +7,7 @@ import { SettingsView } from "./Settings.js";
 import { TodayView } from "./Today.js";
 import {
   ApiError,
+  type Emergency,
   type PendingDevice,
   type ScreenStatus,
   type TimetableSetup,
@@ -41,6 +43,7 @@ export function App() {
   const [screens, setScreens] = useState<ScreenStatus[]>([]);
   const [pending, setPending] = useState<PendingDevice[]>([]);
   const [setup, setSetup] = useState<TimetableSetup | null>(null);
+  const [emergency, setEmergency] = useState<Emergency | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -49,6 +52,7 @@ export function App() {
       const result = await api.screens();
       setScreens(result.screens);
       setPending(result.pending);
+      setEmergency((await api.emergency.current()).emergency);
       setError(null);
     } catch (cause) {
       if (cause instanceof ApiError && cause.status === 401) {
@@ -107,6 +111,7 @@ export function App() {
         </nav>
 
         <span className="spacer" />
+        <EmergencyBar active={emergency} onChanged={() => void refreshScreens()} />
         <span className="pill">{screens.length - offline} en ligne</span>
         {offline > 0 && <span className="pill warn">{offline} muets</span>}
         <button

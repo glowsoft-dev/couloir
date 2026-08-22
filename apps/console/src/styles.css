@@ -291,3 +291,55 @@ button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   font-size: 9px; letter-spacing: .08em; text-transform: uppercase; font-weight: 700;
   border: 1px solid currentColor; border-radius: 3px; padding: 1px 5px; margin-left: 7px;
 }
+
+/* ---------- aperçu fidèle ---------- */
+.preview-frame {
+  position: relative; overflow: hidden;
+  border: 1px solid var(--rule-strong); border-radius: 6px; background: #000;
+}
+.preview-stage { position: absolute; top: 0; left: 0 }
+.preview-waiting {
+  position: absolute; inset: 0; display: grid; place-items: center;
+  color: var(--ink-faint); font-size: 13px; margin: 0;
+}
+
+/* ---------- urgence ----------
+   Rouge, et rouge seulement ici : la couleur ne doit signifier qu'une chose
+   dans toute la console. */
+.emergency-trigger {
+  background: none; border: 1px solid var(--signal); color: var(--signal);
+  font-weight: 600; font-size: 12px; letter-spacing: .06em; text-transform: uppercase;
+  padding: 5px 12px;
+}
+.emergency-trigger:hover { background: var(--signal); color: #fff; border-color: var(--signal) }
+
+.emergency-active {
+  display: flex; align-items: center; gap: 12px;
+  background: var(--signal); color: #fff;
+  padding: 6px 14px; border-radius: 6px; margin-right: 10px;
+}
+.emergency-mark {
+  font-size: 10px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase;
+  opacity: .85;
+}
+.emergency-title { font-weight: 600; font-size: 13px }
+.emergency-stop {
+  background: #fff; color: var(--signal); border-color: #fff;
+  font-size: 12px; padding: 4px 10px; font-weight: 600;
+}
+.emergency-stop:hover:not(:disabled) { color: var(--signal); border-color: #fff; filter: brightness(.94) }
+
+button.danger { background: var(--signal); color: #fff; border-color: var(--signal); font-weight: 600 }
+button.danger:hover:not(:disabled) { color: #fff; border-color: var(--signal); filter: brightness(1.08) }
+
+.overlay {
+  position: fixed; inset: 0; z-index: 50;
+  background: rgba(6, 8, 7, .72);
+  display: grid; place-items: center; padding: 20px;
+}
+.overlay-card {
+  background: var(--surface); border: 1px solid var(--rule-strong);
+  border-radius: 10px; padding: 22px; width: min(520px, 100%);
+  max-height: 90vh; overflow-y: auto;
+}
+.overlay-card h2 { margin: 0 0 4px; font-size: 19px }

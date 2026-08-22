@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from "react";
+import type { Manifest } from "@couloir/protocol";
+import { ScreenPreview } from "./Preview.js";
 import { type Media, type PublishItem, type SchoolClass, type ScreenStatus, api, humanSize } from "./api.js";
 
 /**
@@ -28,6 +30,8 @@ export function PublishPanel({
   /** Vide = toutes les classes défilent. Une seule = écran fixe. */
   const [classIds, setClassIds] = useState<string[]>([]);
   const [message, setMessage] = useState<{ text: string; error?: boolean } | null>(null);
+  const [preview, setPreview] = useState<Manifest | null>(null);
+  const [previewError, setPreviewError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
 
@@ -42,6 +46,38 @@ export function PublishPanel({
     setTicker("");
     setMessage(null);
   }, [screen.id]);
+
+  /**
+   * L'aperçu se recompose à chaque modification, avec un léger délai : on
+   * ne demande pas un manifeste au serveur à chaque frappe dans un titre.
+   */
+  useEffect(() => {
+    if (items.length === 0 || items.some((item) => item.text && !item.text.titre.trim())) {
+      setPreview(null);
+      setPreviewError(null);
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      void api
+        .previewSpec(screen.id, {
+          layout,
+          items: items.map(({ key, title, ...item }) => item),
+          ...(ticker.trim() ? { ticker: ticker.trim() } : {}),
+          ...(layout === "principal-et-cours" && classIds.length > 0 ? { timetableClassIds: classIds } : {}),
+        })
+        .then((result) => {
+          setPreview(result.manifest as Manifest);
+          setPreviewError(null);
+        })
+        .catch((cause) => {
+          setPreview(null);
+          setPreviewError(cause instanceof Error ? cause.message : String(cause));
+        });
+    }, 400);
+
+    return () => clearTimeout(timer);
+  }, [screen.id, layout, items, ticker, classIds]);
 
   async function upload(file: File) {
     setBusy(true);
@@ -99,6 +135,7 @@ export function PublishPanel({
   const ready = items.length > 0 && items.every((item) => !item.text || item.text.titre.trim());
 
   return (
+    <>
     <section className="panel">
       <header>
         <h2>Publier sur {screen.code}</h2>
@@ -291,5 +328,10 @@ export function PublishPanel({
         )}
       </div>
     </section>
+
+      <div style={{ marginTop: 20 }}>
+        <ScreenPreview manifest={preview} screenCode={screen.code} error={previewError} />
+      </div>
+    </>
   );
 }
