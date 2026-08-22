@@ -40,6 +40,8 @@ export interface PublishSpec {
    * Une seule classe : écran « fixe ». Plusieurs : l'écran les enchaîne.
    */
   timetableClasses?: { id: string; label: string }[];
+  /** Plages d'extinction de la dalle, en heure locale de l'école. */
+  displayOff?: { daysOfWeek: number[]; from: string; to: string }[];
 }
 
 export interface ComposeInput {
@@ -195,7 +197,7 @@ export function compose(input: ComposeInput): Manifest {
       cacheBudgetBytes: 8 * 1024 ** 3,
       offlineGraceDays: 7,
       timezone: "Europe/Paris",
-      displayOff: [],
+      displayOff: spec.displayOff ?? [],
       showScreenCodeWatermark: true,
       ...input.settings,
     },

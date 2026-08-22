@@ -1,0 +1,11 @@
+-- La composition qui a produit le manifeste.
+--
+-- Le manifeste est le résultat : des identifiants de médias, des zones, des
+-- durées. On ne peut pas le remonter jusqu'au choix d'origine — « plein
+-- écran, cette affiche, ce bandeau ». Sans cette colonne, rouvrir une
+-- publication pour en changer un détail obligerait à tout resaisir de
+-- mémoire, et publier resterait un acte de composition à l'aveugle.
+--
+-- Nullable : les publications antérieures à cette migration n'en ont pas.
+-- La console le sait et propose alors une composition vierge.
+ALTER TABLE manifests ADD COLUMN spec JSONB;

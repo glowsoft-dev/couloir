@@ -14,37 +14,37 @@ function S(e, t) {
     hour: "2-digit",
     minute: "2-digit",
     hour12: !1
-  }).formatToParts(new Date(e)), r = (c) => n.find((o) => o.type === c)?.value ?? "", i = Number(r("hour")) % 24, a = Number(r("minute"));
+  }).formatToParts(new Date(e)), o = (s) => n.find((i) => i.type === s)?.value ?? "", r = Number(o("hour")) % 24, a = Number(o("minute"));
   return {
-    dayOfWeek: P[r("weekday")] ?? 1,
-    minutesOfDay: i * 60 + a
+    dayOfWeek: P[o("weekday")] ?? 1,
+    minutesOfDay: r * 60 + a
   };
 }
-function x(e) {
+function I(e) {
   const [t, n] = e.split(":");
   return Number(t) * 60 + Number(n);
 }
 function E(e, t, n) {
-  const r = x(t), i = x(n);
-  return r === i ? !0 : r < i ? e >= r && e < i : e >= r || e < i;
+  const o = I(t), r = I(n);
+  return o === r ? !0 : o < r ? e >= o && e < r : e >= o || e < r;
 }
 function A(e, t, n) {
   if (!t) return { status: "never-loaded" };
-  const r = Math.max(0, (n - t.fetchedAtMs) / 1e3);
-  if (r <= e.maxStaleSec)
+  const o = Math.max(0, (n - t.fetchedAtMs) / 1e3);
+  if (o <= e.maxStaleSec)
     return {
       status: "usable",
       payload: t.payload,
-      ageSec: r,
-      needsRefresh: r > e.ttlSec
+      ageSec: o,
+      needsRefresh: o > e.ttlSec
     };
   switch (e.stalePolicy) {
     case "keep-with-date":
-      return { status: "stale-shown", payload: t.payload, ageSec: r, fetchedAtMs: t.fetchedAtMs };
+      return { status: "stale-shown", payload: t.payload, ageSec: o, fetchedAtMs: t.fetchedAtMs };
     case "hide":
-      return { status: "hidden", ageSec: r };
+      return { status: "hidden", ageSec: o };
     case "fallback":
-      return { status: "fallback", ageSec: r };
+      return { status: "fallback", ageSec: o };
   }
 }
 function z(e) {
@@ -58,24 +58,29 @@ function F(e, t = "fr-FR", n = "Europe/Paris") {
     minute: "2-digit"
   }).format(new Date(e.fetchedAtMs))}`;
 }
-function N(e, t, n) {
-  if (e.startsAt && t < Date.parse(e.startsAt) || e.endsAt && t >= Date.parse(e.endsAt)) return !1;
-  const r = S(t, n);
-  return !(e.daysOfWeek && e.daysOfWeek.length > 0 && !e.daysOfWeek.includes(r.dayOfWeek) || e.dailyStart && e.dailyEnd && !E(r.minutesOfDay, e.dailyStart, e.dailyEnd));
-}
 function D(e, t, n) {
-  const r = e.layout.zones.find((o) => o.id === t);
-  if (!r) return null;
-  const i = e.settings.timezone, a = e.schedules.filter((o) => o.zoneId === t).filter((o) => N(o, n, i));
-  if (a.length === 0) return r.playlistId;
-  let c = a[0];
-  for (const o of a.slice(1))
-    o.priority >= c.priority && (c = o);
-  return c.playlistId;
+  if (e.startsAt && t < Date.parse(e.startsAt) || e.endsAt && t >= Date.parse(e.endsAt)) return !1;
+  const o = S(t, n);
+  return !(e.daysOfWeek && e.daysOfWeek.length > 0 && !e.daysOfWeek.includes(o.dayOfWeek) || e.dailyStart && e.dailyEnd && !E(o.minutesOfDay, e.dailyStart, e.dailyEnd));
+}
+function N(e, t, n) {
+  const o = e.layout.zones.find((i) => i.id === t);
+  if (!o) return null;
+  const r = e.settings.timezone, a = e.schedules.filter((i) => i.zoneId === t).filter((i) => D(i, n, r));
+  if (a.length === 0) return o.playlistId;
+  let s = a[0];
+  for (const i of a.slice(1))
+    i.priority >= s.priority && (s = i);
+  return s.playlistId;
 }
 function O(e, t) {
-  const n = S(t, e.timezone);
-  return e.displayOff.some((r) => r.daysOfWeek.length > 0 && !r.daysOfWeek.includes(n.dayOfWeek) ? !1 : E(n.minutesOfDay, r.from, r.to));
+  const n = S(t, e.timezone), o = (n.dayOfWeek + 5) % 7 + 1;
+  return e.displayOff.some((r) => {
+    if (!E(n.minutesOfDay, r.from, r.to)) return !1;
+    if (r.daysOfWeek.length === 0) return !0;
+    const a = I(r.from), s = I(r.to), i = a > s && n.minutesOfDay < s;
+    return r.daysOfWeek.includes(i ? o : n.dayOfWeek);
+  });
 }
 const T = 130, W = 2500, L = 6e4, R = 1.9;
 function $(e) {
@@ -90,8 +95,8 @@ function q(e) {
   return e.kind !== "template" ? "" : Object.values(e.fields).filter((t) => typeof t == "string").join(" ");
 }
 function U(e) {
-  const t = "durationMs" in e && e.durationMs ? e.durationMs : 0, n = _(q(e)), r = Math.min(Math.max(t, n), L);
-  return { effectiveMs: r, requestedMs: t, extended: r > t };
+  const t = "durationMs" in e && e.durationMs ? e.durationMs : 0, n = _(q(e)), o = Math.min(Math.max(t, n), L);
+  return { effectiveMs: o, requestedMs: t, extended: o > t };
 }
 function j(e) {
   const t = Math.round(e * R / 100);
@@ -103,51 +108,51 @@ function j(e) {
   };
 }
 function M(e, t, n) {
-  for (let r = 1; r <= e.length; r++) {
-    const i = (t + r) % e.length, a = e[i];
-    if (a !== void 0 && n(a)) return i;
+  for (let o = 1; o <= e.length; o++) {
+    const r = (t + o) % e.length, a = e[r];
+    if (a !== void 0 && n(a)) return r;
   }
   return null;
 }
 function B(e, t) {
   for (let n = 0; n < e.length; n++) {
-    const r = e[n];
-    if (r !== void 0 && t(r)) return n;
+    const o = e[n];
+    if (o !== void 0 && t(o)) return n;
   }
   return null;
 }
 function Z(e) {
-  const { state: t, playlistId: n, slideIds: r, isEligible: i, durationMsOf: a, nowMs: c } = e, o = t && t.playlistId === n ? r[t.index] ?? null : null, s = (f) => {
+  const { state: t, playlistId: n, slideIds: o, isEligible: r, durationMsOf: a, nowMs: s } = e, i = t && t.playlistId === n ? o[t.index] ?? null : null, c = (f) => {
     if (f === null)
-      return { state: null, currentSlideId: null, changed: o !== null };
-    const p = r[f];
+      return { state: null, currentSlideId: null, changed: i !== null };
+    const p = o[f];
     return {
-      state: { playlistId: n, index: f, slideStartedAtMs: c },
+      state: { playlistId: n, index: f, slideStartedAtMs: s },
       currentSlideId: p,
-      changed: p !== o
+      changed: p !== i
     };
   };
-  if (!t || t.playlistId !== n || t.index >= r.length)
-    return s(B(r, i));
-  const d = r[t.index];
-  if (d === void 0 || !i(d))
-    return s(M(r, t.index, i));
-  const y = a(d), b = c - t.slideStartedAtMs;
+  if (!t || t.playlistId !== n || t.index >= o.length)
+    return c(B(o, r));
+  const d = o[t.index];
+  if (d === void 0 || !r(d))
+    return c(M(o, t.index, r));
+  const y = a(d), b = s - t.slideStartedAtMs;
   if (!(y === null ? e.mediaEnded === !0 : b >= y))
     return { state: t, currentSlideId: d, changed: !1 };
-  const m = M(r, t.index, i);
-  return s(m === null ? null : m);
+  const m = M(o, t.index, r);
+  return c(m === null ? null : m);
 }
 function H(e) {
-  const { manifest: t, nowMs: n } = e, r = new Map(t.slides.map((l) => [l.id, l])), i = new Map(t.assets.map((l) => [l.id, l])), a = new Map(t.playlists.map((l) => [l.id, l])), c = new Map(
+  const { manifest: t, nowMs: n } = e, o = new Map(t.slides.map((l) => [l.id, l])), r = new Map(t.assets.map((l) => [l.id, l])), a = new Map(t.playlists.map((l) => [l.id, l])), s = new Map(
     t.dataSources.map((l) => [
       l.id,
       A(l, e.sources.get(l.id), n)
     ])
-  ), o = t.settings.showScreenCodeWatermark ? e.screenCode ?? null : null, s = t.emergency;
-  if (s && n < Date.parse(s.validUntil))
+  ), i = t.settings.showScreenCodeWatermark ? e.screenCode ?? null : null, c = t.emergency;
+  if (c && n < Date.parse(c.validUntil))
     return {
-      screen: { mode: "emergency", zones: [], emergency: s, identify: null, watermark: o },
+      screen: { mode: "emergency", zones: [], emergency: c, identify: null, watermark: i },
       rotations: new Map(e.rotations),
       transitions: []
     };
@@ -164,91 +169,91 @@ function H(e) {
       transitions: []
     };
   const d = (l) => {
-    const h = r.get(l);
+    const h = o.get(l);
     if (!h) return !1;
     switch (h.kind) {
       case "media":
         return e.availableAssetIds.has(h.assetId);
       case "template":
-        return h.assetIds.every((w) => e.availableAssetIds.has(w));
+        return h.assetIds.every((v) => e.availableAssetIds.has(v));
       case "widget":
         return !0;
       case "data": {
-        const w = c.get(h.sourceId);
-        return w !== void 0 && z(w);
+        const v = s.get(h.sourceId);
+        return v !== void 0 && z(v);
       }
     }
   }, y = (l) => {
-    const h = r.get(l);
+    const h = o.get(l);
     return h ? h.kind === "media" && h.durationMs === void 0 ? null : U(h).effectiveMs : 0;
   }, b = e.forceFallback ? "fallback" : "normal", u = /* @__PURE__ */ new Map(), m = [], f = [];
   for (const l of t.layout.zones) {
-    const h = e.forceFallback ? t.fallbackPlaylistId : D(t, l.id, n) ?? l.playlistId, w = a.get(h), k = e.rotations.get(l.id), C = k && k.playlistId === h ? w?.slideIds[k.index] ?? null : null, v = Z({
+    const h = e.forceFallback ? t.fallbackPlaylistId : N(t, l.id, n) ?? l.playlistId, v = a.get(h), k = e.rotations.get(l.id), C = k && k.playlistId === h ? v?.slideIds[k.index] ?? null : null, w = Z({
       state: k,
       playlistId: h,
-      slideIds: w?.slideIds ?? [],
+      slideIds: v?.slideIds ?? [],
       isEligible: d,
       durationMsOf: y,
       nowMs: n,
       mediaEnded: e.mediaEndedZoneIds?.has(l.id) ?? !1
     });
-    v.state && u.set(l.id, v.state), v.changed && m.push({
+    w.state && u.set(l.id, w.state), w.changed && m.push({
       zoneId: l.id,
       fromSlideId: C,
-      toSlideId: v.currentSlideId,
+      toSlideId: w.currentSlideId,
       atMs: n
     });
-    const I = v.currentSlideId ? r.get(v.currentSlideId) : void 0;
+    const x = w.currentSlideId ? o.get(w.currentSlideId) : void 0;
     if (f.push({
       zoneId: l.id,
       rect: l.rect,
       playlistId: h,
-      slide: I ? X(I, i, c, t.settings.timezone) : null
+      slide: x ? X(x, r, s, t.settings.timezone) : null
     }), e.forceFallback) break;
   }
   const p = e.forceFallback ? f.map((l) => ({ ...l, rect: { xPercent: 0, yPercent: 0, widthPercent: 100, heightPercent: 100 } })) : G(f);
   return {
-    screen: { mode: b, zones: p, emergency: null, identify: null, watermark: o },
+    screen: { mode: b, zones: p, emergency: null, identify: null, watermark: i },
     rotations: u,
     transitions: m
   };
 }
-function X(e, t, n, r) {
+function X(e, t, n, o) {
   switch (e.kind) {
     case "media": {
-      const i = t.get(e.assetId);
-      return i ? { kind: "media", slideId: e.id, asset: i } : null;
+      const r = t.get(e.assetId);
+      return r ? { kind: "media", slideId: e.id, asset: r } : null;
     }
     case "template":
       return { kind: "template", slideId: e.id, templateId: e.templateId, fields: e.fields };
     case "widget":
       return { kind: "widget", slideId: e.id, widget: e.widget, config: e.config };
     case "data": {
-      const i = n.get(e.sourceId);
-      return !i || !z(i) ? null : {
+      const r = n.get(e.sourceId);
+      return !r || !z(r) ? null : {
         kind: "data",
         slideId: e.id,
         sourceId: e.sourceId,
         view: e.view,
-        payload: "payload" in i ? i.payload : null,
+        payload: "payload" in r ? r.payload : null,
         params: e.params,
-        staleLabel: F(i, "fr-FR", r)
+        staleLabel: F(r, "fr-FR", o)
       };
     }
   }
 }
 function G(e) {
   const t = /* @__PURE__ */ new Map();
-  for (const s of e) {
-    const d = `${s.rect.yPercent}:${s.rect.heightPercent}`, y = t.get(d);
-    y ? y.push(s) : t.set(d, [s]);
+  for (const c of e) {
+    const d = `${c.rect.yPercent}:${c.rect.heightPercent}`, y = t.get(d);
+    y ? y.push(c) : t.set(d, [c]);
   }
   const n = [];
-  for (const s of t.values()) {
-    const d = s.filter((f) => f.slide !== null);
+  for (const c of t.values()) {
+    const d = c.filter((f) => f.slide !== null);
     if (d.length === 0) continue;
-    const y = s.reduce((f, p) => f + p.rect.widthPercent, 0), b = d.reduce((f, p) => f + p.rect.widthPercent, 0), u = b > 0 ? y / b : 1;
-    let m = Math.min(...s.map((f) => f.rect.xPercent));
+    const y = c.reduce((f, p) => f + p.rect.widthPercent, 0), b = d.reduce((f, p) => f + p.rect.widthPercent, 0), u = b > 0 ? y / b : 1;
+    let m = Math.min(...c.map((f) => f.rect.xPercent));
     n.push(
       d.map((f) => {
         const p = f.rect.widthPercent * u, l = { ...f, rect: { ...f.rect, xPercent: m, widthPercent: p } };
@@ -257,15 +262,15 @@ function G(e) {
     );
   }
   if (n.length === 0) return [];
-  const r = [...t.values()].reduce((s, d) => s + (d[0]?.rect.heightPercent ?? 0), 0), i = n.reduce((s, d) => s + (d[0]?.rect.heightPercent ?? 0), 0), a = i > 0 ? r / i : 1, c = [];
-  let o = Math.min(...e.map((s) => s.rect.yPercent));
-  for (const s of n.sort((d, y) => (d[0]?.rect.yPercent ?? 0) - (y[0]?.rect.yPercent ?? 0))) {
-    const d = (s[0]?.rect.heightPercent ?? 0) * a;
-    for (const y of s)
-      c.push({ ...y, rect: { ...y.rect, yPercent: o, heightPercent: d } });
-    o += d;
+  const o = [...t.values()].reduce((c, d) => c + (d[0]?.rect.heightPercent ?? 0), 0), r = n.reduce((c, d) => c + (d[0]?.rect.heightPercent ?? 0), 0), a = r > 0 ? o / r : 1, s = [];
+  let i = Math.min(...e.map((c) => c.rect.yPercent));
+  for (const c of n.sort((d, y) => (d[0]?.rect.yPercent ?? 0) - (y[0]?.rect.yPercent ?? 0))) {
+    const d = (c[0]?.rect.heightPercent ?? 0) * a;
+    for (const y of c)
+      s.push({ ...y, rect: { ...y.rect, yPercent: i, heightPercent: d } });
+    i += d;
   }
-  return c;
+  return s;
 }
 const Y = `
 :host, .couloir-root {
@@ -453,24 +458,24 @@ const Y = `
 }
 `;
 function J(e, t = {}) {
-  const n = e.ownerDocument, r = n.createElement("style");
-  r.textContent = Y, e.appendChild(r);
-  const i = n.createElement("div");
-  i.className = "couloir-root", e.appendChild(i);
+  const n = e.ownerDocument, o = n.createElement("style");
+  o.textContent = Y, e.appendChild(o);
+  const r = n.createElement("div");
+  r.className = "couloir-root", e.appendChild(r);
   let a = () => {
   };
-  const c = /* @__PURE__ */ new Map();
-  let o = "";
-  const s = () => {
-    const u = i.clientHeight || 1080, m = j(u);
-    i.style.setProperty("--fs-eyebrow", `${m.eyebrow}px`), i.style.setProperty("--fs-title", `${m.title}px`), i.style.setProperty("--fs-body", `${m.body}px`), i.style.setProperty("--fs-caption", `${m.caption}px`), i.style.setProperty("--pad", `${Math.round(u * 0.045)}px`);
-  }, d = new ResizeObserver(s);
-  d.observe(i), s();
+  const s = /* @__PURE__ */ new Map();
+  let i = "";
+  const c = () => {
+    const u = r.clientHeight || 1080, m = j(u);
+    r.style.setProperty("--fs-eyebrow", `${m.eyebrow}px`), r.style.setProperty("--fs-title", `${m.title}px`), r.style.setProperty("--fs-body", `${m.body}px`), r.style.setProperty("--fs-caption", `${m.caption}px`), r.style.setProperty("--pad", `${Math.round(u * 0.045)}px`);
+  }, d = new ResizeObserver(c);
+  d.observe(r), c();
   function y(u) {
     const m = `${u.mode}:${u.emergency?.id ?? ""}:${u.identify?.screenCode ?? ""}`;
     if (u.mode === "normal" || u.mode === "fallback") return !1;
-    if (m === o) return !0;
-    o = m, i.replaceChildren(), c.clear();
+    if (m === i) return !0;
+    i = m, r.replaceChildren(), s.clear();
     const f = n.createElement("div");
     return u.mode === "emergency" && u.emergency ? (f.className = "couloir-full couloir-full--emergency", f.append(
       g(n, "p", "couloir-eyebrow", "Message important"),
@@ -479,30 +484,30 @@ function J(e, t = {}) {
       g(n, "div", "couloir-code", u.identify.screenCode),
       g(n, "p", "couloir-body", u.identify.label),
       g(n, "p", "couloir-body", u.identify.ipAddress)
-    )) : f.className = "couloir-full couloir-full--off", i.appendChild(f), !0;
+    )) : f.className = "couloir-full couloir-full--off", r.appendChild(f), !0;
   }
   function b(u) {
-    o !== "" && (i.replaceChildren(), c.clear(), o = "");
+    i !== "" && (r.replaceChildren(), s.clear(), i = "");
     const m = /* @__PURE__ */ new Set();
     for (const p of u.zones) {
       m.add(p.zoneId);
-      let l = i.querySelector(`[data-zone="${p.zoneId}"]`);
-      l || (l = n.createElement("section"), l.className = "couloir-zone", l.dataset.zone = p.zoneId, i.appendChild(l)), l.style.left = `${p.rect.xPercent}%`, l.style.top = `${p.rect.yPercent}%`, l.style.width = `${p.rect.widthPercent}%`, l.style.height = `${p.rect.heightPercent}%`;
+      let l = r.querySelector(`[data-zone="${p.zoneId}"]`);
+      l || (l = n.createElement("section"), l.className = "couloir-zone", l.dataset.zone = p.zoneId, r.appendChild(l)), l.style.left = `${p.rect.xPercent}%`, l.style.top = `${p.rect.yPercent}%`, l.style.width = `${p.rect.widthPercent}%`, l.style.height = `${p.rect.heightPercent}%`;
       const h = p.slide?.slideId ?? null;
-      if (c.get(p.zoneId) !== h) {
+      if (s.get(p.zoneId) !== h) {
         if (l.replaceChildren(), h === null) {
-          c.delete(p.zoneId);
+          s.delete(p.zoneId);
           continue;
         }
-        c.set(p.zoneId, h), l.appendChild(K(n, p, p.slide, t, a));
+        s.set(p.zoneId, h), l.appendChild(V(n, p, p.slide, t, a));
       }
     }
-    for (const p of [...i.querySelectorAll("[data-zone]")]) {
+    for (const p of [...r.querySelectorAll("[data-zone]")]) {
       const l = p.dataset.zone;
-      l && !m.has(l) && (p.remove(), c.delete(l));
+      l && !m.has(l) && (p.remove(), s.delete(l));
     }
-    let f = i.querySelector(".couloir-watermark");
-    u.watermark ? (f || (f = g(n, "div", "couloir-watermark", u.watermark), i.appendChild(f)), f.textContent = u.watermark) : f?.remove();
+    let f = r.querySelector(".couloir-watermark");
+    u.watermark ? (f || (f = g(n, "div", "couloir-watermark", u.watermark), r.appendChild(f)), f.textContent = u.watermark) : f?.remove();
   }
   return {
     update(u) {
@@ -512,44 +517,44 @@ function J(e, t = {}) {
       a = u;
     },
     destroy() {
-      d.disconnect(), i.remove(), r.remove();
+      d.disconnect(), r.remove(), o.remove();
     }
   };
 }
-function g(e, t, n, r) {
-  const i = e.createElement(t);
-  return i.className = n, r !== void 0 && (i.textContent = r), i;
+function g(e, t, n, o) {
+  const r = e.createElement(t);
+  return r.className = n, o !== void 0 && (r.textContent = o), r;
 }
-function K(e, t, n, r, i) {
+function V(e, t, n, o, r) {
   const a = e.createElement("div");
   switch (a.className = "couloir-slide", a.dataset.slide = n.slideId, n.kind) {
     case "media": {
       a.classList.add("couloir-slide--media");
-      const c = r.assetUrl?.(n.asset.id) ?? n.asset.url;
+      const s = o.assetUrl?.(n.asset.id) ?? n.asset.url;
       if (n.asset.mime.startsWith("video/")) {
-        const o = e.createElement("video");
-        o.className = "couloir-media", o.src = c, o.muted = !0, o.autoplay = !0, o.playsInline = !0, o.addEventListener("ended", () => i(t.zoneId)), o.addEventListener("error", () => i(t.zoneId)), a.appendChild(o);
+        const i = e.createElement("video");
+        i.className = "couloir-media", i.src = s, i.muted = !0, i.autoplay = !0, i.playsInline = !0, i.addEventListener("ended", () => r(t.zoneId)), i.addEventListener("error", () => r(t.zoneId)), a.appendChild(i);
       } else {
-        const o = e.createElement("img");
-        o.className = "couloir-media", o.src = c, o.alt = "", a.appendChild(o);
+        const i = e.createElement("img");
+        i.className = "couloir-media", i.src = s, i.alt = "", a.appendChild(i);
       }
       return a;
     }
     case "template": {
-      const c = (y) => {
+      const s = (y) => {
         const b = n.fields[y];
         return typeof b == "string" ? b : void 0;
-      }, o = c("eyebrow"), s = c("titre") ?? c("title"), d = c("texte") ?? c("body");
-      return o && a.appendChild(g(e, "p", "couloir-eyebrow", o)), s && a.appendChild(g(e, "h1", "couloir-title", s)), d && a.appendChild(g(e, "p", "couloir-body", d)), a;
+      }, i = s("eyebrow"), c = s("titre") ?? s("title"), d = s("texte") ?? s("body");
+      return i && a.appendChild(g(e, "p", "couloir-eyebrow", i)), c && a.appendChild(g(e, "h1", "couloir-title", c)), d && a.appendChild(g(e, "p", "couloir-body", d)), a;
     }
     case "widget": {
       if (n.widget === "ticker") {
         a.classList.add("couloir-slide--ticker");
-        const c = typeof n.config.text == "string" ? n.config.text : "", o = g(e, "div", "couloir-ticker-viewport");
-        o.appendChild(g(e, "span", "couloir-ticker-text", c)), a.appendChild(o);
-        const s = g(e, "div", "couloir-clock", ""), d = () => {
-          s.textContent = new Intl.DateTimeFormat(r.locale ?? "fr-FR", {
-            timeZone: r.timezone ?? "Europe/Paris",
+        const s = typeof n.config.text == "string" ? n.config.text : "", i = g(e, "div", "couloir-ticker-viewport");
+        i.appendChild(g(e, "span", "couloir-ticker-text", s)), a.appendChild(i);
+        const c = g(e, "div", "couloir-clock", ""), d = () => {
+          c.textContent = new Intl.DateTimeFormat(o.locale ?? "fr-FR", {
+            timeZone: o.timezone ?? "Europe/Paris",
             hour: "2-digit",
             minute: "2-digit"
           }).format(/* @__PURE__ */ new Date());
@@ -557,65 +562,65 @@ function K(e, t, n, r, i) {
         d();
         const y = setInterval(d, 1e4);
         return new MutationObserver((b, u) => {
-          s.isConnected || (clearInterval(y), u.disconnect());
-        }).observe(a.ownerDocument.body, { childList: !0, subtree: !0 }), a.appendChild(s), a;
+          c.isConnected || (clearInterval(y), u.disconnect());
+        }).observe(a.ownerDocument.body, { childList: !0, subtree: !0 }), a.appendChild(c), a;
       }
       return a.appendChild(g(e, "p", "couloir-eyebrow", n.widget)), a;
     }
     case "data":
-      return V(e, a, n), n.staleLabel && a.appendChild(g(e, "p", "couloir-stale", n.staleLabel)), a;
+      return Q(e, a, n), n.staleLabel && a.appendChild(g(e, "p", "couloir-stale", n.staleLabel)), a;
   }
 }
-function Q(e, t) {
+function K(e, t) {
   const n = e?.days;
   if (Array.isArray(n))
-    return t ? n.find((i) => i.classId === t) ?? null : n[0] ?? null;
-  const r = e;
-  return r && Array.isArray(r.entries) ? r : null;
+    return t ? n.find((r) => r.classId === t) ?? null : n[0] ?? null;
+  const o = e;
+  return o && Array.isArray(o.entries) ? o : null;
 }
-function V(e, t, n) {
+function Q(e, t, n) {
   if (n.view.startsWith("timetable")) {
-    const a = Q(n.payload, n.params.classId);
+    const a = K(n.payload, n.params.classId);
     if (!a) return;
     if (t.appendChild(g(e, "p", "couloir-eyebrow", a.classLabel)), a.notice) {
       t.appendChild(g(e, "p", "couloir-body", a.notice));
       return;
     }
-    const c = e.createElement("ul");
-    c.className = "couloir-list";
-    for (const o of a.entries) {
-      const s = o.change && o.change !== "none", d = e.createElement("li");
-      d.className = s ? "couloir-row couloir-row--changed" : "couloir-row", o.change === "cancelled" && d.classList.add("couloir-row--cancelled");
+    const s = e.createElement("ul");
+    s.className = "couloir-list";
+    for (const i of a.entries) {
+      const c = i.change && i.change !== "none", d = e.createElement("li");
+      d.className = c ? "couloir-row couloir-row--changed" : "couloir-row", i.change === "cancelled" && d.classList.add("couloir-row--cancelled");
       const y = e.createElement("time");
-      y.textContent = o.time;
+      y.textContent = i.time;
       const b = e.createElement("span");
-      b.textContent = o.subject, o.note && b.appendChild(g(e, "span", "couloir-badge", o.note)), d.append(y, b, g(e, "span", "room", o.room)), c.appendChild(d);
+      b.textContent = i.subject, i.note && b.appendChild(g(e, "span", "couloir-badge", i.note)), d.append(y, b, g(e, "span", "room", i.room)), s.appendChild(d);
     }
-    t.appendChild(c);
+    t.appendChild(s);
     return;
   }
-  const i = (Array.isArray(n.payload) ? n.payload : [])[0];
-  i && (i.category && t.appendChild(g(e, "p", "couloir-eyebrow", i.category)), t.appendChild(g(e, "h1", "couloir-title", i.title)), i.excerpt && t.appendChild(g(e, "p", "couloir-body", i.excerpt)));
+  const r = (Array.isArray(n.payload) ? n.payload : [])[0];
+  r && (r.category && t.appendChild(g(e, "p", "couloir-eyebrow", r.category)), t.appendChild(g(e, "h1", "couloir-title", r.title)), r.excerpt && t.appendChild(g(e, "p", "couloir-body", r.excerpt)));
 }
 function ne(e, t) {
-  const n = J(e, t), r = t.pollMs ?? 2e3, i = t.tickMs ?? 500;
-  let a = null, c = /* @__PURE__ */ new Map(), o = /* @__PURE__ */ new Set(), s = !1;
+  const n = J(e, t), o = t.pollMs ?? 2e3, r = t.tickMs ?? 500;
+  let a = null, s = /* @__PURE__ */ new Map(), i = /* @__PURE__ */ new Set(), c = !1;
   n.onMediaEnded((m) => {
-    o.add(m), y();
+    i.add(m), y();
   });
   async function d() {
-    if (!s)
+    if (!c)
       try {
         const m = await fetch(t.stateUrl, { cache: "no-store" });
         if (m.ok) {
           const f = await m.json();
-          f.manifest?.version !== a?.manifest?.version && (c = /* @__PURE__ */ new Map()), a = f;
+          f.manifest?.version !== a?.manifest?.version && (s = /* @__PURE__ */ new Map()), a = f;
         }
       } catch {
       }
   }
   function y() {
-    if (s) return;
+    if (c) return;
     if (!a?.manifest) {
       n.update(ee(a));
       return;
@@ -625,18 +630,18 @@ function ne(e, t) {
       nowMs: Date.now(),
       sources: new Map(Object.entries(a.sources)),
       availableAssetIds: new Set(a.availableAssetIds),
-      rotations: c,
+      rotations: s,
       forceFallback: a.forceFallback,
       identify: a.identify,
-      mediaEndedZoneIds: o,
+      mediaEndedZoneIds: i,
       ...a.screenCode !== null ? { screenCode: a.screenCode } : {}
     });
-    o = /* @__PURE__ */ new Set(), c = m.rotations, n.update(m.screen), m.transitions.length > 0 && t.transitionsUrl && te(t.transitionsUrl, m.transitions);
+    i = /* @__PURE__ */ new Set(), s = m.rotations, n.update(m.screen), m.transitions.length > 0 && t.transitionsUrl && te(t.transitionsUrl, m.transitions);
   }
-  const b = setInterval(() => void d(), r), u = setInterval(y, i);
+  const b = setInterval(() => void d(), o), u = setInterval(y, r);
   return d().then(y), {
     stop() {
-      s = !0, clearInterval(b), clearInterval(u), n.destroy();
+      c = !0, clearInterval(b), clearInterval(u), n.destroy();
     }
   };
 }
@@ -688,7 +693,7 @@ export {
   R as MIN_BODY_TEXT_HEIGHT_PERCENT,
   T as READING_WORDS_PER_MINUTE,
   Y as RENDERER_CSS,
-  D as activePlaylistId,
+  N as activePlaylistId,
   Z as advanceRotation,
   G as collapseEmptyZones,
   $ as countWords,
@@ -696,12 +701,12 @@ export {
   U as effectiveDuration,
   O as isDisplayOffPeriod,
   z as isDisplayable,
-  N as isScheduleActive,
+  D as isScheduleActive,
   E as isWithinDailyWindow,
   S as localMoment,
   _ as minReadableDurationMs,
   J as mountRenderer,
-  x as parseClock,
+  I as parseClock,
   A as resolveSource,
   q as slideText,
   F as stalenessLabel,

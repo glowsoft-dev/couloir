@@ -68,12 +68,25 @@ export interface Emergency {
   validUntil: string;
 }
 
+export interface DisplayOffWindow {
+  daysOfWeek: number[];
+  from: string;
+  to: string;
+}
+
 export interface PublishSpec {
   layout: "plein-ecran" | "principal-et-cours";
   items: PublishItem[];
   ticker?: string;
   /** Vide = toutes les classes défilent. Une seule = écran fixe. */
   timetableClassIds?: string[];
+  /** Plages d'extinction de la dalle. Un message d'urgence la rallume. */
+  displayOff?: DisplayOffWindow[];
+}
+
+export interface ManifestVersion {
+  version: number;
+  issuedAt: string;
 }
 
 // --- Emploi du temps -------------------------------------------------
@@ -221,6 +234,19 @@ export const api = {
   /** Compose sans enregistrer : le même chemin que la publication. */
   previewSpec: (screenId: string, spec: PublishSpec) =>
     call<{ manifest: unknown }>(`/screens/${screenId}/preview`, json("POST", spec)),
+
+  /** Ce qui est actuellement en ligne, pour rouvrir l'éditeur dessus. */
+  composition: (screenId: string) =>
+    call<{ version: number | null; spec: PublishSpec | null }>(`/screens/${screenId}/composition`),
+
+  history: (screenId: string) =>
+    call<{ versions: ManifestVersion[] }>(`/screens/${screenId}/history`),
+
+  restore: (screenId: string, version: number) =>
+    call<{ version: number; restoredFrom: number }>(
+      `/screens/${screenId}/history/${version}/restore`,
+      { method: "POST" },
+    ),
 
   command: (screenId: string, kind: CommandKind, params?: Record<string, unknown>) =>
     call<{ command: { id: string; kind: CommandKind }; result: CommandResult }>(

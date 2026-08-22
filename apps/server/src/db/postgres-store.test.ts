@@ -151,6 +151,31 @@ describe("manifestes", () => {
     expect(versions.map((row) => row.version)).toEqual([1, 2]);
   });
 
+  dbIt("relit la composition d'une version, pour rouvrir l'éditeur", async () => {
+    // Sans ça, l'éditeur s'ouvre vide devant un écran qui affiche déjà
+    // quelque chose : on ne peut que remplacer à l'aveugle.
+    const { claim } = await enroll();
+    await store.putManifest(demoManifest(claim.screen.id, 1), { layout: "plein-ecran", ticker: "un" });
+    await store.putManifest(demoManifest(claim.screen.id, 2), { layout: "plein-ecran", ticker: "deux" });
+
+    expect(await store.getSpec(claim.screen.id)).toEqual({ layout: "plein-ecran", ticker: "deux" });
+    expect(await store.getSpec(claim.screen.id, 1)).toEqual({ layout: "plein-ecran", ticker: "un" });
+
+    const history = await store.listManifests(claim.screen.id);
+    expect(history.map((h) => h.version)).toEqual([2, 1]);
+    expect((await store.getManifestVersion(claim.screen.id, 1))?.version).toBe(1);
+  });
+
+  dbIt("garde la composition d'origine quand un manifeste est réécrit", async () => {
+    // La restauration réinsère un contenu passé ; elle ne doit pas effacer
+    // la composition déjà connue pour cette version.
+    const { claim } = await enroll();
+    await store.putManifest(demoManifest(claim.screen.id, 1), { layout: "plein-ecran", ticker: "un" });
+    await store.putManifest(demoManifest(claim.screen.id, 1));
+
+    expect(await store.getSpec(claim.screen.id, 1)).toEqual({ layout: "plein-ecran", ticker: "un" });
+  });
+
   dbIt("refuse un manifeste qui référencerait du vide", async () => {
     const { claim } = await enroll();
     const manifest = demoManifest(claim.screen.id, 1);

@@ -489,6 +489,89 @@ describe("parcours de la console", () => {
     expect(comparable(preview.json().manifest)).toEqual(comparable(published as never));
   });
 
+  it("rouvre la composition en ligne, au lieu d'un éditeur vide", async () => {
+    // Un écran qui affiche déjà quelque chose se corrige ; il ne se
+    // remplace pas à l'aveugle.
+    const { app, store, auth } = await ready();
+    const device = await store.startEnrollment("z".repeat(44), { platform: "linux" } as never);
+    const { screen } = await store.claimNew(device.deviceId, {
+      code: "E·0·04", label: "Cantine", building: "E", floor: 0, area: "hall", orientation: "landscape",
+    });
+
+    // Avant toute publication : rien à rouvrir, et on le dit sans mentir.
+    const vide = await app.inject({
+      method: "GET", url: `${CONSOLE_PREFIX}/screens/${screen.id}/composition`, headers: auth,
+    });
+    expect(vide.json()).toEqual({ version: null, spec: null });
+
+    const spec = {
+      layout: "plein-ecran",
+      items: [{ assetId: poster.id, durationMs: 9000 }],
+      ticker: "Portes ouvertes samedi",
+      displayOff: [{ daysOfWeek: [1, 2, 3, 4, 5], from: "19:00", to: "07:30" }],
+    };
+    await app.inject({
+      method: "POST", url: `${CONSOLE_PREFIX}/screens/${screen.id}/publish`, headers: auth, payload: spec,
+    });
+
+    const rouvert = await app.inject({
+      method: "GET", url: `${CONSOLE_PREFIX}/screens/${screen.id}/composition`, headers: auth,
+    });
+    expect(rouvert.json().version).toBe(1);
+    expect(rouvert.json().spec).toEqual(spec);
+  });
+
+  it("republie une version passée sans effacer l'historique", async () => {
+    // Publier serait irréversible sans ça : on ne pourrait revenir en
+    // arrière qu'en refaisant la composition de mémoire.
+    const { app, store, auth } = await ready();
+    const device = await store.startEnrollment("y".repeat(44), { platform: "linux" } as never);
+    const { screen } = await store.claimNew(device.deviceId, {
+      code: "E·0·03", label: "Hall", building: "E", floor: 0, area: "hall", orientation: "landscape",
+    });
+    const publish = (ticker: string) =>
+      app.inject({
+        method: "POST",
+        url: `${CONSOLE_PREFIX}/screens/${screen.id}/publish`,
+        headers: auth,
+        payload: { layout: "plein-ecran", items: [{ assetId: poster.id }], ticker },
+      });
+
+    await publish("premier");
+    await publish("second");
+    expect((await store.getManifest(screen.id))?.version).toBe(2);
+
+    const restore = await app.inject({
+      method: "POST",
+      url: `${CONSOLE_PREFIX}/screens/${screen.id}/history/1/restore`,
+      headers: auth,
+    });
+
+    expect(restore.statusCode).toBe(200);
+    // Une nouvelle version portant l'ancien contenu, pas une réécriture.
+    const current = await store.getManifest(screen.id);
+    expect(current?.version).toBe(3);
+    expect(JSON.stringify(current)).toContain("premier");
+
+    const history = await app.inject({
+      method: "GET", url: `${CONSOLE_PREFIX}/screens/${screen.id}/history`, headers: auth,
+    });
+    expect(history.json().versions.map((v: { version: number }) => v.version)).toEqual([3, 2, 1]);
+  });
+
+  it("porte les plages d'extinction jusque dans le manifeste", async () => {
+    // Une dalle allumée toute la nuit s'use et consomme pour personne.
+    const manifest = composeWith({
+      layout: "plein-ecran",
+      items: [{ assetId: poster.id }],
+      displayOff: [{ daysOfWeek: [1, 2, 3, 4, 5], from: "19:00", to: "07:00" }],
+    } as never);
+
+    expect(manifest.settings.displayOff).toEqual([
+      { daysOfWeek: [1, 2, 3, 4, 5], from: "19:00", to: "07:00" },
+    ]);
+  });
+
   it("refuse de publier sur un écran inconnu", async () => {
     const { app, auth } = await ready();
     const response = await app.inject({
