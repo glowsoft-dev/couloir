@@ -27,6 +27,8 @@ export type RenderedSlide =
       sourceId: string;
       view: string;
       payload: unknown;
+      /** Sélecteur dans la charge utile : quelle classe, quelle salle. */
+      params: Record<string, string>;
       /** Mention « Mis à jour lundi 08:12 » quand la donnée n'est plus fraîche. */
       staleLabel: string | null;
     };
@@ -237,6 +239,7 @@ function renderSlide(
         sourceId: slide.sourceId,
         view: slide.view,
         payload: "payload" in state ? state.payload : null,
+        params: slide.params,
         staleLabel: stalenessLabel(state, "fr-FR", timezone),
       };
     }

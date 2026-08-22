@@ -18,3 +18,4 @@ export * from "./negotiation.js";
 export * from "./routes.js";
 export * from "./signing.js";
 export * from "./demo.js";
+export * from "./timetable.js";

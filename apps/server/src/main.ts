@@ -2,6 +2,8 @@ import { buildApp } from "./app.js";
 import { connect, waitForDatabase } from "./db/connect.js";
 import { migrate } from "./db/migrate.js";
 import { PostgresStore } from "./db/postgres-store.js";
+import { PostgresTimetable } from "./timetable/repository.js";
+import type { TimetableRepository } from "./timetable/repository.js";
 import { MediaStore } from "./media.js";
 import { seedDemoScreen } from "./seed.js";
 import { MemoryStore, type Store } from "./store.js";
@@ -20,6 +22,7 @@ const media = new MediaStore(process.env["COULOIR_MEDIA"] ?? "./data/media");
 await media.load();
 
 let store: Store;
+let timetable: TimetableRepository | undefined;
 let closeDatabase = async () => {};
 
 if (useMemory) {
@@ -31,6 +34,7 @@ if (useMemory) {
   const applied = await migrate(sql, (message) => console.log(`[couloir] ${message}`));
   if (applied.length === 0) console.log("[couloir] schéma déjà à jour");
   store = new PostgresStore(sql);
+  timetable = new PostgresTimetable(sql);
   closeDatabase = () => store.close();
 }
 
@@ -49,7 +53,8 @@ const app = buildApp({
   logger: true,
   devRoutes: process.env["COULOIR_DEV"] === "1",
   ...(consoleToken ? { consoleToken } : {}),
-  timetableUrl: process.env["COULOIR_TIMETABLE_URL"] ?? `${publicUrl}/connectors/timetable`,
+  ...(timetable ? { timetable } : {}),
+  timetableUrl: process.env["COULOIR_TIMETABLE_URL"] ?? `${publicUrl}/v1/timetable/day`,
   publicUrl,
 });
 

@@ -5,6 +5,7 @@ import { API_PREFIX } from "@couloir/protocol";
 import { CompositionError, type PublishSpec, compose } from "./composer.js";
 import type { MediaStore } from "./media.js";
 import type { Store } from "./store.js";
+import type { TimetableRepository } from "./timetable/repository.js";
 
 /**
  * L'API de la console.
@@ -42,6 +43,13 @@ const PublishBody = z.object({
     .min(1),
   ticker: z.string().max(500).optional(),
   timetableUrl: z.string().url().optional(),
+  /**
+   * Les classes affichées dans la colonne des cours.
+   *
+   * Une seule : écran « fixe », toujours la même classe. Plusieurs, ou
+   * absent : l'écran les fait défiler, dans l'ordre de la console.
+   */
+  timetableClassIds: z.array(z.string().uuid()).optional(),
 });
 
 const PairBody = z.object({
@@ -59,7 +67,7 @@ export interface ConsoleApiOptions {
   media: MediaStore;
   /** Absent = console fermée. On ne l'ouvre jamais par défaut. */
   adminToken?: string;
-  /** Connecteur d'emploi du temps proposé par défaut à la publication. */
+  /** Source d'emploi du temps proposée par défaut à la publication. */
   timetableUrl?: string;
   /**
    * L'adresse par laquelle LES ÉCRANS joignent le serveur.
@@ -72,6 +80,8 @@ export interface ConsoleApiOptions {
    * porte.
    */
   publicUrl?: string;
+  /** Pour résoudre les classes à afficher dans la colonne des cours. */
+  timetable?: TimetableRepository;
 }
 
 export function registerConsoleApi(app: FastifyInstance, options: ConsoleApiOptions): void {
@@ -195,9 +205,29 @@ export function registerConsoleApi(app: FastifyInstance, options: ConsoleApiOpti
         return reply.code(404).send({ code: "unknown-screen", message: "Écran inconnu.", retryable: false });
       }
 
+      // Les classes sont résolues au moment de publier : la console n'envoie
+      // que des identifiants, et une classe renommée n'oblige pas à
+      // republier tous les écrans.
+      let timetableClasses: { id: string; label: string }[] | undefined;
+      if (parsed.data.layout === "principal-et-cours" && options.timetable) {
+        const all = await options.timetable.listClasses();
+        const wanted = parsed.data.timetableClassIds;
+        timetableClasses = wanted?.length
+          ? all.filter((c) => wanted.includes(c.id))
+          : all;
+        if (timetableClasses.length === 0) {
+          return reply.code(400).send({
+            code: "no-class",
+            message: "Aucune classe à afficher. Créez-en une avant de publier cette mise en page.",
+            retryable: false,
+          });
+        }
+      }
+
       const spec: PublishSpec = {
         ...parsed.data,
         timetableUrl: parsed.data.timetableUrl ?? options.timetableUrl,
+        ...(timetableClasses ? { timetableClasses } : {}),
       };
 
       try {

@@ -20,7 +20,7 @@ export interface SourceSnapshot {
 }
 
 export class SourcePoller {
-  private readonly snapshots = new Map<string, SourceSnapshot>();
+  private snapshots = new Map<string, SourceSnapshot>();
   private readonly inFlight = new Set<string>();
   private timer: ReturnType<typeof setInterval> | null = null;
   private manifest: Manifest | null = null;
@@ -31,9 +31,18 @@ export class SourcePoller {
     private readonly log?: (level: "info" | "warn", message: string, context?: Record<string, unknown>) => void,
   ) {}
 
-  /** Les instantanés survivent au changement de manifeste : ils sont datés. */
+  /**
+   * Les instantanés survivent au changement de manifeste : ils sont datés.
+   *
+   * Mais une NOUVELLE version force un rafraîchissement immédiat. Quelqu'un
+   * vient de publier et regarde l'écran : lui faire attendre la fin du TTL —
+   * quinze minutes pour un emploi du temps — lui ferait croire que la
+   * publication n'a pas pris.
+   */
   setManifest(manifest: Manifest): void {
+    const isNewVersion = manifest.version !== this.manifest?.version;
     this.manifest = manifest;
+    if (isNewVersion) this.snapshots.clear();
     void this.refreshDue();
   }
 

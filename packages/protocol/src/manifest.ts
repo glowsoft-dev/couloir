@@ -90,6 +90,14 @@ export const Slide = z.discriminatedUnion("kind", [
     id: z.string(),
     sourceId: z.string(),
     view: z.enum(["timetable-day", "timetable-room", "timetable-next", "news-list", "news-single"]),
+    /**
+     * Sélecteur dans la charge utile de la source.
+     *
+     * Un écran qui fait défiler trente classes partage UNE source et trente
+     * diapositives qui y piochent — plutôt que trente sources interrogées
+     * séparément par l'agent.
+     */
+    params: z.record(z.string()).default({}),
     durationMs: z.number().int().positive(),
   }),
 ]);

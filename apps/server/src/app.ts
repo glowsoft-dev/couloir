@@ -15,6 +15,8 @@ import {
 } from "@couloir/protocol";
 import { ReplayGuard, verifyRequest } from "./auth.js";
 import { registerConsoleApi } from "./console-api.js";
+import { registerTimetableRoutes } from "./timetable/routes.js";
+import type { TimetableRepository } from "./timetable/repository.js";
 import { MediaStore, parseRange } from "./media.js";
 import { MemoryStore, type Store, isPairingExpired } from "./store.js";
 
@@ -36,6 +38,8 @@ export interface AppOptions {
   timetableUrl?: string;
   /** Adresse par laquelle les écrans joignent le serveur. Voir console-api. */
   publicUrl?: string;
+  /** Emploi du temps. Absent = les routes ne sont pas montées. */
+  timetable?: TimetableRepository;
   /**
    * Coupe la vérification des signatures.
    * Réservé aux tests qui portent sur autre chose : en production, une
@@ -338,15 +342,26 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
   // Bouchons pour le développement. Les vrais connecteurs — ICS pour
   // l'emploi du temps, REST pour le site de l'école — viendront ici.
 
-  app.get("/connectors/timetable", async () => [
-    { time: "08:00", subject: "Mathématiques", room: "B 204" },
-    { time: "09:00", subject: "Histoire-géo", room: "A 112" },
-    { time: "10:15", subject: "Physique-chimie", room: "C 007", changed: true, note: "salle changée" },
-    { time: "11:15", subject: "Anglais", room: "B 118" },
-    { time: "13:30", subject: "EPS", room: "Gymnase" },
-    { time: "14:30", subject: "SVT", room: "C 102", changed: true, note: "annulé" },
-    { time: "15:30", subject: "Philosophie", room: "A 210" },
-  ]);
+  // Bouchon conservé pour les démonstrations sans base : le vrai emploi du
+  // temps est servi par /v1/timetable.
+  app.get("/connectors/timetable", async () => ({
+    days: [
+      {
+        classId: "demo",
+        classLabel: "Terminale G1",
+        date: new Date().toISOString().slice(0, 10),
+        entries: [
+          { time: "08:00", endTime: "08:55", subject: "Mathématiques", room: "B 204", change: "none" },
+          { time: "09:00", endTime: "09:55", subject: "Histoire-géo", room: "A 112", change: "none" },
+          { time: "10:15", endTime: "11:10", subject: "Physique-chimie", room: "C 007", change: "room", note: "salle changée" },
+          { time: "11:15", endTime: "12:10", subject: "Anglais", room: "B 118", change: "none" },
+          { time: "13:30", endTime: "14:25", subject: "EPS", room: "Gymnase", change: "none" },
+          { time: "14:30", endTime: "15:25", subject: "SVT", room: "C 102", change: "cancelled", note: "annulé" },
+          { time: "15:30", endTime: "16:25", subject: "Philosophie", room: "A 210", change: "none" },
+        ],
+      },
+    ],
+  }));
 
   app.get("/connectors/news", async () => [
     {
@@ -388,6 +403,10 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
     return reply.send({ acceptedEventIds });
   });
 
+  if (options.timetable) {
+    registerTimetableRoutes(app, { timetable: options.timetable });
+  }
+
   if (options.consoleToken !== undefined || options.devRoutes) {
     registerConsoleApi(app, {
       store,
@@ -395,6 +414,7 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
       ...(options.consoleToken !== undefined ? { adminToken: options.consoleToken } : {}),
       ...(options.timetableUrl !== undefined ? { timetableUrl: options.timetableUrl } : {}),
       ...(options.publicUrl !== undefined ? { publicUrl: options.publicUrl } : {}),
+      ...(options.timetable ? { timetable: options.timetable } : {}),
     });
   }
 

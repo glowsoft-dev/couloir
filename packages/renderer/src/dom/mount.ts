@@ -266,15 +266,41 @@ function renderSlide(
 
 interface TimetableEntry {
   time: string;
+  endTime?: string;
   subject: string;
   room: string;
-  changed?: boolean;
+  teacher?: string;
+  change?: "none" | "cancelled" | "room" | "teacher" | "added";
   note?: string;
+}
+interface TimetableDay {
+  classId: string;
+  classLabel: string;
+  entries: TimetableEntry[];
+  notice?: string;
 }
 interface NewsEntry {
   title: string;
   excerpt?: string;
   category?: string;
+}
+
+/**
+ * Choisit la journée à afficher dans la charge utile.
+ *
+ * Une seule source sert toutes les classes ; c'est le sélecteur de la
+ * diapositive qui dit laquelle. Sans sélecteur, on prend la première — un
+ * écran ne doit pas rester vide à cause d'un paramètre oublié.
+ */
+function pickDay(payload: unknown, classId: string | undefined): TimetableDay | null {
+  const days = (payload as { days?: TimetableDay[] } | null)?.days;
+  if (Array.isArray(days)) {
+    if (!classId) return days[0] ?? null;
+    return days.find((day) => day.classId === classId) ?? null;
+  }
+  // Charge utile d'une seule classe.
+  const single = payload as TimetableDay | null;
+  return single && Array.isArray(single.entries) ? single : null;
 }
 
 function renderDataView(
@@ -283,19 +309,32 @@ function renderDataView(
   slide: Extract<RenderedSlide, { kind: "data" }>,
 ): void {
   if (slide.view.startsWith("timetable")) {
-    const entries = Array.isArray(slide.payload) ? (slide.payload as TimetableEntry[]) : [];
-    wrapper.appendChild(el(doc, "p", "couloir-eyebrow", "Cours du jour"));
+    const day = pickDay(slide.payload, slide.params["classId"]);
+    if (!day) return;
+
+    wrapper.appendChild(el(doc, "p", "couloir-eyebrow", day.classLabel));
+
+    // Vacances, week-end : on le dit. Une liste vide ressemble à une panne.
+    if (day.notice) {
+      wrapper.appendChild(el(doc, "p", "couloir-body", day.notice));
+      return;
+    }
+
     const list = doc.createElement("ul");
     list.className = "couloir-list";
-    for (const entry of entries) {
+    for (const entry of day.entries) {
+      const changed = entry.change && entry.change !== "none";
       const row = doc.createElement("li");
-      // Un changement de dernière minute doit sauter aux yeux.
-      row.className = entry.changed ? "couloir-row couloir-row--changed" : "couloir-row";
+      row.className = changed ? "couloir-row couloir-row--changed" : "couloir-row";
+      if (entry.change === "cancelled") row.classList.add("couloir-row--cancelled");
+
       const time = doc.createElement("time");
       time.textContent = entry.time;
+
       const label = doc.createElement("span");
       label.textContent = entry.subject;
       if (entry.note) label.appendChild(el(doc, "span", "couloir-badge", entry.note));
+
       row.append(time, label, el(doc, "span", "room", entry.room));
       list.appendChild(row);
     }

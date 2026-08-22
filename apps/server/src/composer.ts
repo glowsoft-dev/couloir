@@ -31,8 +31,15 @@ export interface PublishSpec {
   items: PublishItem[];
   /** Bandeau défilant en bas d'écran. Absent = pas de bandeau. */
   ticker?: string;
-  /** URL du connecteur d'emploi du temps, pour la mise en page à colonne. */
+  /** URL de la source d'emploi du temps, pour la mise en page à colonne. */
   timetableUrl?: string;
+  /**
+   * Les classes à faire défiler dans la colonne.
+   *
+   * Vide ou absent : la source décide (une seule classe, ou la première).
+   * Une seule classe : écran « fixe ». Plusieurs : l'écran les enchaîne.
+   */
+  timetableClasses?: { id: string; label: string }[];
 }
 
 export interface ComposeInput {
@@ -135,14 +142,36 @@ export function compose(input: ComposeInput): Manifest {
     if (!spec.timetableUrl) {
       throw new CompositionError("Cette mise en page a besoin d'une source d'emploi du temps.");
     }
-    slides.push({
-      kind: "data",
-      id: "cours-du-jour",
-      sourceId: "edt",
-      view: "timetable-day",
-      durationMs: 20_000,
-    });
-    playlists.push({ id: "cours", slideIds: ["cours-du-jour"] });
+    // Une diapositive par classe, toutes branchées sur LA MÊME source :
+    // l'agent ne fait qu'un appel, et chaque classe garde sa propre preuve
+    // de diffusion.
+    const columnSlideIds: string[] = [];
+    const columnClasses = spec.timetableClasses ?? [];
+    if (columnClasses.length === 0) {
+      slides.push({
+        kind: "data",
+        id: "cours-du-jour",
+        sourceId: "edt",
+        view: "timetable-day",
+        params: {},
+        durationMs: 20_000,
+      });
+      columnSlideIds.push("cours-du-jour");
+    } else {
+      for (const schoolClass of columnClasses) {
+        const id = `cours-${schoolClass.id}`;
+        slides.push({
+          kind: "data",
+          id,
+          sourceId: "edt",
+          view: "timetable-day",
+          params: { classId: schoolClass.id },
+          durationMs: 20_000,
+        });
+        columnSlideIds.push(id);
+      }
+    }
+    playlists.push({ id: "cours", slideIds: columnSlideIds });
   }
 
   if (withTicker) {

@@ -403,6 +403,68 @@ dégrader proprement en leur absence — et c'est vérifié : sans `xrandr` la
 résolution retombe sur 1920×1080, sans zone thermique la température est
 simplement absente du battement de cœur.
 
+## L'emploi du temps
+
+Construit chez nous plutôt que branché sur celui de l'école. Deux raisons :
+la question du logiciel de l'établissement traînait depuis le début du
+projet, et surtout **les changements de dernière minute sont ce qui a le plus
+de valeur sur un écran de couloir** — or c'est justement ce que les exports
+d'emploi du temps rendent le plus mal.
+
+Périmètre assumé : alimenter les écrans. Ni les profs, ni les élèves, ni les
+parents ne s'en servent. Ce n'est pas un remplaçant d'Hyperplanning, et ce
+n'est surtout pas un *générateur* d'emplois du temps — répartir classes,
+profs et salles sans conflit est un problème d'optimisation qui se construit
+sur des années, pas en marge d'un projet d'affichage.
+
+### Une grille qui se répète, corrigée au jour le jour
+
+C'est ainsi que fonctionne un établissement : l'ossature bouge deux fois par
+an, les exceptions tombent tous les matins. D'où deux tables distinctes —
+`lessons` pour la grille, `timetable_exceptions` pour les changements datés.
+
+Le calcul est dans `engine.ts`, en **logique pure** : on lui donne la grille,
+les exceptions et le calendrier, il rend la journée. Aucune base, aucune
+horloge implicite — on rejoue une année scolaire entière dans un test,
+vacances et quinzaines comprises, plutôt que d'attendre le bon jour.
+
+### Trois décisions qui se voient à l'écran
+
+| Décision | Pourquoi |
+|---|---|
+| **Un cours annulé reste affiché**, barré | le faire disparaître priverait l'élève de l'information qui l'intéresse le plus : il se déplacerait pour rien |
+| Le week-end n'est **pas** décrété | beaucoup d'établissements ont cours le samedi matin. C'est la grille qui décide, pas une règle en dur |
+| Vacances annoncées par un libellé | une liste vide ressemble à un échec de chargement |
+
+La quinzaine se compte depuis une **date d'ancrage**, pas depuis le numéro de
+semaine ISO : les établissements ne s'accordent pas sur le point de départ, et
+une année qui commence en semaine B n'a rien d'exceptionnel. Réglage absent :
+tous les cours s'affichent, parce qu'un paramètre oublié ne doit pas vider un
+écran.
+
+### Les trois modes d'affichage
+
+Ils tombent sur le même mécanisme. Le composeur produit **une diapositive par
+classe**, toutes branchées sur la même source :
+
+- **fixe** — une seule classe retenue, l'écran devant les terminales montre
+  toujours la terminale ;
+- **rotation** — toutes les classes s'enchaînent dans la colonne ;
+- **rotation mêlée** — elles s'intercalent avec les actualités et les
+  affiches, puisque c'est déjà ce que fait la playlist principale.
+
+Une source, N diapositives qui y piochent par `params.classId` : l'agent ne
+fait qu'un appel réseau même pour trente classes, et chaque classe garde sa
+propre preuve de diffusion.
+
+### Séparation des accès
+
+`/v1/console/timetable` pour la saisie, protégé par le jeton de la console.
+`/v1/timetable` pour la lecture par les écrans, sans jeton — c'est une source
+de données du manifeste, un player doit pouvoir la joindre. Ce qui en sort ne
+contient aucune donnée d'élève : des matières, des salles, et le nom d'usage
+d'un enseignant — exactement ce qui figurait déjà sur les panneaux papier.
+
 ## Ce qui n'est pas encore fait
 
 Le socle tourne, mais il reste volontairement incomplet :
@@ -423,8 +485,11 @@ Le socle tourne, mais il reste volontairement incomplet :
 - **Les gabarits** — le rendu n'en connaît que la forme générale (bandeau,
   titre, texte). La bibliothèque annoncée au cahier des charges reste à faire.
 - **La console** — aucune interface.
-- **Les connecteurs** — `/connectors/*` sont des bouchons. Les vrais — ICS
-  pour l'emploi du temps, REST pour le site — restent à écrire.
+- **L'éditeur de grille** — la saisie passe par l'API, pas encore par une
+  interface. C'est la prochaine pièce, et la plus attendue : personne ne
+  saisira une année scolaire en `curl`.
+- **Le connecteur du site** — `/connectors/news` est un bouchon. Le vrai
+  connecteur WordPress reste à écrire.
 - **La publication** — `/dev/publish-demo` tient lieu de console. Réservé au
   mode développement.
 
