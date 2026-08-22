@@ -182,6 +182,119 @@ describe("accès à la console", () => {
   });
 });
 
+describe("mode urgence", () => {
+  async function withScreens() {
+    const store = new MemoryStore();
+    const app = buildApp({ store, media, consoleToken: TOKEN });
+    const auth = { authorization: `Bearer ${TOKEN}` };
+
+    const codes = ["U·1·01", "U·1·02"];
+    const screens = [];
+    for (const code of codes) {
+      const device = await store.startEnrollment("x".repeat(44), { platform: "linux" } as never);
+      const { screen } = await store.claimNew(device.deviceId, {
+        code, label: code, building: "U", floor: 1, area: "hall", orientation: "landscape",
+      });
+      await app.inject({
+        method: "POST", url: `${CONSOLE_PREFIX}/screens/${screen.id}/publish`, headers: auth,
+        payload: { layout: "plein-ecran", items: [{ assetId: poster.id }] },
+      });
+      screens.push(screen);
+    }
+    return { app, store, auth, screens };
+  }
+
+  it("prend tous les écrans et incrémente leur version", async () => {
+    // Sans version incrémentée, l'agent ignorerait le manifeste : il refuse
+    // toute version qui n'augmente pas.
+    const { app, store, auth, screens } = await withScreens();
+
+    const response = await app.inject({
+      method: "POST", url: `${CONSOLE_PREFIX}/emergency`, headers: auth,
+      payload: { title: "Évacuation immédiate", body: "Parking nord." },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json().applied).toEqual(["U·1·01", "U·1·02"]);
+    for (const screen of screens) {
+      const manifest = await store.getManifest(screen.id);
+      expect(manifest?.version).toBe(2);
+      expect(manifest?.emergency).toMatchObject({ title: "Évacuation immédiate" });
+    }
+  });
+
+  it("signale les écrans qui n'ont rien reçu", async () => {
+    // Savoir quels couloirs sont restés muets fait partie de l'information
+    // d'urgence : on ne le passe pas sous silence.
+    const { app, store, auth } = await withScreens();
+    const device = await store.startEnrollment("y".repeat(44), { platform: "linux" } as never);
+    await store.claimNew(device.deviceId, {
+      code: "U·2·09", label: "Neuf", building: "U", floor: 2, area: "hall", orientation: "landscape",
+    });
+
+    const response = await app.inject({
+      method: "POST", url: `${CONSOLE_PREFIX}/emergency`, headers: auth,
+      payload: { title: "Confinement" },
+    });
+
+    expect(response.json().skipped).toEqual(["U·2·09"]);
+  });
+
+  it("ne part qu'aux écrans visés quand on en désigne", async () => {
+    const { app, store, auth, screens } = await withScreens();
+
+    await app.inject({
+      method: "POST", url: `${CONSOLE_PREFIX}/emergency`, headers: auth,
+      payload: { title: "Fermeture", screenIds: [screens[0]!.id] },
+    });
+
+    expect((await store.getManifest(screens[0]!.id))?.emergency).not.toBeNull();
+    expect((await store.getManifest(screens[1]!.id))?.emergency).toBeNull();
+  });
+
+  it("ne se retire que sur action explicite", async () => {
+    const { app, store, auth, screens } = await withScreens();
+    await app.inject({
+      method: "POST", url: `${CONSOLE_PREFIX}/emergency`, headers: auth, payload: { title: "Évacuation" },
+    });
+
+    const cleared = await app.inject({ method: "DELETE", url: `${CONSOLE_PREFIX}/emergency`, headers: auth });
+
+    expect(cleared.json().applied).toHaveLength(2);
+    for (const screen of screens) {
+      const manifest = await store.getManifest(screen.id);
+      expect(manifest?.emergency).toBeNull();
+      // Encore une version de plus : le retrait doit aussi partir.
+      expect(manifest?.version).toBe(3);
+    }
+  });
+
+  it("borne la validité pour qu'un écran rallumé tard l'ignore", async () => {
+    const { app, store, auth, screens } = await withScreens();
+    await app.inject({
+      method: "POST", url: `${CONSOLE_PREFIX}/emergency`, headers: auth,
+      payload: { title: "Évacuation", validHours: 2 },
+    });
+
+    const manifest = await store.getManifest(screens[0]!.id);
+    const window = Date.parse(manifest!.emergency!.validUntil) - Date.parse(manifest!.emergency!.issuedAt);
+    expect(window).toBe(2 * 3_600_000);
+  });
+
+  it("dit s'il y a une urgence en cours", async () => {
+    const { app, auth } = await withScreens();
+    expect((await app.inject({ method: "GET", url: `${CONSOLE_PREFIX}/emergency`, headers: auth })).json())
+      .toEqual({ emergency: null });
+
+    await app.inject({
+      method: "POST", url: `${CONSOLE_PREFIX}/emergency`, headers: auth, payload: { title: "Alerte" },
+    });
+
+    const current = await app.inject({ method: "GET", url: `${CONSOLE_PREFIX}/emergency`, headers: auth });
+    expect(current.json().emergency).toMatchObject({ title: "Alerte" });
+  });
+});
+
 describe("parcours de la console", () => {
   async function ready() {
     const store = new MemoryStore();
@@ -330,6 +443,50 @@ describe("parcours de la console", () => {
 
     const manifest = await store.getManifest(screen.id);
     expect(manifest!.assets[0]!.url).toBe(`https://couloir.ecole.fr/v1/assets/${poster.id}`);
+  });
+
+  it("compose un aperçu sans rien enregistrer", async () => {
+    // L'aperçu doit être fidèle SANS effet de bord : le regarder ne doit
+    // pas partir sur les écrans.
+    const { app, store, auth } = await ready();
+    const device = await store.startEnrollment("x".repeat(44), { platform: "linux" } as never);
+    const { screen } = await store.claimNew(device.deviceId, {
+      code: "E·0·01", label: "Préau", building: "E", floor: 0, area: "préau", orientation: "landscape",
+    });
+
+    const response = await app.inject({
+      method: "POST",
+      url: `${CONSOLE_PREFIX}/screens/${screen.id}/preview`,
+      headers: auth,
+      payload: { layout: "plein-ecran", items: [{ assetId: poster.id }] },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(findBrokenReferences(response.json().manifest)).toEqual([]);
+    // Rien n'a été publié.
+    expect(await store.getManifest(screen.id)).toBeNull();
+  });
+
+  it("l'aperçu et la publication produisent le même écran", async () => {
+    // Deux chemins distincts finiraient par diverger, et l'aperçu se
+    // mettrait à mentir. Ils partagent donc le composeur.
+    const { app, store, auth } = await ready();
+    const device = await store.startEnrollment("x".repeat(44), { platform: "linux" } as never);
+    const { screen } = await store.claimNew(device.deviceId, {
+      code: "E·0·02", label: "Couloir", building: "E", floor: 0, area: "couloir", orientation: "landscape",
+    });
+    const spec = { layout: "plein-ecran", items: [{ assetId: poster.id }], ticker: "Bonjour" };
+
+    const preview = await app.inject({
+      method: "POST", url: `${CONSOLE_PREFIX}/screens/${screen.id}/preview`, headers: auth, payload: spec,
+    });
+    await app.inject({
+      method: "POST", url: `${CONSOLE_PREFIX}/screens/${screen.id}/publish`, headers: auth, payload: spec,
+    });
+
+    const published = await store.getManifest(screen.id);
+    const comparable = (m: Record<string, unknown>) => ({ ...m, version: 0, issuedAt: "" });
+    expect(comparable(preview.json().manifest)).toEqual(comparable(published as never));
   });
 
   it("refuse de publier sur un écran inconnu", async () => {

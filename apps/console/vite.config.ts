@@ -12,6 +12,15 @@ export default defineConfig({
   // depuis son paquet ou depuis la racine du dépôt.
   root: fileURLToPath(new URL(".", import.meta.url)),
   plugins: [react()],
+  resolve: {
+    // Les paquets de l'espace de travail sont résolus par leurs sources :
+    // un `dist` oublié ferait diverger l'aperçu du rendu réel, ce qui est
+    // exactement ce que cet aperçu est censé empêcher.
+    alias: {
+      "@couloir/protocol": fileURLToPath(new URL("../../packages/protocol/src/index.ts", import.meta.url)),
+      "@couloir/renderer": fileURLToPath(new URL("../../packages/renderer/src/index.ts", import.meta.url)),
+    },
+  },
   server: {
     port: 5174,
     host: "127.0.0.1",

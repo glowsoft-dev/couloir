@@ -26,6 +26,12 @@ importers:
 
   apps/console:
     dependencies:
+      '@couloir/protocol':
+        specifier: workspace:*
+        version: link:../../packages/protocol
+      '@couloir/renderer':
+        specifier: workspace:*
+        version: link:../../packages/renderer
       react:
         specifier: ^19.0.0
         version: 19.2.8

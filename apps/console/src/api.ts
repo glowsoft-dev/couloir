@@ -43,6 +43,14 @@ export interface PublishItem {
   durationMs?: number;
 }
 
+export interface Emergency {
+  id: string;
+  title: string;
+  body?: string;
+  issuedAt: string;
+  validUntil: string;
+}
+
 export interface PublishSpec {
   layout: "plein-ecran" | "principal-et-cours";
   items: PublishItem[];
@@ -192,6 +200,20 @@ export const api = {
 
   publish: (screenId: string, spec: PublishSpec) =>
     call<{ screenId: string; version: number }>(`/screens/${screenId}/publish`, json("POST", spec)),
+
+  /** Compose sans enregistrer : le même chemin que la publication. */
+  previewSpec: (screenId: string, spec: PublishSpec) =>
+    call<{ manifest: unknown }>(`/screens/${screenId}/preview`, json("POST", spec)),
+
+  emergency: {
+    current: () => call<{ emergency: Emergency | null }>("/emergency"),
+    raise: (input: { title: string; body?: string; screenIds?: string[]; validHours?: number }) =>
+      call<{ emergency: Emergency; applied: string[]; skipped: string[] }>(
+        "/emergency",
+        json("POST", input),
+      ),
+    clear: () => call<{ applied: string[]; skipped: string[] }>("/emergency", { method: "DELETE" }),
+  },
 
   timetable: {
     setup: () => call<TimetableSetup>("/timetable/setup"),
