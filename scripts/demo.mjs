@@ -175,12 +175,6 @@ for (const écran of ÉCRANS) {
   fait(`http://127.0.0.1:${écran.port}`);
 }
 
-const attente = await fetch(`http://localhost:${PORT_SERVEUR}/v1/console/screens`, {
-  headers: { Authorization: `Bearer ${JETON}` },
-})
-  .then((r) => r.json())
-  .catch(() => ({ pending: [], screens: [] }));
-
 /**
  * Quel port affiche quel écran.
  *
@@ -188,12 +182,29 @@ const attente = await fetch(`http://localhost:${PORT_SERVEUR}/v1/console/screens
  * suivre l'ordre de démarrage, si bien que « écran 1 » peut très bien être
  * B·2·02. Sans cette ligne on publie sur un écran en regardant l'autre, on
  * conclut que la publication ne marche pas, et on reclique.
+ *
+ * On réessaie quelques secondes : un boîtier qui vient de démarrer répond
+ * avant d'avoir obtenu son code d'appairage, et l'afficher « pas encore
+ * rattaché » ferait justement rater l'étape suivante.
  */
+async function identifier(port) {
+  for (let essai = 0; essai < 20; essai++) {
+    try {
+      const état = await fetch(`http://127.0.0.1:${port}/state`).then((r) => r.json());
+      if (état.screenCode) return { texte: état.screenCode, code: null };
+      if (état.pairing) return { texte: `à rattacher`, code: état.pairing.code };
+    } catch {
+      // pas encore prêt
+    }
+    await new Promise((r) => setTimeout(r, 500));
+  }
+  return { texte: "pas encore rattaché", code: null };
+}
+
 for (const écran of ÉCRANS) {
-  écran.identité = await fetch(`http://127.0.0.1:${écran.port}/state`)
-    .then((r) => r.json())
-    .then((é) => é.screenCode ?? (é.pairing ? `à rattacher · ${é.pairing.code}` : null))
-    .catch(() => null);
+  const { texte, code } = await identifier(écran.port);
+  écran.identité = texte;
+  écran.codeAppairage = code;
 }
 
 console.log(`
@@ -202,7 +213,9 @@ ${c.gras("Ouvrez trois onglets")}
   ${c.gras("Console")}   http://localhost:${PORT_SERVEUR}
 ${ÉCRANS.map(
   (é) =>
-    `  ${c.gras("Écran")}     http://127.0.0.1:${é.port}   ${é.identité ? c.vert(é.identité) : c.gris("pas encore rattaché")}`,
+    `  ${c.gras("Écran")}     http://127.0.0.1:${é.port}   ${
+      é.codeAppairage ? `${c.gris("à rattacher, code")} ${c.jaune(é.codeAppairage)}` : c.vert(é.identité)
+    }`,
 ).join("\n")}
 
   ${c.gris("Chaque onglet écran porte son code dans le titre : on sait toujours")}
@@ -226,14 +239,10 @@ if (comptes === false) {
   console.log(`${c.gris("Connectez-vous avec le compte créé précédemment.")}\n`);
 }
 
-if (attente.pending?.length) {
-  console.log(`${c.gras("À faire en premier")} — rattacher les écrans, onglet ${c.gras("Écrans")} :\n`);
-  for (const boîtier of attente.pending) {
-    console.log(`  code ${c.jaune(boîtier.pairingCode)}   ${c.gris("bâtiment, étage, zone — le code d'étiquette se construit seul")}`);
-  }
-  console.log("");
-} else if (attente.screens?.length) {
-  console.log(`${c.gris(`${attente.screens.length} écran(s) déjà rattaché(s) — les boîtiers ont retrouvé leur identité.`)}\n`);
+if (ÉCRANS.some((é) => é.codeAppairage)) {
+  console.log(
+    `${c.gras("Puis")} — rattachez les écrans dans l'onglet ${c.gras("Écrans")}. Les codes ci-dessus\n  y apparaissent d'eux-mêmes ; il ne reste qu'à indiquer bâtiment, étage et zone.\n`,
+  );
 }
 
 console.log(`${c.gris("Scénarios à éprouver : docs/tester.md")}`);

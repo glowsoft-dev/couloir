@@ -13,7 +13,7 @@ lecteurs. Elle affiche ensuite trois adresses et les codes d'appairage.
 
 | Onglet | Adresse | Ce que c'est |
 |---|---|---|
-| Console | `http://localhost:3000` | ce que voit la personne qui publie · jeton `demo-couloir` |
+| Console | `http://localhost:3000` | ce que voit la personne qui publie |
 | Écran 1 | `http://127.0.0.1:8080` | un vrai lecteur, pas une maquette |
 | Écran 2 | `http://127.0.0.1:8081` | le second, pour éprouver ce qui vise tout le parc |
 
@@ -29,7 +29,45 @@ plupart des scénarios ci-dessous se jugent à l'œil, pas dans un journal.
 
 ---
 
-## D'abord : rattacher les écrans
+## D'abord : créer le compte administrateur
+
+À la première ouverture, la console demande la **clé de secours du serveur** —
+`demo-couloir` dans la démonstration — puis votre nom, votre adresse et un mot
+de passe d'au moins douze caractères.
+
+Cette clé ne sert qu'à ça, et à réparer un compte : **elle ne publie rien et
+ne voit aucun écran**. Vérifiez-le, c'est en une commande :
+
+```bash
+curl -s -o /dev/null -w "%{http_code}\n" -H "Authorization: Bearer demo-couloir" \
+  http://localhost:3000/v1/console/screens
+```
+
+`401`. Quelqu'un qui connaîtrait la clé ne peut rien afficher dans un couloir.
+
+### Ajouter quelqu'un
+
+Onglet **Comptes**, panneau de droite. Créez Valérie en **éditrice**, avec la
+phrase de passe proposée par le bouton — trois mots tirés au hasard, plus
+faciles à dire au téléphone qu'une suite de caractères tordus.
+
+Déconnectez-vous, reconnectez-vous sous son compte. L'onglet **Comptes**
+disparaît. Masquer n'est pas protéger, alors vérifiez que le serveur refuse
+aussi, depuis la console de votre navigateur :
+
+```js
+await fetch('/v1/console/utilisateurs', { credentials: 'same-origin' })
+```
+
+`403`, avec un message lisible.
+
+> **Ce que ça éprouve** — que Valérie peut publier sans détenir vos accès, et
+> que le journal dira qui a fait quoi. Reconnectez-vous en administrateur : le
+> panneau **Journal des actions** porte déjà sa connexion et ses publications.
+
+---
+
+## Ensuite : rattacher les écrans
 
 Onglet **Écrans**. Les deux boîtiers apparaissent d'eux-mêmes avec leur code —
 on ne le recopie pas depuis le couloir. Renseignez bâtiment, étage et zone : le
