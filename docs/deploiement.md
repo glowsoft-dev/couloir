@@ -1,0 +1,118 @@
+# Mettre le serveur en production
+
+Trois services : la base, l'application, la terminaison TLS. Rien n'est lié à
+un hébergeur particulier — ça tourne sur un VPS, sur une machine de l'école,
+ou ailleurs.
+
+## Avant de commencer
+
+Il faut **un nom de domaine qui pointe déjà sur la machine**. Caddy demande le
+certificat au premier démarrage : si le domaine ne résout pas encore, la
+demande échoue et il faut attendre avant de réessayer.
+
+Il faut aussi que les ports **80 et 443** soient joignables depuis l'extérieur.
+Le 80 sert uniquement à la vérification du certificat et à la redirection.
+
+## L'installation
+
+```bash
+cd deploiement
+cp .env.exemple .env
+```
+
+Remplissez les trois valeurs. Les deux secrets se génèrent, ils ne s'inventent
+pas :
+
+```bash
+openssl rand -base64 24   # COULOIR_MOT_DE_PASSE_BASE
+openssl rand -base64 32   # COULOIR_CONSOLE_TOKEN
+```
+
+Construisez l'image, puis démarrez :
+
+```bash
+docker build -t couloir-serveur:latest ..
+docker compose --env-file .env up -d
+```
+
+Le schéma de la base est appliqué au démarrage : il n'y a pas d'étape de
+migration à lancer à la main. Les migrations sont jouées dans l'ordre, une
+seule fois, et le serveur note celles qu'il a déjà passées.
+
+Vérifiez :
+
+```bash
+docker compose ps          # les trois services, dont deux « healthy »
+curl https://votre-domaine/health
+```
+
+## Ce qui doit être juste, sous peine de chercher longtemps
+
+**`COULOIR_PUBLIC_URL`** est l'adresse inscrite dans les manifestes. C'est
+avec elle que les écrans vont chercher les médias. Si elle est fausse — une
+adresse interne, un `localhost` oublié — les écrans reçoivent des URL qu'ils
+ne savent pas joindre, restent sur leur contenu précédent, et rien dans la
+console ne le signale. L'assemblage la déduit du domaine ; ne la surchargez
+pas sans raison.
+
+**Le port de la base n'est pas publié.** Seul le serveur la joint, par le
+réseau interne de Docker. Si vous avez besoin d'y accéder pour une
+sauvegarde, passez par `docker compose exec base` plutôt que d'ouvrir le port.
+
+**Caddy attend jusqu'à 120 s** sur les requêtes vers le serveur. Ce n'est pas
+un excès de prudence : le canal de commandes retient sa réponse 25 secondes,
+et un délai plus court la couperait — chaque écran repartirait alors dans une
+reconnexion inutile toutes les quelques secondes.
+
+## Sauvegarder
+
+Deux choses à conserver, et elles ne se remplacent pas l'une l'autre :
+
+```bash
+# La base : écrans, emplois du temps, historique des publications.
+docker compose exec -T base pg_dump -U couloir couloir | gzip > base-$(date +%F).sql.gz
+
+# Les médias : les fichiers eux-mêmes.
+docker run --rm -v deploiement_medias:/m -v "$PWD":/sortie alpine \
+  tar czf /sortie/medias-$(date +%F).tar.gz -C /m .
+```
+
+Une base sans les médias donne des manifestes qui référencent des fichiers
+absents. Des médias sans la base ne disent pas quel écran affichait quoi.
+
+## Mettre à jour
+
+```bash
+git pull
+docker build -t couloir-serveur:latest ..
+docker compose --env-file .env up -d serveur
+```
+
+Les écrans ne perdent rien pendant le redémarrage : ils continuent d'afficher
+ce qu'ils ont en cache, et reprennent contact dans les secondes qui suivent.
+Mesuré : le canal de commandes se rétablit en 6,9 s, le manifeste est repollé
+à 12,8 s.
+
+## Si l'école n'a pas de domaine public
+
+Le certificat automatique suppose un domaine joignable depuis Internet. Sur un
+réseau interne fermé, deux chemins :
+
+- **Un domaine public qui pointe sur une adresse privée.** Caddy sait alors
+  obtenir un certificat par vérification DNS. C'est la solution propre, et
+  elle demande un accès à la zone DNS.
+- **L'autorité interne de Caddy** (`tls internal` dans le Caddyfile). Le
+  certificat n'est signé par personne de connu : chaque écran doit recevoir le
+  certificat racine dans `NODE_EXTRA_CA_CERTS`, faute de quoi l'agent refuse
+  la connexion — et il a raison de la refuser.
+
+Ce choix se prend avec le service informatique de l'école, pas à sa place.
+
+## Ce qui n'est pas encore là
+
+- **Les comptes nominatifs.** Un jeton partagé protège la console. Qui a
+  publié quoi n'est écrit nulle part.
+- **Les URL de médias signées.** Un média est servi à qui connaît son
+  identifiant, sans expiration.
+- **La sauvegarde automatique.** Les commandes ci-dessus sont à mettre dans
+  une tâche planifiée ; personne ne l'a fait.

@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { randomUUID, timingSafeEqual } from "node:crypto";
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { API_PREFIX, CommandKind } from "@couloir/protocol";
@@ -23,6 +23,24 @@ import type { TimetableRepository } from "./timetable/repository.js";
  * viendront, mais une console sans aucune protection serait pire que des
  * `curl`.
  */
+
+/**
+ * Comparaison du jeton à temps constant.
+ *
+ * `!==` s'arrête au premier caractère qui diffère : le temps de réponse
+ * renseigne alors sur le nombre de caractères déjà justes, et le jeton se
+ * devine caractère par caractère. Sur un réseau local l'écart est noyé dans
+ * le bruit, mais ce serveur va être exposé — autant ne pas laisser la porte
+ * entrouverte.
+ */
+function jetonValide(entete: string | undefined, attendu: string): boolean {
+  if (typeof entete !== "string") return false;
+  const fourni = Buffer.from(entete);
+  const référence = Buffer.from(`Bearer ${attendu}`);
+  // `timingSafeEqual` exige des longueurs égales ; on compare donc d'abord
+  // la longueur, qui n'est pas un secret.
+  return fourni.length === référence.length && timingSafeEqual(fourni, référence);
+}
 
 export const CONSOLE_PREFIX = `${API_PREFIX}/console` as const;
 
@@ -130,7 +148,7 @@ export function registerConsoleApi(app: FastifyInstance, options: ConsoleApiOpti
     }
 
     const header = request.headers.authorization;
-    if (header !== `Bearer ${options.adminToken}`) {
+    if (!jetonValide(header, options.adminToken)) {
       return reply.code(401).send({
         code: "unauthorized",
         message: "Jeton d'accès invalide.",

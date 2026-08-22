@@ -1,0 +1,60 @@
+# Le déploiement du serveur Couloir.
+#
+#   docker compose --env-file .env -f compose.yml up -d
+#
+# Trois services : la base, l'application, la terminaison TLS. Aucun n'est
+# lié à un hébergeur particulier — ça tourne sur un VPS, sur une machine de
+# l'école, ou ailleurs.
+services:
+  base:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: couloir
+      POSTGRES_PASSWORD: ${COULOIR_MOT_DE_PASSE_BASE:?définissez COULOIR_MOT_DE_PASSE_BASE dans .env}
+      POSTGRES_DB: couloir
+    volumes:
+      - base:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U couloir"]
+      interval: 10s
+      retries: 10
+    # Jamais exposée : seul le serveur la joint, par le réseau interne.
+
+  serveur:
+    image: ${COULOIR_IMAGE:-couloir-serveur:latest}
+    restart: unless-stopped
+    depends_on:
+      base:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://couloir:${COULOIR_MOT_DE_PASSE_BASE}@base:5432/couloir
+      COULOIR_CONSOLE_TOKEN: ${COULOIR_CONSOLE_TOKEN:?définissez COULOIR_CONSOLE_TOKEN dans .env}
+      # L'adresse inscrite dans les manifestes. Si elle est fausse, les écrans
+      # reçoivent des URL de médias qu'ils ne savent pas joindre — et on ne
+      # s'en aperçoit qu'en montant voir un écran resté vide.
+      COULOIR_PUBLIC_URL: https://${COULOIR_DOMAINE}
+      COULOIR_MEDIA: /donnees/medias
+    volumes:
+      - medias:/donnees/medias
+    # Pas de ports publiés : on ne joint le serveur qu'à travers Caddy.
+
+  tls:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on: [serveur]
+    ports: ["80:80", "443:443", "443:443/udp"]
+    environment:
+      COULOIR_DOMAINE: ${COULOIR_DOMAINE:?définissez COULOIR_DOMAINE dans .env}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-donnees:/data
+      - caddy-config:/config
+      - caddy-journaux:/var/log/caddy
+
+volumes:
+  base:
+  medias:
+  caddy-donnees:
+  caddy-config:
+  caddy-journaux:

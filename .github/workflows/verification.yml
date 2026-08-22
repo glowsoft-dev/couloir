@@ -1,0 +1,74 @@
+# Vérification à chaque poussée.
+#
+# Les tests ont besoin d'une vraie base : ceux qui portent sur la persistance
+# se taisent silencieusement quand PostgreSQL est absent, ce qui est
+# confortable en local et dangereux ici. On la fournit donc toujours.
+name: vérification
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: couloir
+          POSTGRES_PASSWORD: couloir
+          POSTGRES_DB: couloir
+        ports: ["5442:5432"]
+        options: >-
+          --health-cmd "pg_isready -U couloir"
+          --health-interval 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL_TEST: postgres://couloir:couloir@localhost:5442/couloir_test
+      DATABASE_URL: postgres://couloir:couloir@localhost:5442/couloir
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: types
+        run: pnpm exec tsc --build
+
+      - name: tests
+        run: pnpm test
+
+      # Le paquet navigateur et la console sont servis en fichiers statiques :
+      # une erreur de construction ne se voit qu'à l'exécution, sur un écran
+      # posé à quatre mètres de haut. On les construit ici.
+      - name: paquets servis au navigateur
+        run: pnpm build:browser && pnpm build:console
+
+  image:
+    runs-on: ubuntu-latest
+    needs: tests
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      # Construite à chaque fois, publiée jamais : tant qu'il n'y a pas
+      # d'hébergement décidé, pousser l'image quelque part serait décider à
+      # la place de l'école. Ce travail garantit seulement qu'elle construit.
+      - name: construction de l'image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

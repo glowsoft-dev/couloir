@@ -25,6 +25,9 @@ pnpm dev:console   # la console en rechargement à chaud, :5174
 racine, l'API sous `/v1`. Un seul domaine, un seul certificat, un seul endroit
 à ouvrir. `pnpm dev:console` n'est qu'un confort de développement.
 
+Pour la mise en production — image, TLS, sauvegardes — voir
+[docs/deploiement.md](docs/deploiement.md).
+
 Pour éprouver le système sans matériel, `pnpm demo` monte un couloir complet
 sur le poste — serveur, deux écrans simulés, console — et affiche les trois
 adresses à ouvrir. Les scénarios qui valent le détour sont dans

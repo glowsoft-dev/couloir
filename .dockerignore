@@ -1,0 +1,10 @@
+node_modules
+**/node_modules
+**/dist
+**/dist-browser
+data
+.git
+.github
+*.log
+docs
+apps/player-linux/lima

@@ -1,0 +1,39 @@
+# Terminaison TLS devant le serveur Couloir.
+#
+# Caddy obtient et renouvelle le certificat tout seul. C'est délibérément lui
+# qui porte le TLS et non Node : le jour où l'école a déjà un proxy, on retire
+# ce service et on ne touche pas à l'application.
+#
+# COULOIR_DOMAINE est lu depuis le fichier .env voisin.
+
+{$COULOIR_DOMAINE} {
+	# Compression : la console fait 265 ko de JavaScript, servis à chaque
+	# ouverture depuis un poste de l'école.
+	encode zstd gzip
+
+	# Les médias sont immuables — leur identifiant est leur empreinte. Un
+	# écran qui redémarre ne doit pas retélécharger ce qu'il a déjà.
+	@medias path /v1/assets/*
+	header @medias Cache-Control "public, max-age=31536000, immutable"
+
+	# Le manifeste, jamais. Un écran qui servirait un manifeste en cache
+	# afficherait l'annonce de la semaine dernière.
+	@api path /v1/*
+	header @api Cache-Control "no-store"
+
+	reverse_proxy serveur:3000 {
+		# L'interrogation longue des commandes retient la réponse 25 s. Le
+		# défaut de Caddy la couperait avant, et chaque écran repartirait
+		# dans une reconnexion inutile toutes les quelques secondes.
+		transport http {
+			read_timeout 120s
+		}
+	}
+
+	log {
+		output file /var/log/caddy/acces.log {
+			roll_size 20mb
+			roll_keep 10
+		}
+	}
+}

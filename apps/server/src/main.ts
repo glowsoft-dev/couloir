@@ -15,7 +15,13 @@ import { MemoryStore, type Store } from "./store.js";
  * le lancer sans base — pratique pour une démonstration, mais tout est perdu
  * à l'arrêt, y compris les écrans enrôlés.
  */
-const PORT = Number(process.env["PORT"] ?? 3000);
+/**
+ * Le port d'écoute.
+ *
+ * `COULOIR_PORT` par cohérence avec le reste de la configuration, `PORT` en
+ * repli parce que la plupart des hébergeurs l'imposent sans laisser le choix.
+ */
+const PORT = Number(process.env["COULOIR_PORT"] ?? process.env["PORT"] ?? 3000);
 const useMemory = process.env["COULOIR_STORE"] === "memory";
 
 const media = new MediaStore(process.env["COULOIR_MEDIA"] ?? "./data/media");
