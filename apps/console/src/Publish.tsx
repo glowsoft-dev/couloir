@@ -61,6 +61,10 @@ export function PublishPanel({
   /** Vide = toutes les classes défilent. Une seule = écran fixe. */
   const [classIds, setClassIds] = useState<string[]>([]);
   const [displayOff, setDisplayOff] = useState<DisplayOffWindow[]>([]);
+  /** Combien d'actualités du site tournent avec le reste. 0 = aucune. */
+  const [actualites, setActualites] = useState(0);
+  /** La source est-elle configurée ? Sans elle, le réglage n'a aucun sens. */
+  const [sourceActive, setSourceActive] = useState<boolean | null>(null);
   /** La version en ligne, et sa composition telle que rouverte. */
   const [live, setLive] = useState<{ version: number | null; loaded: boolean; reopenable: boolean }>(
     { version: null, loaded: false, reopenable: true },
@@ -76,6 +80,10 @@ export function PublishPanel({
 
   useEffect(() => {
     void api.media().then((r) => setMedia(r.media)).catch(() => {});
+    void api.actualites
+      .lire()
+      .then((r) => setSourceActive(r.reglages.actif && Boolean(r.reglages.url)))
+      .catch(() => setSourceActive(false));
   }, []);
 
   /**
@@ -100,12 +108,14 @@ export function PublishPanel({
         setTicker(spec.ticker ?? "");
         setClassIds(spec.timetableClassIds ?? []);
         setDisplayOff(spec.displayOff ?? []);
+        setActualites(spec.actualites ?? 0);
       } else {
         setLayout("plein-ecran");
         setItems([]);
         setTicker("");
         setClassIds([]);
         setDisplayOff([]);
+        setActualites(0);
       }
       setLive({ version, loaded: true, reopenable: spec !== null });
       setDirty(false);
@@ -127,6 +137,7 @@ export function PublishPanel({
         ? { timetableClassIds: classIds }
         : {}),
       ...(displayOff.length > 0 ? { displayOff } : {}),
+      ...(actualites > 0 ? { actualites } : {}),
     };
   }
 
@@ -157,7 +168,7 @@ export function PublishPanel({
 
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [screen.id, layout, items, ticker, classIds, displayOff, live.loaded]);
+  }, [screen.id, layout, items, ticker, classIds, displayOff, actualites, live.loaded]);
 
   /** Toute modification rend le brouillon différent de ce qui est diffusé. */
   function touch<T>(apply: () => T): T {
@@ -257,7 +268,9 @@ export function PublishPanel({
   }
 
   const invalidText = items.some((item) => item.text && !item.text.titre.trim());
-  const ready = items.length > 0 && !invalidText;
+  // Un écran qui ne diffuse que les actualités du site est une configuration
+  // parfaitement légitime : c'est même celle du hall d'accueil.
+  const ready = (items.length > 0 || actualites > 0) && !invalidText;
   const nothingLive = live.loaded && live.version === null;
 
   return (
@@ -528,6 +541,34 @@ export function PublishPanel({
             />
           </div>
 
+          <div className="field">
+            <label htmlFor="actus">Actualités du site</label>
+            {sourceActive === false ? (
+              <p className="hint">
+                Aucune source configurée. Renseignez l'adresse du site dans l'onglet Réglages, et
+                les articles rejoindront la rotation ici.
+              </p>
+            ) : (
+              <>
+                <input
+                  id="actus"
+                  type="number"
+                  min={0}
+                  max={10}
+                  value={actualites}
+                  onChange={(e) =>
+                    touch(() => setActualites(Math.min(10, Math.max(0, Number(e.target.value)))))
+                  }
+                />
+                <p className="hint">
+                  {actualites === 0
+                    ? "Aucune actualité dans la rotation."
+                    : `${actualites} article${actualites > 1 ? "s" : ""} du site, ${actualites > 1 ? "affichés" : "affiché"} entre vos contenus. Ils se mettent à jour tout seuls.`}
+                </p>
+              </>
+            )}
+          </div>
+
           <Schedule windows={displayOff} onChange={(next) => touch(() => setDisplayOff(next))} />
 
           <div className="row-actions">
@@ -542,9 +583,9 @@ export function PublishPanel({
           </div>
 
           {/* Un bouton grisé sans explication laisse chercher. */}
-          {items.length === 0 && (
+          {items.length === 0 && actualites === 0 && (
             <p className="hint">
-              Ajoutez au moins un contenu pour pouvoir publier.
+              Ajoutez au moins un contenu, ou des actualités du site, pour pouvoir publier.
             </p>
           )}
           {invalidText && <p className="hint">Un texte sans titre ne peut pas être publié.</p>}

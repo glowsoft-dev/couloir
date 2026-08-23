@@ -1,3 +1,4 @@
+import { Actualites } from "./Actualites.js";
 import { useState } from "react";
 import { type TimetableSetup, api } from "./api.js";
 
@@ -12,16 +13,23 @@ import { type TimetableSetup, api } from "./api.js";
 
 export function SettingsView({ setup, onChanged }: { setup: TimetableSetup; onChanged: () => void }) {
   return (
-    <div className="split">
-      <div>
-        <PeriodsPanel setup={setup} onChanged={onChanged} />
-        <YearPanel setup={setup} onChanged={onChanged} />
+    <>
+      <div className="split">
+        <div>
+          <PeriodsPanel setup={setup} onChanged={onChanged} />
+          <YearPanel setup={setup} onChanged={onChanged} />
+        </div>
+        <div>
+          <ClassesPanel setup={setup} onChanged={onChanged} />
+          <HolidaysPanel setup={setup} onChanged={onChanged} />
+        </div>
       </div>
-      <div>
-        <ClassesPanel setup={setup} onChanged={onChanged} />
-        <HolidaysPanel setup={setup} onChanged={onChanged} />
+      {/* Sous la grille et non dedans : l'aperçu des articles a besoin de
+          toute la largeur pour montrer ce que les écrans afficheront. */}
+      <div style={{ marginTop: 20 }}>
+        <Actualites />
       </div>
-    </div>
+    </>
   );
 }
 

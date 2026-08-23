@@ -158,6 +158,16 @@ lancer("serveur", "pnpm", ["dev:server"], {
   COULOIR_DEV: "1",
   COULOIR_CONSOLE_TOKEN: JETON,
   COULOIR_PORT: String(PORT_SERVEUR),
+  /**
+   * L'adresse par laquelle les ÉCRANS joignent le serveur.
+   *
+   * Sans elle, elle se déduit de l'en-tête `Host` de qui publie — donc
+   * « localhost », qui pour un écran désigne l'écran lui-même. Les médias
+   * s'en tiraient parce que l'agent les télécharge depuis Node ; les images
+   * d'actualités, elles, sont chargées par le navigateur de la dalle, et
+   * échouaient sans un mot. En production c'est le nom de domaine.
+   */
+  COULOIR_PUBLIC_URL: `http://127.0.0.1:${PORT_SERVEUR}`,
 });
 await attendre(`http://localhost:${PORT_SERVEUR}/health`, "le serveur");
 fait(`http://localhost:${PORT_SERVEUR}`);

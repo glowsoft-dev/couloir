@@ -82,6 +82,31 @@ export interface PublishSpec {
   timetableClassIds?: string[];
   /** Plages d'extinction de la dalle. Un message d'urgence la rallume. */
   displayOff?: DisplayOffWindow[];
+  /** Combien d'actualités du site tournent avec le reste. 0 = aucune. */
+  actualites?: number;
+}
+
+export interface Article {
+  id: string;
+  titre: string;
+  extrait?: string;
+  categorie?: string;
+  image?: string;
+  publieLe?: string;
+}
+
+export interface ChargeActualites {
+  articles: Article[];
+  source: "wordpress" | "rss" | "aucune";
+  recupereLe: string;
+}
+
+export interface ReglagesActualites {
+  url: string;
+  categorie?: string;
+  nombre: number;
+  actif: boolean;
+  modifieLe: string | null;
 }
 
 export interface ManifestVersion {
@@ -280,6 +305,18 @@ export const api = {
   },
 
   journal: () => call<{ entrees: EntreeJournal[] }>("/journal"),
+
+  actualites: {
+    lire: () =>
+      call<{
+        reglages: ReglagesActualites;
+        etat: { enCache: boolean; recupereLe: string | null; articles: number };
+      }>("/actualites"),
+    enregistrer: (reglages: { url: string; categorie?: string; nombre: number; actif: boolean }) =>
+      call<{ reglages: ReglagesActualites }>("/actualites", json("PUT", reglages)),
+    essayer: (reglages: { url: string; categorie?: string; nombre: number }) =>
+      call<{ charge: ChargeActualites }>("/actualites/essai", json("POST", { ...reglages, actif: true })),
+  },
 
   screens: () => call<{ screens: ScreenStatus[]; pending: PendingDevice[] }>("/screens"),
   screen: (id: string) => call<{ screen: ScreenStatus; manifest: unknown }>(`/screens/${id}`),

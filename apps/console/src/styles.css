@@ -516,3 +516,28 @@ button.danger:hover:not(:disabled) { color: #fff; border-color: var(--signal); f
   .compte-row { gap: 8px; }
   .compte-row select, .compte-row button { min-height: 40px; }
 }
+
+/* ---------- actualités du site ---------- */
+
+.actus-grille {
+  display: grid; gap: 12px; margin-bottom: 4px;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+}
+.actu-carte {
+  border: 1px solid var(--rule); border-radius: var(--radius);
+  background: var(--surface-2); overflow: hidden;
+  display: flex; flex-direction: column;
+}
+.actu-carte img { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; display: block; }
+.actu-texte { padding: 11px 13px 13px; display: flex; flex-direction: column; gap: 5px; }
+.actu-categorie {
+  font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--accent); font-weight: 600;
+}
+.actu-carte h3 { margin: 0; font-size: 14px; line-height: 1.25; text-wrap: balance; }
+.actu-carte p { margin: 0; font-size: 12px; line-height: 1.45; color: var(--ink-soft); }
+
+/* Le conseil accompagne le message d'erreur au lieu d'en être un second. */
+.notice .hint { display: block; margin-top: 6px; }
+
+.field label.inline input[type="checkbox"] { width: auto; margin: 0; }

@@ -192,10 +192,10 @@ li::marker{color:var(--ink-faint)}
 <p class="deck">L'état réel du projet, vérifié dans le code — pas ce qui était prévu.</p>
 
 <div class="tally">
-  <div class="c-ok"><b>42</b><span>utilisables</span></div>
+  <div class="c-ok"><b>45</b><span>utilisables</span></div>
   <div class="c-half"><b>1</b><span>écrit, pas branché</span></div>
-  <div class="c-none"><b>12</b><span>pas commencés</span></div>
-  <div><b>186</b><span>tests verts</span></div>
+  <div class="c-none"><b>11</b><span>pas commencés</span></div>
+  <div><b>236</b><span>tests verts</span></div>
 </div>
 
 <div class="legend" style="margin-top:22px">
@@ -360,9 +360,17 @@ li::marker{color:var(--ink-faint)}
       <b>Transcodage vidéo</b>
       <span class="why">Le fichier importé part tel quel. Le serveur sait déjà choisir le bon dérivé selon les capacités du boîtier — il n'y a simplement rien à choisir.</span>
     </div></div>
-    <div class="item none"><div class="bar"></div><div class="text">
+    <div class="item ok"><div class="bar"></div><div class="text">
       <b>Actualités du site de l'école</b>
-      <span class="why">Le connecteur est un bouchon qui renvoie des données d'exemple.</span>
+      <span class="why">Ce qui est publié sur le site apparaît dans les couloirs, sans toucher aux écrans. WordPress est reconnu directement ; pour tout autre site, le flux RSS suffit. Un bouton « Essayer » montre les articles avant de brancher la source sur vingt écrans.</span>
+    </div></div>
+    <div class="item ok"><div class="bar"></div><div class="text">
+      <b>Un article par diapositive</b>
+      <span class="why">Les actualités tournent avec les affiches et les vidéos, pas dans un coin à part. Un écran qui ne diffuse que le site est possible — c'est la configuration d'un hall d'accueil.</span>
+    </div></div>
+    <div class="item ok"><div class="bar"></div><div class="text">
+      <b>Le site tombe, les écrans tiennent</b>
+      <span class="why">Le serveur garde la dernière copie connue et continue de la servir, datée. Contrairement à l'emploi du temps qui se retire, une actualité périmée s'affiche : un cours faux envoie quelqu'un dans la mauvaise salle, une vieille annonce ne fait de mal à personne.</span>
     </div></div>
   </div>
 </section>
@@ -521,6 +529,6 @@ li::marker{color:var(--ink-faint)}
   </div>
 </section>
 
-<p class="endnote">État vérifié dans le code le 22 août 2026 — 186 tests automatisés, dont la résilience réseau, la persistance, le moteur d'emploi du temps et les plages d'extinction.</p>
+<p class="endnote">État vérifié dans le code le 23 août 2026 — 236 tests automatisés, dont la résilience réseau, la persistance, les comptes, le moteur d'emploi du temps et les plages d'extinction.</p>
 
 </main>

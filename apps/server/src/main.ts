@@ -6,6 +6,7 @@ import { PostgresTimetable } from "./timetable/repository.js";
 import type { TimetableRepository } from "./timetable/repository.js";
 import { MediaStore } from "./media.js";
 import { DepotComptes } from "./comptes/depot.js";
+import { ServiceActualites } from "./connecteurs/service.js";
 import { seedDemoScreen } from "./seed.js";
 import { MemoryStore, type Store } from "./store.js";
 
@@ -31,6 +32,7 @@ await media.load();
 let store: Store;
 let timetable: TimetableRepository | undefined;
 let comptes: DepotComptes | undefined;
+let actualites: ServiceActualites | undefined;
 let closeDatabase = async () => {};
 
 if (useMemory) {
@@ -44,6 +46,7 @@ if (useMemory) {
   store = new PostgresStore(sql);
   timetable = new PostgresTimetable(sql);
   comptes = new DepotComptes(sql);
+  actualites = new ServiceActualites(sql);
   closeDatabase = () => store.close();
 
   // Les sessions expirées ne servent qu'à faire grossir la table. Une fois
@@ -95,6 +98,7 @@ const app = buildApp({
   devRoutes: process.env["COULOIR_DEV"] === "1",
   cookieSécurisé,
   ...(comptes ? { comptes } : {}),
+  ...(actualites ? { actualites } : {}),
   ...(consoleToken ? { consoleToken } : {}),
   ...(timetable ? { timetable } : {}),
   timetableUrl: process.env["COULOIR_TIMETABLE_URL"] ?? `${publicUrl}/v1/timetable/day`,

@@ -5,6 +5,7 @@ import Fastify, { type FastifyInstance } from "fastify";
 import multipart from "@fastify/multipart";
 import fastifyCookie from "@fastify/cookie";
 import type { DepotComptes } from "./comptes/depot.js";
+import type { ServiceActualites } from "./connecteurs/service.js";
 import fastifyStatic from "@fastify/static";
 import {
   EnrollClaimRequest,
@@ -67,6 +68,8 @@ export interface AppOptions {
   trustUnsignedDevices?: boolean;
   /** Ouvre les routes de publication de développement. */
   devRoutes?: boolean;
+  /** Le connecteur d'actualités. Absent = la route rend une liste vide. */
+  actualites?: ServiceActualites;
   /**
    * Les comptes nominatifs.
    *
@@ -449,14 +452,64 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
     ],
   }));
 
-  app.get("/connectors/news", async () => [
-    {
-      category: "Vie de l'école",
-      title: "Portes ouvertes le samedi 12 septembre",
-      excerpt:
-        "Visite des ateliers, rencontre avec les équipes pédagogiques et démonstrations du club robotique de 9 h à 17 h.",
-    },
-  ]);
+  /**
+   * Les actualités, telles que les écrans les lisent.
+   *
+   * Sans configuration, la route rend une liste vide plutôt qu'une erreur :
+   * un écran ne doit pas se mettre en repli parce qu'une source facultative
+   * n'a pas encore été branchée.
+   *
+   * Route publique, comme toutes les sources de données : elle ne dit rien
+   * que le site de l'école ne publie déjà. Les écrans ne portent pas de
+   * jeton de console, et leur en donner un serait le disséminer dans le
+   * couloir.
+   */
+  /**
+   * Les illustrations, relayées par le serveur.
+   *
+   * Seules les adresses vues dans la charge courante sont servies : la route
+   * n'accepte pas d'adresse, seulement une clé. Un relais qui prendrait une
+   * adresse arbitraire permettrait d'atteindre depuis le serveur ce qu'on ne
+   * peut pas atteindre de l'extérieur.
+   */
+  app.get<{ Params: { clef: string } }>("/connectors/news/image/:clef", async (request, reply) => {
+    const image = await options.actualites?.image(request.params.clef);
+    if (!image) {
+      // 404 franc : le rendu retire l'illustration et garde le texte.
+      return reply.code(404).send({ code: "image-inconnue", message: "Image indisponible.", retryable: false });
+    }
+    return reply
+      .type(image.type)
+      // Les illustrations changent quand l'article change, et l'article
+      // change d'adresse : on peut donc les garder longtemps.
+      .header("cache-control", "public, max-age=86400")
+      .send(image.octets);
+  });
+
+  app.get("/connectors/news", async (request, reply) => {
+    if (!options.actualites) {
+      return reply.send({
+        articles: [],
+        source: "aucune",
+        recupereLe: new Date().toISOString().replace(/\.\d+Z$/, "Z"),
+      });
+    }
+    try {
+      // La même adresse que celle inscrite dans les manifestes : c'est par
+      // elle que l'écran reviendra chercher les illustrations.
+      const base = options.publicUrl ?? `http://${request.headers.host ?? "localhost:3000"}`;
+      return await options.actualites.charge(base);
+    } catch (cause) {
+      // Site injoignable et aucun cache : on le dit franchement. L'agent
+      // gardera sa dernière copie, et le rendu décidera quoi en faire.
+      request.log.warn({ err: cause }, "actualités indisponibles");
+      return reply.code(503).send({
+        code: "source-indisponible",
+        message: cause instanceof Error ? cause.message : "Actualités indisponibles.",
+        retryable: true,
+      });
+    }
+  });
 
   // --- Télémétrie -----------------------------------------------------
 
@@ -506,6 +559,7 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
       ...(options.timetable ? { timetable: options.timetable } : {}),
       commands: commandBus,
       ...(options.comptes ? { comptes: options.comptes } : {}),
+      ...(options.actualites ? { actualites: options.actualites } : {}),
       ...(options.cookieSécurisé !== undefined ? { cookieSécurisé: options.cookieSécurisé } : {}),
     });
   }

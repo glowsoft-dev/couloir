@@ -91,6 +91,27 @@ export const RENDERER_CSS = `
   margin: 0;
 }
 
+/* --- actualités du site --- */
+
+/* L'illustration occupe le haut de la diapositive sans écraser le titre :
+   c'est le titre qu'on lit à quatre mètres, l'image ne fait qu'attirer
+   l'oeil. Hauteur bornée en pourcentage pour tenir aussi bien dans une
+   colonne étroite que sur une dalle entière. */
+.couloir-illustration {
+  width: 100%;
+  max-height: 46%;
+  object-fit: cover;
+  border-radius: .18em;
+  margin-bottom: .7em;
+  display: block;
+}
+
+/* Un extrait sous une image pleine largeur ne doit pas se replier sur une
+   colonne étroite : la mesure de 28 caractères convient à la colonne des
+   cours, pas à une dalle entière. Le titre reste ce qu'on lit de loin ;
+   l'extrait, on le lit en s'approchant, et il peut respirer. */
+.couloir-slide:has(> .couloir-illustration) .couloir-body { max-width: 52ch; }
+
 /* --- colonne emploi du temps --- */
 .couloir-list { display: flex; flex-direction: column; gap: .5em; margin: 0; padding: 0; list-style: none }
 .couloir-row {

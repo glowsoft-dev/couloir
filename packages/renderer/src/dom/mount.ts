@@ -279,10 +279,12 @@ interface TimetableDay {
   entries: TimetableEntry[];
   notice?: string;
 }
-interface NewsEntry {
-  title: string;
-  excerpt?: string;
-  category?: string;
+interface Article {
+  id?: string;
+  titre: string;
+  extrait?: string;
+  categorie?: string;
+  image?: string;
 }
 
 /**
@@ -301,6 +303,48 @@ function pickDay(payload: unknown, classId: string | undefined): TimetableDay | 
   // Charge utile d'une seule classe.
   const single = payload as TimetableDay | null;
   return single && Array.isArray(single.entries) ? single : null;
+}
+
+/**
+ * Un article, choisi par son rang.
+ *
+ * Une seule source alimente N diapositives, chacune désignant son article :
+ * le même schéma que l'emploi du temps, où une source sert toutes les
+ * classes. Afficher seulement le premier article condamnerait les suivants à
+ * ne jamais paraître — et une école qui publie trois actualités s'attend à
+ * voir les trois.
+ */
+function renderNews(
+  doc: Document,
+  wrapper: HTMLElement,
+  slide: Extract<RenderedSlide, { kind: "data" }>,
+): void {
+  const charge = slide.payload as { articles?: Article[] } | Article[] | null;
+  const articles = Array.isArray(charge) ? charge : (charge?.articles ?? []);
+  if (articles.length === 0) return;
+
+  // Le rang boucle : une source qui rend deux articles là où la publication
+  // en attendait quatre ne laisse pas deux dalles vides.
+  const rang = Number(slide.params["index"] ?? 0);
+  const article = articles[((rang % articles.length) + articles.length) % articles.length];
+  if (!article?.titre) return;
+
+  if (article.image) {
+    // L'image d'abord dans le DOM : elle commence à charger pendant que le
+    // reste se construit, et la diapositive ne s'affiche pas en deux temps.
+    const illustration = doc.createElement("img");
+    illustration.className = "couloir-illustration";
+    illustration.src = article.image;
+    illustration.alt = "";
+    // Une illustration absente ne doit pas laisser un cadre brisé au-dessus
+    // du titre : elle disparaît, le texte reste.
+    illustration.addEventListener("error", () => illustration.remove());
+    wrapper.appendChild(illustration);
+  }
+
+  if (article.categorie) wrapper.appendChild(el(doc, "p", "couloir-eyebrow", article.categorie));
+  wrapper.appendChild(el(doc, "h1", "couloir-title", article.titre));
+  if (article.extrait) wrapper.appendChild(el(doc, "p", "couloir-body", article.extrait));
 }
 
 function renderDataView(
@@ -342,10 +386,7 @@ function renderDataView(
     return;
   }
 
-  const items = Array.isArray(slide.payload) ? (slide.payload as NewsEntry[]) : [];
-  const first = items[0];
-  if (!first) return;
-  if (first.category) wrapper.appendChild(el(doc, "p", "couloir-eyebrow", first.category));
-  wrapper.appendChild(el(doc, "h1", "couloir-title", first.title));
-  if (first.excerpt) wrapper.appendChild(el(doc, "p", "couloir-body", first.excerpt));
+  if (slide.view.startsWith("news")) {
+    renderNews(doc, wrapper, slide);
+  }
 }

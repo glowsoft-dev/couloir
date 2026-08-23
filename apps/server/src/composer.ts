@@ -42,6 +42,15 @@ export interface PublishSpec {
   timetableClasses?: { id: string; label: string }[];
   /** Plages d'extinction de la dalle, en heure locale de l'école. */
   displayOff?: { daysOfWeek: number[]; from: string; to: string }[];
+  /**
+   * Combien d'actualités du site font partie de la rotation. 0 = aucune.
+   *
+   * Elles tournent AVEC les affiches et les vidéos, pas dans un coin à part :
+   * c'était la demande d'origine — des cours, mais pas que.
+   */
+  actualites?: number;
+  /** L'adresse à laquelle les écrans vont lire les actualités. */
+  actualitesUrl?: string;
 }
 
 export interface ComposeInput {
@@ -72,8 +81,13 @@ const FALLBACK_SLIDE: Slide = {
 
 export function compose(input: ComposeInput): Manifest {
   const { spec } = input;
-  if (spec.items.length === 0) {
-    throw new CompositionError("Ajoutez au moins un contenu avant de publier.");
+  // Un écran qui ne diffuse que les actualités du site est légitime : c'est
+  // la configuration d'un hall d'accueil. Ce qu'on refuse, c'est un écran
+  // sans rien du tout.
+  if (spec.items.length === 0 && !(spec.actualites && spec.actualites > 0)) {
+    throw new CompositionError(
+      "Ajoutez au moins un contenu, ou des actualités du site, avant de publier.",
+    );
   }
 
   const slides: Slide[] = [FALLBACK_SLIDE];
@@ -139,6 +153,35 @@ export function compose(input: ComposeInput): Manifest {
 
   const withTimetable = spec.layout === "principal-et-cours";
   const withTicker = Boolean(spec.ticker?.trim());
+  const nombreActualites = Math.max(0, Math.min(spec.actualites ?? 0, 10));
+
+  /**
+   * Les actualités rejoignent la rotation principale.
+   *
+   * Une diapositive par article, toutes branchées sur LA MÊME source : un
+   * seul appel réseau depuis l'écran, et chaque article garde sa propre
+   * preuve de diffusion. Le rang boucle côté rendu, si bien qu'une source
+   * qui rend moins d'articles que prévu ne laisse aucune dalle vide.
+   */
+  if (nombreActualites > 0) {
+    if (!spec.actualitesUrl) {
+      throw new CompositionError(
+        "Les actualités ne sont pas configurées. Renseignez l'adresse du site dans les Réglages.",
+      );
+    }
+    for (let rang = 0; rang < nombreActualites; rang++) {
+      const id = `actualite-${rang}`;
+      slides.push({
+        kind: "data",
+        id,
+        sourceId: "actus",
+        view: "news-single",
+        params: { index: String(rang) },
+        durationMs: 14_000,
+      });
+      mainSlideIds.push(id);
+    }
+  }
 
   if (withTimetable) {
     if (!spec.timetableUrl) {
@@ -205,20 +248,42 @@ export function compose(input: ComposeInput): Manifest {
     playlists,
     slides,
     assets,
-    dataSources: withTimetable
-      ? [
-          {
-            id: "edt",
-            kind: "timetable",
-            url: spec.timetableUrl!,
-            ttlSec: 900,
-            // Au-delà de quatre heures, la colonne se retire plutôt que de
-            // laisser croire qu'elle est à jour.
-            maxStaleSec: 14_400,
-            stalePolicy: "hide",
-          },
-        ]
-      : [],
+    dataSources: [
+      ...(withTimetable
+        ? [
+            {
+              id: "edt",
+              kind: "timetable" as const,
+              url: spec.timetableUrl!,
+              ttlSec: 900,
+              // Au-delà de quatre heures, la colonne se retire plutôt que de
+              // laisser croire qu'elle est à jour.
+              maxStaleSec: 14_400,
+              stalePolicy: "hide" as const,
+            },
+          ]
+        : []),
+      ...(nombreActualites > 0
+        ? [
+            {
+              id: "actus",
+              kind: "news" as const,
+              url: spec.actualitesUrl!,
+              ttlSec: 900,
+              // Deux jours : une actualité scolaire vieillit lentement, et
+              // un site en maintenance le week-end ne doit pas vider les
+              // écrans du lundi matin. Passé ce délai on l'affiche quand
+              // même, datée — mieux vaut une vieille annonce signalée comme
+              // telle qu'un trou dans la rotation. C'est l'inverse du choix
+              // fait pour l'emploi du temps, qui se retire : un cours faux
+              // envoie quelqu'un dans la mauvaise salle, une vieille
+              // actualité ne fait de mal à personne.
+              maxStaleSec: 172_800,
+              stalePolicy: "keep-with-date" as const,
+            },
+          ]
+        : []),
+    ],
     schedules: buildSchedules(withTimetable, withTicker),
     emergency: null,
     fallbackPlaylistId: "repli",

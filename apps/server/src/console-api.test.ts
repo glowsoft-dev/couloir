@@ -572,6 +572,108 @@ describe("parcours de la console", () => {
     ]);
   });
 
+  it("met une diapositive par actualité, toutes sur la même source", async () => {
+    // Une seule source pour N diapositives : l'écran ne fait qu'un appel
+    // réseau, et chaque article garde sa propre preuve de diffusion.
+    const manifest = composeWith({
+      layout: "plein-ecran",
+      items: [{ assetId: poster.id }],
+      actualites: 3,
+      actualitesUrl: "http://serveur.test/connectors/news",
+    } as never);
+
+    const actus = manifest.slides.filter((s) => s.kind === "data" && s.sourceId === "actus");
+    expect(actus).toHaveLength(3);
+    expect(actus.map((s) => (s as { params: Record<string, string> }).params["index"])).toEqual([
+      "0",
+      "1",
+      "2",
+    ]);
+    expect(manifest.dataSources.filter((s) => s.id === "actus")).toHaveLength(1);
+
+    // Elles tournent AVEC les affiches, pas dans un coin à part.
+    const principale = manifest.playlists.find((p) => p.id === "principale");
+    expect(principale?.slideIds).toEqual(
+      expect.arrayContaining(["actualite-0", "actualite-1", "actualite-2"]),
+    );
+  });
+
+  it("affiche une actualité périmée plutôt que de laisser un trou", async () => {
+    // L'inverse du choix fait pour l'emploi du temps, et c'est délibéré :
+    // un cours faux envoie quelqu'un dans la mauvaise salle, une vieille
+    // actualité ne fait de mal à personne.
+    const manifest = composeWith({
+      layout: "plein-ecran",
+      items: [{ assetId: poster.id }],
+      actualites: 1,
+      actualitesUrl: "http://serveur.test/connectors/news",
+    } as never);
+
+    const source = manifest.dataSources.find((s) => s.id === "actus");
+    expect(source?.stalePolicy).toBe("keep-with-date");
+    expect(manifest.dataSources.find((s) => s.id === "edt")).toBeUndefined();
+  });
+
+  it("refuse les actualités sans adresse configurée", async () => {
+    // Mieux vaut refuser franchement que produire un manifeste dont la
+    // source pointe nulle part, et le découvrir sur un écran.
+    expect(() =>
+      composeWith({ layout: "plein-ecran", items: [{ assetId: poster.id }], actualites: 2 } as never),
+    ).toThrow(CompositionError);
+  });
+
+  it("accepte un écran qui ne diffuse que les actualités", async () => {
+    // C'est la configuration du hall d'accueil.
+    const manifest = composeWith({
+      layout: "plein-ecran",
+      items: [],
+      actualites: 2,
+      actualitesUrl: "http://serveur.test/connectors/news",
+    } as never);
+    expect(findBrokenReferences(manifest)).toEqual([]);
+    expect(manifest.playlists.find((p) => p.id === "principale")?.slideIds).toHaveLength(2);
+  });
+
+  it("publie un écran d'actualités seules, par la vraie route", async () => {
+    // Le test du composeur seul ne suffit pas : la validation du corps est
+    // une couche de plus, et elle imposait un contenu minimum. Le défaut
+    // n'est apparu qu'en publiant pour de vrai.
+    const { app, store, auth } = await ready();
+    const device = await store.startEnrollment("w".repeat(44), { platform: "linux" } as never);
+    const { screen } = await store.claimNew(device.deviceId, {
+      code: "E·0·05", label: "Accueil", building: "E", floor: 0, area: "hall", orientation: "landscape",
+    });
+
+    const réponse = await app.inject({
+      method: "POST",
+      url: `${CONSOLE_PREFIX}/screens/${screen.id}/publish`,
+      headers: auth,
+      payload: { layout: "plein-ecran", items: [], actualites: 3 },
+    });
+
+    expect(réponse.statusCode).toBe(200);
+    const manifest = await store.getManifest(screen.id);
+    expect(manifest?.slides.filter((s) => s.kind === "data")).toHaveLength(3);
+  });
+
+  it("refuse par la vraie route un écran sans rien du tout", async () => {
+    const { app, store, auth } = await ready();
+    const device = await store.startEnrollment("v".repeat(44), { platform: "linux" } as never);
+    const { screen } = await store.claimNew(device.deviceId, {
+      code: "E·0·06", label: "Vide", building: "E", floor: 0, area: "hall", orientation: "landscape",
+    });
+
+    const réponse = await app.inject({
+      method: "POST",
+      url: `${CONSOLE_PREFIX}/screens/${screen.id}/publish`,
+      headers: auth,
+      payload: { layout: "plein-ecran", items: [] },
+    });
+
+    expect(réponse.statusCode).toBe(400);
+    expect(réponse.json().message).toContain("actualités");
+  });
+
   it("refuse de publier sur un écran inconnu", async () => {
     const { app, auth } = await ready();
     const response = await app.inject({

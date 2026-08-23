@@ -9,6 +9,7 @@ import type { CommandBus } from "./commands.js";
 import type { Manifest } from "@couloir/protocol";
 import type { TimetableRepository } from "./timetable/repository.js";
 import type { DepotComptes } from "./comptes/depot.js";
+import { ErreurConnecteur, type ServiceActualites } from "./connecteurs/service.js";
 import { NOM_COOKIE, enregistrerRoutesComptes, journaliserAction, pouvoirRequis } from "./comptes/routes.js";
 import { peut } from "./comptes/roles.js";
 
@@ -47,6 +48,14 @@ function jetonValide(entete: string | undefined, attendu: string): boolean {
 
 export const CONSOLE_PREFIX = `${API_PREFIX}/console` as const;
 
+/**
+ * Le corps d'une publication.
+ *
+ * `items` peut être vide : un écran qui ne diffuse que les actualités du site
+ * est légitime — c'est la configuration d'un hall d'accueil. C'est le
+ * composeur qui refuse un écran sans rien du tout, parce que lui seul sait ce
+ * qui alimente la rotation.
+ */
 const PublishBody = z.object({
   layout: z.enum(["plein-ecran", "principal-et-cours"]),
   items: z
@@ -62,8 +71,7 @@ const PublishBody = z.object({
           .optional(),
         durationMs: z.number().int().positive().max(60_000).optional(),
       }),
-    )
-    .min(1),
+    ),
   ticker: z.string().max(500).optional(),
   timetableUrl: z.string().url().optional(),
   /**
@@ -73,6 +81,8 @@ const PublishBody = z.object({
    * absent : l'écran les fait défiler, dans l'ordre de la console.
    */
   timetableClassIds: z.array(z.string().uuid()).optional(),
+  /** Combien d'actualités du site tournent avec le reste. 0 = aucune. */
+  actualites: z.number().int().min(0).max(10).optional(),
   /**
    * Plages d'extinction de la dalle, en heure locale.
    *
@@ -141,6 +151,8 @@ export interface ConsoleApiOptions {
   comptes?: DepotComptes;
   /** Faux en développement : un cookie `Secure` ne survit pas à HTTP. */
   cookieSécurisé?: boolean;
+  /** Le connecteur d'actualités. Absent = l'onglet reste indisponible. */
+  actualites?: ServiceActualites;
 }
 
 export function registerConsoleApi(app: FastifyInstance, options: ConsoleApiOptions): void {
@@ -327,6 +339,78 @@ export function registerConsoleApi(app: FastifyInstance, options: ConsoleApiOpti
       };
     },
   );
+
+  // --- Actualités du site ------------------------------------------------
+
+  const Reglages = z.object({
+    url: z.string().min(1),
+    categorie: z.string().optional(),
+    nombre: z.number().int().min(1).max(20).default(5),
+    actif: z.boolean().default(true),
+  });
+
+  app.get(`${CONSOLE_PREFIX}/actualites`, async (_request, reply) => {
+    if (!options.actualites) {
+      return reply.code(503).send({
+        code: "sans-base",
+        message: "Les actualités demandent une base de données.",
+        retryable: false,
+      });
+    }
+    return { reglages: await options.actualites.reglages(), etat: options.actualites.etat() };
+  });
+
+  app.put(`${CONSOLE_PREFIX}/actualites`, async (request, reply) => {
+    if (!options.actualites) {
+      return reply.code(503).send({ code: "sans-base", message: "Indisponible.", retryable: false });
+    }
+    const parsed = Reglages.safeParse(request.body);
+    if (!parsed.success) {
+      return reply.code(400).send({
+        code: "invalid-body",
+        message: "Réglage incomplet.",
+        retryable: false,
+        details: parsed.error.flatten(),
+      });
+    }
+    const reglages = await options.actualites.enregistrer(parsed.data);
+    if (options.comptes) {
+      await journaliserAction(request, options.comptes, "réglage des actualités", reglages.url, {
+        actif: reglages.actif,
+      });
+    }
+    return { reglages };
+  });
+
+  /**
+   * L'essai avant enregistrement.
+   *
+   * On ne branche pas une source sur vingt écrans sans avoir vu ce qu'elle
+   * rend. L'essai ne touche ni au cache ni aux réglages : il dit seulement
+   * ce qu'on obtiendrait.
+   */
+  app.post(`${CONSOLE_PREFIX}/actualites/essai`, async (request, reply) => {
+    if (!options.actualites) {
+      return reply.code(503).send({ code: "sans-base", message: "Indisponible.", retryable: false });
+    }
+    const parsed = Reglages.safeParse(request.body);
+    if (!parsed.success) {
+      return reply.code(400).send({ code: "invalid-body", message: "Réglage incomplet.", retryable: false });
+    }
+    try {
+      return { charge: await options.actualites.essayer(parsed.data) };
+    } catch (cause) {
+      if (cause instanceof ErreurConnecteur) {
+        return reply.code(400).send({
+          code: "source-refusee",
+          message: cause.message,
+          ...(cause.conseil ? { conseil: cause.conseil } : {}),
+          retryable: false,
+        });
+      }
+      throw cause;
+    }
+  });
 
   // --- Historique des publications --------------------------------------
 
@@ -546,7 +630,7 @@ export function registerConsoleApi(app: FastifyInstance, options: ConsoleApiOpti
       }
 
       try {
-        const spec = await resolveSpec(parsed.data, options);
+        const spec = await resolveSpec(parsed.data, options, resolvePublicUrl(options.publicUrl, request.headers.host));
         const manifest = compose({
           screenId: screen.id,
           version: 0,
@@ -585,7 +669,7 @@ export function registerConsoleApi(app: FastifyInstance, options: ConsoleApiOpti
         return reply.code(404).send({ code: "unknown-screen", message: "Écran inconnu.", retryable: false });
       }
 
-      const spec = await resolveSpec(parsed.data, options);
+      const spec = await resolveSpec(parsed.data, options, resolvePublicUrl(options.publicUrl, request.headers.host));
 
       try {
         const existing = await store.getManifest(screen.id);
@@ -696,6 +780,7 @@ function iso(date: Date): string {
 async function resolveSpec(
   body: z.infer<typeof PublishBody>,
   options: ConsoleApiOptions,
+  baseUrl: string,
 ): Promise<PublishSpec> {
   let timetableClasses: { id: string; label: string }[] | undefined;
 
@@ -711,9 +796,15 @@ async function resolveSpec(
   }
 
   const timetableUrl = body.timetableUrl ?? options.timetableUrl;
+  // L'adresse que les ÉCRANS appellent, résolue exactement comme celle des
+  // médias : une adresse configurée si elle existe, sinon l'en-tête `Host`.
+  // Deux chemins distincts finiraient par diverger, et les actualités
+  // deviendraient injoignables sur une installation où les médias marchent.
+  const actualitesUrl = `${baseUrl}/connectors/news`;
   return {
     ...body,
     ...(timetableUrl !== undefined ? { timetableUrl } : {}),
+    ...(actualitesUrl !== undefined ? { actualitesUrl } : {}),
     ...(timetableClasses ? { timetableClasses } : {}),
   };
 }

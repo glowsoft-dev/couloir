@@ -755,6 +755,84 @@ fichier efface les données d'un autre en pleine exécution. L'échec tombe alor
 ailleurs que la cause, et ne se reproduit pas quand on relance le fichier
 seul. `ensureTestDatabase(suffixe)` donne à chacun la sienne.
 
+## Les actualités du site
+
+La promesse d'origine : ce que la personne chargée de la communication publie
+sur le site apparaît dans les couloirs, sans qu'elle ait à toucher aux écrans.
+
+### C'est le serveur qui va chercher, pas les écrans
+
+Trois raisons, et chacune suffirait. Les écrans sont souvent sur un réseau
+restreint qui ne sort pas. Vingt écrans interrogeant le site toutes les dix
+minutes finiraient par le faire tomber. Et normaliser une seule fois évite
+d'écrire la connaissance de WordPress dans le noyau de rendu, qui doit rester
+ignorant de l'endroit d'où vient une donnée.
+
+Deux protocoles, essayés dans cet ordre : l'API REST de WordPress — la plus
+riche, avec images, catégories et extraits déjà rédigés — puis le flux RSS ou
+Atom, plus pauvre mais à peu près universel, y compris sur les sites dont
+l'API REST est désactivée.
+
+### Les images passent aussi par le serveur
+
+Le premier jet rendait aux écrans les adresses d'images du site, sur son
+propre réseau de diffusion. C'était rouvrir par la petite porte ce qu'on
+venait de fermer par la grande : les couloirs auraient affiché du texte sans
+images, sans que personne comprenne pourquoi.
+
+Le serveur relaie donc les illustrations. La table qui les porte n'est pas un
+cache mais **une liste blanche** : on ne relaie que les adresses vues dans la
+charge courante, et la route n'accepte qu'une clé, jamais une adresse. Une
+route qui prendrait une adresse arbitraire serait un relais ouvert, utilisable
+pour atteindre depuis le serveur ce qu'on ne peut pas atteindre du dehors.
+
+### Une diapositive par article
+
+Le premier jet n'affichait que le premier article. Une école qui en publie
+trois s'attend à voir les trois.
+
+N diapositives partagent donc UNE source, chacune désignant son rang — le même
+schéma que l'emploi du temps, où une source sert toutes les classes. L'écran
+ne fait qu'un appel réseau, et chaque article garde sa propre preuve de
+diffusion. Le rang boucle côté rendu : une source qui rend moins d'articles
+que prévu ne laisse aucune dalle vide.
+
+Elles rejoignent la rotation principale, avec les affiches et les vidéos. Un
+écran qui ne diffuserait que les actualités est légitime — c'est la
+configuration d'un hall d'accueil.
+
+### Ce qu'on garde quand le site tombe
+
+Le site de l'école tombera : maintenance, hébergeur, certificat expiré. Le
+serveur conserve donc la dernière charge connue et continue de la servir,
+aussi vieille soit-elle. La date part avec, et le rendu décide.
+
+`stalePolicy` vaut `keep-with-date` pour les actualités, là où l'emploi du
+temps utilise `hide`. Ce n'est pas une inattention : un cours faux envoie
+quelqu'un dans la mauvaise salle, une vieille actualité ne fait de mal à
+personne. Mieux vaut une annonce datée qu'un trou dans la rotation.
+
+Une asymétrie subsiste, et il faut la connaître : les médias importés sont
+téléchargés et vérifiés par l'agent, donc ils survivent à une coupure ; les
+images d'actualités sont chargées par le navigateur de la dalle au moment de
+l'affichage. Pendant une panne réseau, le texte des articles reste — l'agent
+en a une copie — mais les illustrations disparaissent.
+
+### Deux pièges rencontrés en le branchant
+
+**Un test du composeur ne prouve pas qu'une publication passe.** Le schéma de
+validation du corps imposait au moins un contenu, ce qui rendait impossible un
+écran d'actualités seules. Le test du composeur passait, parce qu'il contourne
+la couche HTTP. Le défaut n'est apparu qu'en publiant pour de vrai. Le
+minimum vit désormais dans le composeur, le seul endroit qui sache ce qui
+alimente la rotation.
+
+**`COULOIR_PUBLIC_URL` compte plus qu'il n'y paraît.** Sans elle, l'adresse se
+déduit de l'en-tête `Host` de qui publie — donc « localhost », qui pour un
+écran désigne l'écran lui-même. Les médias s'en tiraient parce que l'agent les
+télécharge depuis Node ; les images d'actualités, chargées par le navigateur
+de la dalle, échouaient sans un mot.
+
 ## Ce qui n'est pas encore fait
 
 Le socle tourne, mais il reste volontairement incomplet :
@@ -774,8 +852,9 @@ Le socle tourne, mais il reste volontairement incomplet :
   Linux existe et sert de référence : elles n'ont qu'à implémenter `ports.ts`.
 - **Les gabarits** — le rendu n'en connaît que la forme générale (bandeau,
   titre, texte). La bibliothèque annoncée au cahier des charges reste à faire.
-- **Le connecteur du site** — `/connectors/news` est un bouchon. Le vrai
-  connecteur WordPress reste à écrire.
+- **Les images d'actualités hors connexion** — le texte des articles survit à
+  une coupure, les illustrations non : elles sont chargées à l'affichage
+  plutôt que mises en cache par l'agent.
 - **Les groupes d'écrans** — on publie écran par écran. Publier sur « tout le
   bâtiment B » d'un geste reste à faire.
 - **Les preuves de diffusion** — la télémétrie les remonte et les conserve,
