@@ -1,7 +1,7 @@
 import type { AssetRef, EmergencyMessage, Manifest, Slide, Zone } from "@couloir/protocol";
 import { effectiveDuration } from "./readability.js";
 import { type RotationState, advanceRotation } from "./rotation.js";
-import { activePlaylistId, isDisplayOffPeriod } from "./schedule.js";
+import { activePlaylistId, isDisplayOffPeriod, isVisible } from "./schedule.js";
 import { type SourceSnapshot, type SourceState, isDisplayable, resolveSource, stalenessLabel } from "./staleness.js";
 
 /**
@@ -127,10 +127,16 @@ export function direct(input: DirectorInput): DirectorOutput {
     };
   }
 
-  /** Une diapositive est-elle diffusable en l'état actuel du cache ? */
+  /** Une diapositive est-elle diffusable ici et maintenant ? */
   const isEligible = (slideId: string): boolean => {
     const slide = slidesById.get(slideId);
     if (!slide) return false;
+
+    // Hors de sa période d'affichage : on la saute, exactement comme on
+    // saute un média pas encore téléchargé. Le mécanisme existait déjà, il
+    // n'y avait qu'à lui donner une raison de plus.
+    if (!isVisible(slide.visibility, nowMs, manifest.settings.timezone)) return false;
+
     switch (slide.kind) {
       case "media":
         return input.availableAssetIds.has(slide.assetId);
@@ -202,6 +208,45 @@ export function direct(input: DirectorInput): DirectorOutput {
 
     // En repli, une seule zone plein écran suffit.
     if (input.forceFallback) break;
+  }
+
+  /**
+   * Plus rien à afficher : on joue le repli plutôt que d'éteindre.
+   *
+   * Le cas arrive dès qu'on programme des affiches — tout est daté pour
+   * septembre, et le 20 août le couloir est noir sans que rien ne l'explique.
+   * Une dalle noire ressemble à une panne : on monte à l'échelle pour
+   * découvrir qu'il n'y avait simplement rien à montrer. La carte d'identité
+   * de l'écran, elle, dit que le boîtier va bien.
+   *
+   * Ce n'est pas le mode `fallback`, qui signale une perte de contact : ici
+   * tout fonctionne, il n'y a rien de programmé pour maintenant.
+   */
+  const rienÀMontrer = !input.forceFallback && zones.every((zone) => zone.slide === null);
+  if (rienÀMontrer) {
+    const repli = playlistsById.get(manifest.fallbackPlaylistId);
+    const premier = repli?.slideIds[0];
+    const diapo = premier ? slidesById.get(premier) : undefined;
+    if (diapo) {
+      return {
+        screen: {
+          mode: "normal",
+          zones: [
+            {
+              zoneId: manifest.layout.zones[0]?.id ?? "principal",
+              rect: { xPercent: 0, yPercent: 0, widthPercent: 100, heightPercent: 100 },
+              playlistId: manifest.fallbackPlaylistId,
+              slide: renderSlide(diapo, assetsById, sourceStates, manifest.settings.timezone),
+            },
+          ],
+          emergency: null,
+          identify: null,
+          watermark,
+        },
+        rotations,
+        transitions,
+      };
+    }
   }
 
   const finalZones = input.forceFallback

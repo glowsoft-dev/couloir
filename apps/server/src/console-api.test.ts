@@ -674,6 +674,64 @@ describe("parcours de la console", () => {
     expect(réponse.json().message).toContain("actualités");
   });
 
+  it("porte la période d'une affiche jusqu'au manifeste", async () => {
+    // C'est l'écran qui tranche, pas le serveur au moment de publier : un
+    // boîtier coupé du réseau doit voir ses affiches arriver et repartir.
+    const manifest = composeWith({
+      layout: "plein-ecran",
+      items: [
+        {
+          assetId: poster.id,
+          visibility: { startsAt: "2099-09-01T00:00:00Z", endsAt: "2099-09-16T00:00:00Z" },
+        },
+        { assetId: video.id },
+      ],
+    } as never);
+
+    const [datée, permanente] = manifest.slides.filter((s) => s.id.startsWith("item-"));
+    expect((datée as { visibility?: unknown }).visibility).toEqual({
+      startsAt: "2099-09-01T00:00:00Z",
+      endsAt: "2099-09-16T00:00:00Z",
+    });
+    expect((permanente as { visibility?: unknown }).visibility).toBeUndefined();
+  });
+
+  it("refuse une période déjà terminée", async () => {
+    // On veut le savoir en publiant, pas en montant voir un écran qui n'a
+    // jamais rien affiché.
+    expect(() =>
+      composeWith({
+        layout: "plein-ecran",
+        items: [{ assetId: poster.id, visibility: { endsAt: "2020-01-01T00:00:00Z" } }],
+      } as never),
+    ).toThrow(CompositionError);
+  });
+
+  it("refuse une fin antérieure au début", async () => {
+    expect(() =>
+      composeWith({
+        layout: "plein-ecran",
+        items: [
+          {
+            assetId: poster.id,
+            visibility: { startsAt: "2099-09-15T00:00:00Z", endsAt: "2099-09-01T00:00:00Z" },
+          },
+        ],
+      } as never),
+    ).toThrow(CompositionError);
+  });
+
+  it("retire une période vide au lieu de l'inscrire", async () => {
+    // Un objet vide dans le manifeste ferait croire à un réglage qui
+    // n'existe pas, et « sept jours cochés » veut dire « tous les jours ».
+    const manifest = composeWith({
+      layout: "plein-ecran",
+      items: [{ assetId: poster.id, visibility: { daysOfWeek: [1, 2, 3, 4, 5, 6, 7] } }],
+    } as never);
+    expect((manifest.slides.find((s) => s.id === "item-1") as { visibility?: unknown }).visibility)
+      .toBeUndefined();
+  });
+
   it("refuse de publier sur un écran inconnu", async () => {
     const { app, auth } = await ready();
     const response = await app.inject({

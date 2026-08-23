@@ -37,10 +37,20 @@ export interface Media {
   filename?: string;
 }
 
+export interface Visibility {
+  startsAt?: string;
+  endsAt?: string;
+  daysOfWeek?: number[];
+  dailyStart?: string;
+  dailyEnd?: string;
+}
+
 export interface PublishItem {
   assetId?: string;
   text?: { eyebrow?: string; titre: string; texte?: string };
   durationMs?: number;
+  /** Absente = le contenu passe toujours. C'est le cas courant. */
+  visibility?: Visibility;
 }
 
 export type CommandKind =

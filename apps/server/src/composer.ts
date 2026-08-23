@@ -18,12 +18,29 @@ import type { StoredMedia } from "./media.js";
 
 export type LayoutChoice = "plein-ecran" | "principal-et-cours";
 
+/**
+ * Quand une affiche fait partie de la rotation.
+ *
+ * Les bornes sont des instants absolus. C'est la console qui convertit « du
+ * 1er au 15 septembre » en instants : poser les dates en UTC sans y penser
+ * décale tout de deux heures en été.
+ */
+export interface Visibility {
+  startsAt?: string;
+  endsAt?: string;
+  daysOfWeek?: number[];
+  dailyStart?: string;
+  dailyEnd?: string;
+}
+
 export interface PublishItem {
   /** Un média de la bibliothèque. */
   assetId?: string;
   /** Ou un bloc de texte composé dans la console. */
   text?: { eyebrow?: string; titre: string; texte?: string };
   durationMs?: number;
+  /** Absente = l'affiche passe toujours. C'est le cas courant. */
+  visibility?: Visibility;
 }
 
 export interface PublishSpec {
@@ -79,6 +96,42 @@ const FALLBACK_SLIDE: Slide = {
   durationMs: 20_000,
 };
 
+/**
+ * Nettoie une période avant de l'inscrire dans le manifeste.
+ *
+ * Une période entièrement vide est retirée : une affiche « programmée sans
+ * aucune condition » se comporte comme une affiche non programmée, et un
+ * objet vide dans le manifeste ferait croire à un réglage qui n'existe pas.
+ *
+ * Une période déjà terminée est refusée : on veut le savoir en publiant, pas
+ * en montant voir un écran qui n'a jamais rien affiché.
+ */
+function normaliserVisibilite(v: Visibility | undefined): Visibility | undefined {
+  if (!v) return undefined;
+
+  const propre: Visibility = {
+    ...(v.startsAt ? { startsAt: v.startsAt } : {}),
+    ...(v.endsAt ? { endsAt: v.endsAt } : {}),
+    ...(v.daysOfWeek && v.daysOfWeek.length > 0 && v.daysOfWeek.length < 7
+      ? { daysOfWeek: [...v.daysOfWeek].sort((a, b) => a - b) }
+      : {}),
+    ...(v.dailyStart && v.dailyEnd ? { dailyStart: v.dailyStart, dailyEnd: v.dailyEnd } : {}),
+  };
+
+  if (Object.keys(propre).length === 0) return undefined;
+
+  if (propre.startsAt && propre.endsAt && Date.parse(propre.endsAt) <= Date.parse(propre.startsAt)) {
+    throw new CompositionError("La date de fin doit être après la date de début.");
+  }
+  if (propre.endsAt && Date.parse(propre.endsAt) <= Date.now()) {
+    throw new CompositionError(
+      "Cette période est déjà terminée : l'affiche ne paraîtrait jamais.",
+    );
+  }
+
+  return propre;
+}
+
 export function compose(input: ComposeInput): Manifest {
   const { spec } = input;
   // Un écran qui ne diffuse que les actualités du site est légitime : c'est
@@ -96,6 +149,10 @@ export function compose(input: ComposeInput): Manifest {
 
   spec.items.forEach((item, index) => {
     const id = `item-${index + 1}`;
+    // La période voyage jusqu'à la diapositive : c'est l'écran qui tranche,
+    // pas le serveur au moment de publier. Un boîtier coupé du réseau
+    // pendant une semaine voit ainsi ses affiches arriver et repartir seul.
+    const quand = normaliserVisibilite(item.visibility);
 
     if (item.assetId) {
       const media = input.media.get(item.assetId);
@@ -109,6 +166,7 @@ export function compose(input: ComposeInput): Manifest {
         kind: "media",
         id,
         assetId: media.id,
+        ...(quand ? { visibility: quand } : {}),
         ...(isVideo ? {} : { durationMs: item.durationMs ?? DEFAULT_ITEM_DURATION_MS }),
       });
 
@@ -137,6 +195,7 @@ export function compose(input: ComposeInput): Manifest {
           ...(item.text.texte ? { texte: item.text.texte } : {}),
         },
         assetIds: [],
+        ...(quand ? { visibility: quand } : {}),
         durationMs: item.durationMs ?? DEFAULT_ITEM_DURATION_MS,
       });
       mainSlideIds.push(id);

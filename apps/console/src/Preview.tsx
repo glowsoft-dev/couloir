@@ -27,10 +27,20 @@ export function ScreenPreview({
   manifest,
   screenCode,
   error,
+  /**
+   * L'instant simulé, en millisecondes.
+   *
+   * C'est ce qui rend une programmation vérifiable : sans lui, on ne saurait
+   * ce qu'affichera l'écran le 12 septembre qu'en attendant le 12 septembre.
+   * Le rendu prend déjà l'instant en paramètre — il n'y avait qu'à cesser de
+   * lui passer l'heure courante.
+   */
+  instant,
 }: {
   manifest: Manifest | null;
   screenCode: string;
   error: string | null;
+  instant?: number;
 }) {
   const frame = useRef<HTMLDivElement>(null);
   const stage = useRef<HTMLDivElement>(null);
@@ -93,7 +103,7 @@ export function ScreenPreview({
     const tick = () => {
       const output = direct({
         manifest,
-        nowMs: Date.now(),
+        nowMs: instant ?? Date.now(),
         sources,
         // Tout est réputé disponible : l'aperçu montre le résultat voulu,
         // pas l'état d'un cache qui n'existe pas encore sur l'écran.
@@ -113,7 +123,7 @@ export function ScreenPreview({
       clearInterval(timer);
       renderer.destroy();
     };
-  }, [manifest, sources, screenCode]);
+  }, [manifest, sources, screenCode, instant]);
 
   return (
     <section className="panel">

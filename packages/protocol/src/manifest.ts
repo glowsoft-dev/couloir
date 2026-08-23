@@ -61,11 +61,40 @@ export const DataSourceRef = z.object({
 export type DataSourceRef = z.infer<typeof DataSourceRef>;
 
 /** Une diapositive. Le rendu est identique sur toutes les plateformes. */
+/**
+ * La période pendant laquelle une diapositive fait partie de la rotation.
+ *
+ * Absente, elle passe toujours. C'est le cas courant, et il ne coûte rien.
+ *
+ * Attachée à la DIAPOSITIVE et non à la playlist, délibérément : une affiche
+ * de portes ouvertes doit REJOINDRE la rotation du 1er au 15 septembre, pas
+ * s'y substituer. Le mécanisme de programmation existant, qui fait occuper
+ * une zone par une playlist entière, aurait fait disparaître tout le reste
+ * pendant la quinzaine.
+ *
+ * C'est l'écran qui décide, pas le serveur au moment de publier : un boîtier
+ * coupé du réseau pendant une semaine doit voir arriver et repartir ses
+ * affiches tout seul.
+ */
+export const Visibility = z.object({
+  /** Premier instant d'affichage. Absent = depuis toujours. */
+  startsAt: IsoDateTime.optional(),
+  /** Dernier instant. Absent = pour toujours. */
+  endsAt: IsoDateTime.optional(),
+  /** 1 = lundi … 7 = dimanche. Vide ou absent = tous les jours. */
+  daysOfWeek: z.array(z.number().int().min(1).max(7)).optional(),
+  /** Heure locale de l'école, format HH:MM. Passe minuit si fin < début. */
+  dailyStart: z.string().regex(/^\d{2}:\d{2}$/).optional(),
+  dailyEnd: z.string().regex(/^\d{2}:\d{2}$/).optional(),
+});
+export type Visibility = z.infer<typeof Visibility>;
+
 export const Slide = z.discriminatedUnion("kind", [
   z.object({
     kind: z.literal("media"),
     id: z.string(),
     assetId: z.string(),
+    visibility: Visibility.optional(),
     /** Absent pour une vidéo : elle dure le temps qu'elle dure. */
     durationMs: z.number().int().positive().optional(),
   }),
@@ -73,6 +102,7 @@ export const Slide = z.discriminatedUnion("kind", [
     kind: z.literal("template"),
     id: z.string(),
     templateId: z.string(),
+    visibility: Visibility.optional(),
     fields: z.record(z.union([z.string(), z.number(), z.boolean()])),
     /** Médias référencés par les champs, à télécharger comme les autres. */
     assetIds: z.array(z.string()).default([]),
@@ -81,6 +111,7 @@ export const Slide = z.discriminatedUnion("kind", [
   z.object({
     kind: z.literal("widget"),
     id: z.string(),
+    visibility: Visibility.optional(),
     widget: z.enum(["clock", "weather", "ticker", "menu", "transit", "countdown", "social"]),
     config: z.record(z.unknown()).default({}),
     durationMs: z.number().int().positive(),
@@ -88,6 +119,7 @@ export const Slide = z.discriminatedUnion("kind", [
   z.object({
     kind: z.literal("data"),
     id: z.string(),
+    visibility: Visibility.optional(),
     sourceId: z.string(),
     view: z.enum(["timetable-day", "timetable-room", "timetable-next", "news-list", "news-single"]),
     /**

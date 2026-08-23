@@ -70,6 +70,21 @@ const PublishBody = z.object({
           })
           .optional(),
         durationMs: z.number().int().positive().max(60_000).optional(),
+        /**
+         * Quand cette affiche fait partie de la rotation.
+         *
+         * Les bornes sont des instants absolus : la console convertit
+         * « jusqu'au 15 septembre » en fin de journée locale avant d'envoyer.
+         */
+        visibility: z
+          .object({
+            startsAt: z.string().datetime().optional(),
+            endsAt: z.string().datetime().optional(),
+            daysOfWeek: z.array(z.number().int().min(1).max(7)).optional(),
+            dailyStart: z.string().regex(/^\d{2}:\d{2}$/).optional(),
+            dailyEnd: z.string().regex(/^\d{2}:\d{2}$/).optional(),
+          })
+          .optional(),
       }),
     ),
   ticker: z.string().max(500).optional(),

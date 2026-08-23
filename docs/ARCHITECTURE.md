@@ -833,6 +833,71 @@ déduit de l'en-tête `Host` de qui publie — donc « localhost », qui pour un
 télécharge depuis Node ; les images d'actualités, chargées par le navigateur
 de la dalle, échouaient sans un mot.
 
+## La programmation d'une affiche
+
+« Cette affiche du 1er au 15 septembre », « celle-là le matin seulement ».
+L'affiche rejoint la rotation le temps voulu puis en sort d'elle-même :
+personne n'a à penser à la retirer trois semaines après les portes ouvertes.
+
+### Attachée à la diapositive, pas à la playlist
+
+Le manifeste portait déjà un mécanisme de programmation : un `Schedule` fait
+occuper une zone par une playlist entière pendant une période. Il ne convenait
+pas. Une affiche datée doit **rejoindre** la rotation, pas s'y substituer —
+avec l'ancien mécanisme, tout le reste aurait disparu pendant la quinzaine des
+portes ouvertes.
+
+La période vit donc sur la diapositive. Et le réalisateur n'a rien eu à
+apprendre de neuf : il savait déjà sauter une diapositive dont le média n'est
+pas encore en cache. On lui a donné une raison de plus.
+
+### C'est l'écran qui tranche
+
+Pas le serveur au moment de publier. Un boîtier coupé du réseau pendant une
+semaine voit ainsi ses affiches arriver et repartir tout seul, avec le
+manifeste qu'il a déjà. Filtrer à la publication aurait figé la rotation à
+l'instant du clic.
+
+### Une dalle ne devient jamais noire
+
+Le défaut que la programmation fait apparaître : on date tout pour septembre,
+et le 20 août le couloir est éteint sans que rien ne l'explique. Une dalle
+noire ressemble à une panne — on monte à l'échelle pour découvrir qu'il n'y
+avait simplement rien à montrer.
+
+Quand plus aucune diapositive n'est dans sa période, l'écran joue donc le
+repli : sa carte d'identité, qui dit au moins que le boîtier va bien. Ce n'est
+pas le mode `fallback`, qui signale une perte de contact ; ici tout
+fonctionne, il n'y a rien de programmé pour maintenant.
+
+### Voir l'écran à une autre date
+
+Sans ça, on ne saurait ce qu'affichera l'écran le 12 septembre qu'en attendant
+le 12 septembre — et une affiche programmée à tort ne se découvrirait qu'en
+montant voir un couloir vide.
+
+Le réalisateur prenait déjà l'instant en paramètre : il suffisait de cesser de
+lui passer l'heure courante. L'aperçu accepte donc une date, et montre
+exactement ce que la dalle affichera ce jour-là. La commande n'apparaît que si
+au moins un contenu est programmé.
+
+### Le piège des fuseaux
+
+Un établissement qui écrit « jusqu'au 15 septembre » veut dire jusqu'à la fin
+du 15 **chez lui**. Poser la borne à `2026-09-15T00:00:00Z` décale tout de
+deux heures en été, et l'affiche disparaît la veille au soir.
+
+La console convertit donc une date saisie en instant local : début de journée
+pour le début, minuit du lendemain pour la fin. Le manifeste ne transporte que
+des instants absolus, et le rendu les compare dans le fuseau de l'école. Le
+piège s'est présenté en écrivant les tests, avec deux heures d'écart
+inexpliquées.
+
+Même règle que pour l'extinction de la dalle : **les jours cochés désignent le
+jour où la plage commence**. « Le vendredi de 18:00 à 08:00 » couvre bien le
+vendredi soir jusqu'au samedi matin. Deux règles différentes pour la même
+phrase seraient un piège.
+
 ## Ce qui n'est pas encore fait
 
 Le socle tourne, mais il reste volontairement incomplet :
@@ -840,9 +905,8 @@ Le socle tourne, mais il reste volontairement incomplet :
 - **La réinitialisation par courriel** — un mot de passe perdu se fait
   remplacer par un administrateur, de vive voix. Le serveur n'envoie aucun
   message.
-- **La programmation calendaire** — on publie, ça part tout de suite. Les
-  campagnes datées restent à faire. L'extinction de la dalle, elle, se
-  programme.
+- **Les campagnes partenaires** — la part de contenu sponsorisé dans une
+  rotation est prévue au manifeste, rien ne la pilote ni ne la mesure.
 - **Le plan interactif** — la console liste les écrans, elle ne les situe pas
   encore sur un plan d'étage.
 - **TLS** — les échanges ne sont pas chiffrés en développement. La signature

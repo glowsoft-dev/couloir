@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Manifest } from "@couloir/protocol";
 import { ScreenPreview } from "./Preview.js";
+import { Periode } from "./Periode.js";
 import { Schedule } from "./Schedule.js";
 import {
   type DisplayOffWindow,
@@ -65,6 +66,13 @@ export function PublishPanel({
   const [actualites, setActualites] = useState(0);
   /** La source est-elle configurée ? Sans elle, le réglage n'a aucun sens. */
   const [sourceActive, setSourceActive] = useState<boolean | null>(null);
+  /**
+   * L'instant depuis lequel on regarde l'aperçu.
+   *
+   * `null` = maintenant. Sinon, on voit ce que l'écran affichera ce jour-là :
+   * c'est la seule façon de vérifier une programmation sans attendre la date.
+   */
+  const [instantSimulé, setInstantSimulé] = useState<number | null>(null);
   /** La version en ligne, et sa composition telle que rouverte. */
   const [live, setLive] = useState<{ version: number | null; loaded: boolean; reopenable: boolean }>(
     { version: null, loaded: false, reopenable: true },
@@ -491,6 +499,22 @@ export function PublishPanel({
                   {/* Groupés : la grille de la rangée compte quatre colonnes,
                       pas six, et trois boutons à la suite la feraient passer
                       sur deux lignes. */}
+                  <Periode
+                    valeur={item.visibility}
+                    libellé={`Contenu ${index + 1}`}
+                    onChange={(v) =>
+                      touch(() =>
+                        setItems((current) =>
+                          current.map((it) =>
+                            it.key === item.key
+                              ? ({ ...it, visibility: v } as Draft)
+                              : it,
+                          ),
+                        ),
+                      )
+                    }
+                  />
+
                   <span className="slide-controls">
                     <button
                       type="button"
@@ -596,8 +620,79 @@ export function PublishPanel({
       </section>
 
       <div style={{ marginTop: 20 }}>
-        <ScreenPreview manifest={preview} screenCode={screen.code} error={previewError} />
+        <MachineÀRemonterLeTemps instant={instantSimulé} onChange={setInstantSimulé} items={items} />
+        <ScreenPreview
+          manifest={preview}
+          screenCode={screen.code}
+          error={previewError}
+          {...(instantSimulé !== null ? { instant: instantSimulé } : {})}
+        />
       </div>
     </>
+  );
+}
+
+/**
+ * Voir l'écran à une autre date.
+ *
+ * Sans elle, on ne saurait ce qu'affichera l'écran le 12 septembre qu'en
+ * attendant le 12 septembre — et une affiche programmée à tort ne se
+ * découvrirait qu'en montant voir un couloir vide.
+ *
+ * N'apparaît que si au moins un contenu est programmé : sur une publication
+ * sans période, elle ne montrerait jamais rien d'autre que le présent.
+ */
+function MachineÀRemonterLeTemps({
+  instant,
+  onChange,
+  items,
+}: {
+  instant: number | null;
+  onChange: (ms: number | null) => void;
+  items: { visibility?: unknown }[];
+}) {
+  if (!items.some((item) => item.visibility)) return null;
+
+  const date = new Date(instant ?? Date.now());
+  const p = (n: number) => String(n).padStart(2, "0");
+  const jour = `${date.getFullYear()}-${p(date.getMonth() + 1)}-${p(date.getDate())}`;
+  const heure = `${p(date.getHours())}:${p(date.getMinutes())}`;
+
+  function poser(nouveauJour: string, nouvelleHeure: string) {
+    const [a, m, j] = nouveauJour.split("-").map(Number);
+    const [h, mn] = nouvelleHeure.split(":").map(Number);
+    onChange(new Date(a!, m! - 1, j!, h!, mn!).getTime());
+  }
+
+  return (
+    <div className="voyage">
+      <span className="voyage-mark" aria-hidden="true">
+        🕐
+      </span>
+      <span>Voir l'écran le</span>
+      <input
+        type="date"
+        value={jour}
+        aria-label="Date simulée"
+        onChange={(e) => poser(e.target.value, heure)}
+      />
+      <input
+        type="time"
+        value={heure}
+        aria-label="Heure simulée"
+        onChange={(e) => poser(jour, e.target.value)}
+      />
+      {instant !== null && (
+        <button type="button" className="link" onClick={() => onChange(null)}>
+          Revenir à maintenant
+        </button>
+      )}
+      <span className="spacer" />
+      <span className="hint">
+        {instant === null
+          ? "Vous regardez le présent."
+          : "L'aperçu montre ce jour-là, pas aujourd'hui."}
+      </span>
+    </div>
   );
 }
