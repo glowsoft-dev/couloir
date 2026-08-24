@@ -964,6 +964,24 @@ poussait le reste de la journée hors de l'écran.
 Le commentaire ne rejoint donc la précision que s'il tient sur une ligne.
 L'information complète est dans NetYPareo, pas sur un mur de couloir.
 
+### L'écran refuse un emploi du temps qui n'est pas celui du jour
+
+La fraîcheur mesurée ne suffit pas, et c'est un piège que le cache crée
+lui-même. Quand NetYPareo tombe, le serveur ressert la dernière journée
+connue — **avec un 200**. L'agent la reçoit donc comme une donnée fraîche, et
+la politique de péremption ne se déclenche jamais. Une panne pendant la nuit
+afficherait le lendemain matin la journée de la veille, présentée comme celle
+du jour.
+
+La journée porte sa date. Le réalisateur la compare à la date du jour dans le
+fuseau de l'école — pas celui du boîtier, qu'un mauvais réglage rendrait faux
+— et retire la colonne si elle ne correspond pas. C'est le seul cas où
+l'écran doit préférer ne rien montrer : un cours faux envoie quelqu'un dans
+la mauvaise salle, à la mauvaise heure.
+
+Le reste de l'écran ne tombe pas pour autant : la colonne se retire, la zone
+principale s'étire.
+
 ### Les rendez-vous individuels
 
 L'afficheur mêle aux groupes des séances dont l'intitulé est un **nom de

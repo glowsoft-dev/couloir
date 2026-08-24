@@ -2,6 +2,7 @@ import type { AssetRef, EmergencyMessage, Manifest, Slide, Zone } from "@couloir
 import { effectiveDuration } from "./readability.js";
 import { type RotationState, advanceRotation } from "./rotation.js";
 import { activePlaylistId, isDisplayOffPeriod, isVisible } from "./schedule.js";
+import { dateLocale } from "./time.js";
 import { type SourceSnapshot, type SourceState, isDisplayable, resolveSource, stalenessLabel } from "./staleness.js";
 
 /**
@@ -156,7 +157,26 @@ export function direct(input: DirectorInput): DirectorOutput {
         return true;
       case "data": {
         const state = sourceStates.get(slide.sourceId);
-        return state !== undefined && isDisplayable(state);
+        if (state === undefined || !isDisplayable(state)) return false;
+
+        /**
+         * Un emploi du temps doit être celui d'aujourd'hui.
+         *
+         * La fraîcheur mesurée ne suffit pas : quand la source d'origine est
+         * tombée, le serveur ressert la dernière journée connue — avec un
+         * 200, donc l'écran la croit fraîche. Une panne pendant la nuit
+         * afficherait le lendemain matin la journée de la veille, présentée
+         * comme celle du jour. Un cours faux envoie quelqu'un dans la
+         * mauvaise salle : mieux vaut retirer la colonne.
+         *
+         * La journée porte sa date ; on la compare, et on tranche ici plutôt
+         * que de laisser la couche d'affichage décider.
+         */
+        if (slide.view.startsWith("timetable") && "payload" in state) {
+          const jour = journéeChoisie(state.payload, slide.params["classId"]);
+          if (jour?.date && jour.date !== dateLocale(nowMs, manifest.settings.timezone)) return false;
+        }
+        return true;
       }
     }
   };
@@ -310,6 +330,24 @@ function renderSlide(
  * bande horizontale se répartissent la place libérée. Si toute une bande est
  * vide, elle disparaît et les autres bandes s'étirent en hauteur.
  */
+/**
+ * La journée que cette diapositive afficherait.
+ *
+ * Même sélection que la couche d'affichage : une source sert toutes les
+ * classes, et le sélecteur de la diapositive dit laquelle.
+ */
+function journéeChoisie(
+  payload: unknown,
+  classId: string | undefined,
+): { date?: string } | null {
+  const days = (payload as { days?: { classId?: string; date?: string }[] } | null)?.days;
+  if (Array.isArray(days)) {
+    if (!classId) return days[0] ?? null;
+    return days.find((day) => day.classId === classId) ?? null;
+  }
+  return (payload as { date?: string } | null) ?? null;
+}
+
 export function collapseEmptyZones(zones: readonly RenderedZone[]): RenderedZone[] {
   const bands = new Map<string, RenderedZone[]>();
   for (const zone of zones) {

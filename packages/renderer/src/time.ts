@@ -20,6 +20,24 @@ const WEEKDAY_INDEX: Record<string, number> = {
   Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6, Sun: 7,
 };
 
+/**
+ * La date du jour dans le fuseau de l'école, en AAAA-MM-JJ.
+ *
+ * Sert à vérifier qu'un emploi du temps reçu est bien celui d'aujourd'hui.
+ * Le fuseau du boîtier ne fait pas foi : un écran mal réglé afficherait la
+ * mauvaise journée sans que personne comprenne pourquoi.
+ */
+export function dateLocale(nowMs: number, timezone: string): string {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: timezone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date(nowMs));
+  const get = (type: Intl.DateTimeFormatPartTypes) => parts.find((p) => p.type === type)?.value ?? "";
+  return `${get("year")}-${get("month")}-${get("day")}`;
+}
+
 export function localMoment(nowMs: number, timezone: string): LocalMoment {
   const parts = new Intl.DateTimeFormat("en-US", {
     timeZone: timezone,
