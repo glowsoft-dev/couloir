@@ -400,6 +400,35 @@ export function registerConsoleApi(app: FastifyInstance, options: ConsoleApiOpti
     },
   );
 
+  // --- Poser un nouveau boîtier ------------------------------------------
+
+  /**
+   * Ce qu'il faut taper sur le boîtier, et si cette adresse tient debout.
+   *
+   * L'adresse est le point qui échoue en silence : un serveur configuré sur
+   * « localhost » donne une commande qui s'exécute sans erreur et un boîtier
+   * qui ne joindra jamais rien. On le dit ici plutôt que de le laisser
+   * découvrir devant un écran monté à quatre mètres.
+   */
+  app.get(`${CONSOLE_PREFIX}/installation`, async (request) => {
+    const adresse = resolvePublicUrl(options.publicUrl, request.headers.host);
+    let hote = "";
+    try {
+      hote = new URL(adresse).hostname;
+    } catch {
+      // adresse malformée : le contrôle ci-dessous s'en chargera
+    }
+    const locale = /^(localhost|127\.|::1|0\.0\.0\.0)/.test(hote);
+    return {
+      adresse,
+      commande: `curl -fsSL ${adresse}/installer.sh | sudo bash`,
+      /** Vrai quand l'adresse ne désigne que la machine du serveur. */
+      adresseLocale: locale,
+      /** Sans TLS, la commande télécharge un script en clair. */
+      sansTls: adresse.startsWith("http://"),
+    };
+  });
+
   // --- Identité de l'établissement ---------------------------------------
 
   const Identite = z.object({

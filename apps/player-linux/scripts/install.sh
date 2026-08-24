@@ -73,8 +73,25 @@ echo "→ application"
 # Deux fichiers autonomes, produits par `pnpm --filter @couloir/player-linux
 # build:bundle`. Surtout PAS `node_modules` : dans un monorepo pnpm c'est un
 # maillage de liens symboliques, incopiable sur un boîtier.
+# L'artefact vient du serveur quand il n'est pas déjà là.
+#
+# C'est ce qui permet de poser un boîtier sans rien copier à la main : le
+# serveur qui pilote les écrans sert aussi le logiciel qu'ils exécutent, et
+# les deux ne peuvent donc pas se désynchroniser.
 if [ ! -f dist-bundle/couloir-player.mjs ]; then
-  echo "artefact absent : lancez d'abord 'pnpm --filter @couloir/player-linux build:bundle'" >&2
+  echo "→ téléchargement du lecteur depuis ${SERVER}"
+  TEMPO="$(mktemp -d)"
+  trap 'rm -rf "$TEMPO"' EXIT
+  if curl -fsSL "${SERVER}/telechargements/couloir-player.mjs" -o "$TEMPO/couloir-player.mjs" \
+     && curl -fsSL "${SERVER}/telechargements/couloir.js" -o "$TEMPO/couloir.js"; then
+    mkdir -p dist-bundle
+    mv "$TEMPO/couloir-player.mjs" "$TEMPO/couloir.js" dist-bundle/
+  fi
+fi
+
+if [ ! -f dist-bundle/couloir-player.mjs ]; then
+  echo "artefact introuvable, et le serveur ${SERVER} ne le sert pas." >&2
+  echo "Construisez-le : pnpm --filter @couloir/player-linux build:bundle" >&2
   exit 1
 fi
 install -m 644 dist-bundle/couloir-player.mjs "$PREFIX"/couloir-player.mjs

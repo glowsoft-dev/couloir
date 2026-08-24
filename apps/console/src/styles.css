@@ -844,3 +844,91 @@ button.ghost.danger:hover:not(:disabled) {
   .slide-row { grid-template-columns: 22px minmax(0, 1fr) auto auto; }
   .slide-row .ajustement { grid-column: 2 / -1; justify-self: start; }
 }
+
+/* ---------- l'assistant de pose ---------- */
+
+.mur-entete {
+  display: flex; align-items: center; gap: 14px; margin-bottom: 18px;
+}
+.mur-entete h1 { margin: 0; font-size: 22px; font-weight: 700; letter-spacing: -0.02em; }
+.mur-entete button { margin-left: auto; }
+
+.assistant { max-width: 62ch; }
+.assistant-entete { margin-bottom: 20px; }
+.assistant-entete h1 { margin: 0; font-size: 24px; font-weight: 700; letter-spacing: -0.02em; }
+.assistant-entete p { margin: 3px 0 0; color: var(--ink-soft); }
+
+.etapes { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+
+.etape {
+  background: var(--surface); border: 1px solid var(--rule);
+  border-radius: var(--radius); box-shadow: var(--ombre); overflow: hidden;
+}
+.etape.ouverte { border-color: var(--accent); }
+
+.etape-titre {
+  display: flex; align-items: center; gap: 12px; width: 100%;
+  padding: 14px 16px; background: none; border: 0; box-shadow: none;
+  font-size: 16px; font-weight: 600; text-align: left; cursor: pointer;
+}
+.etape-titre:hover { background: var(--surface-2); border-color: transparent; color: inherit; }
+
+/* Le numéro devient une coche une fois l'étape passée : on voit d'un coup
+   d'oeil où l'on en est, sans compter. */
+.etape-numero {
+  display: grid; place-items: center;
+  width: 27px; height: 27px; border-radius: 50%;
+  background: var(--surface-2); color: var(--ink-soft);
+  font-size: 13px; font-weight: 700; flex: none;
+}
+.etape.ouverte .etape-numero { background: var(--accent); color: #fff; }
+.etape.passee .etape-numero { background: var(--accent-doux); color: var(--accent-texte); }
+
+.etape-corps { padding: 0 16px 16px 55px; }
+.etape-corps p { margin: 0 0 10px; }
+.etape-corps ul { margin: 0 0 12px; padding-left: 20px; }
+.etape-corps li { margin-bottom: 6px; }
+.liste-materiel { list-style: none; padding-left: 0; }
+.liste-materiel li {
+  padding: 8px 0; border-top: 1px solid var(--rule);
+}
+.liste-materiel li:first-child { border-top: 0; }
+
+/* La commande à recopier : en évidence, avec son bouton. Une commande qu'on
+   retape à la main devant un écran, c'est une occasion de se tromper. */
+.commande {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--ink); border-radius: 8px; padding: 12px 14px; margin: 4px 0 12px;
+  overflow-x: auto;
+}
+.commande code {
+  color: #E9F6F9; font-size: 13px; white-space: nowrap; flex: 1;
+}
+.commande button {
+  flex: none; background: rgba(255,255,255,.12); color: #fff;
+  border-color: rgba(255,255,255,.24); box-shadow: none; font-size: 12.5px; padding: 6px 12px;
+}
+.commande button:hover:not(:disabled) {
+  background: rgba(255,255,255,.2); color: #fff; border-color: rgba(255,255,255,.4);
+}
+
+.attente {
+  display: flex; align-items: center; gap: 12px;
+  background: var(--accent-doux); border-radius: 8px; padding: 12px 14px;
+  font-size: 13.5px; color: var(--ink-soft);
+}
+.attente-rond {
+  width: 15px; height: 15px; flex: none; border-radius: 50%;
+  border: 2px solid var(--accent); border-top-color: transparent;
+  animation: tourne 1s linear infinite;
+}
+@keyframes tourne { to { transform: rotate(360deg) } }
+@media (prefers-reduced-motion: reduce) {
+  .attente-rond { animation: none; border-top-color: var(--accent); opacity: .5 }
+}
+
+@media (max-width: 640px) {
+  .etape-corps { padding-left: 16px; }
+  .mur-entete { flex-wrap: wrap; }
+  .mur-entete button { margin-left: 0; width: 100%; }
+}

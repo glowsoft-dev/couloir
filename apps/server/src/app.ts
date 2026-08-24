@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { existsSync } from "node:fs";
+import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import Fastify, { type FastifyInstance } from "fastify";
 import multipart from "@fastify/multipart";
@@ -535,6 +536,53 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
     },
   );
 
+  /**
+   * L'installateur d'un boîtier, servi par le serveur lui-même.
+   *
+   * Poser un écran devient une commande à recopier, l'adresse du serveur
+   * déjà dedans. Sans ça il faudrait construire un artefact sur un poste de
+   * développement, le copier sur une clé, et retaper une adresse à la main
+   * devant un écran — trois occasions de se tromper, dont une silencieuse.
+   *
+   * Servir aussi le lecteur depuis ici garantit que le serveur et les
+   * boîtiers ne peuvent pas se désynchroniser : c'est le même dépôt qui
+   * fournit les deux.
+   *
+   * Route publique : elle ne contient aucun secret, et un boîtier tout juste
+   * sorti du carton n'a pas d'identité à présenter. C'est l'appairage, plus
+   * tard, qui fait le pont de confiance.
+   */
+  app.get("/installer.sh", async (request, reply) => {
+    const script = await lireInstallateur();
+    if (!script) {
+      return reply.code(404).send("Installateur indisponible sur ce serveur.\n");
+    }
+    const adresse = options.publicUrl ?? `http://${request.headers.host ?? "localhost:3000"}`;
+    return reply
+      .type("text/x-shellscript; charset=utf-8")
+      .header("cache-control", "no-store")
+      // L'adresse est inscrite en tête plutôt que passée en argument : une
+      // commande à recopier ne doit pas dépendre de ce qu'on tape après.
+      .send(script.replace(/^SERVER="\$\{1:-\}"$/m, `SERVER="\${1:-${adresse}}"`));
+  });
+
+  /** Le lecteur déployable, que l'installateur va chercher. */
+  app.get<{ Params: { fichier: string } }>("/telechargements/:fichier", async (request, reply) => {
+    const permis = new Set(["couloir-player.mjs", "couloir.js"]);
+    if (!permis.has(request.params.fichier)) {
+      return reply.code(404).send({ code: "inconnu", message: "Fichier inconnu.", retryable: false });
+    }
+    const contenu = await lireArtefact(request.params.fichier);
+    if (!contenu) {
+      return reply.code(503).send({
+        code: "artefact-absent",
+        message: "Le lecteur n'a pas été construit sur ce serveur.",
+        retryable: false,
+      });
+    }
+    return reply.type("application/javascript; charset=utf-8").send(contenu);
+  });
+
   app.get("/connectors/news", async (request, reply) => {
     if (!options.actualites) {
       return reply.send({
@@ -643,6 +691,41 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
   }
 
   return app;
+}
+
+/**
+ * L'installateur et le lecteur déployable.
+ *
+ * Cherchés à côté du serveur une fois déployé, dans le dépôt en
+ * développement — le même schéma que la console. Absents, les routes le
+ * disent franchement plutôt que de servir un script tronqué qu'on
+ * exécuterait en confiance sur un boîtier.
+ */
+async function lireDepuis(candidats: readonly string[]): Promise<string | null> {
+  for (const chemin of candidats) {
+    try {
+      return await readFile(chemin, "utf8");
+    } catch {
+      // absent ici, on essaie le suivant
+    }
+  }
+  return null;
+}
+
+function lireInstallateur(): Promise<string | null> {
+  return lireDepuis([
+    fileURLToPath(new URL("./install.sh", import.meta.url)),
+    fileURLToPath(new URL("../../player-linux/scripts/install.sh", import.meta.url)),
+    fileURLToPath(new URL("../../../apps/player-linux/scripts/install.sh", import.meta.url)),
+  ]);
+}
+
+function lireArtefact(fichier: string): Promise<string | null> {
+  return lireDepuis([
+    fileURLToPath(new URL(`./telechargements/${fichier}`, import.meta.url)),
+    fileURLToPath(new URL(`../../player-linux/dist-bundle/${fichier}`, import.meta.url)),
+    fileURLToPath(new URL(`../../../apps/player-linux/dist-bundle/${fichier}`, import.meta.url)),
+  ]);
 }
 
 /** La console compilée, telle qu'elle est déposée à côté du serveur. */

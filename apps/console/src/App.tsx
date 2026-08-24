@@ -3,6 +3,7 @@ import { ScreenActions } from "./Actions.js";
 import { EmergencyBar } from "./Emergency.js";
 import { GridView } from "./Grid.js";
 import { MurDEcrans } from "./MurDEcrans.js";
+import { NouvelEcran } from "./NouvelEcran.js";
 import { HistoryPanel } from "./History.js";
 import { PublishPanel } from "./Publish.js";
 import { PendingPanel, ScreenList } from "./Screens.js";
@@ -77,6 +78,8 @@ export function App() {
    * qui est pire que de ne rien afficher.
    */
   const [restored, setRestored] = useState(0);
+  /** L'assistant de pose d'un nouveau boîtier. */
+  const [poseEnCours, setPoseEnCours] = useState(false);
   /** Le nom de l'établissement, affiché dans la barre. */
   const [etablissement, setEtablissement] = useState<string | null>(null);
   /** Vrai quand l'emploi du temps vient d'un logiciel externe. */
@@ -216,8 +219,28 @@ export function App() {
           Tout montrer d'un coup — la liste, l'éditeur, l'historique, les
           actions — donnait une page dont on ne savait par où l'attaquer.
         */}
-        {tab === "screens" && !selected && (
+        {tab === "screens" && poseEnCours && (
+          <NouvelEcran
+            pending={pending}
+            screens={screens}
+            onTermine={() => {
+              setPoseEnCours(false);
+              void refreshScreens();
+            }}
+            onAnnuler={() => setPoseEnCours(false)}
+          />
+        )}
+
+        {tab === "screens" && !selected && !poseEnCours && (
           <>
+            <div className="mur-entete">
+              <h1>Mes écrans</h1>
+              {publie && (
+                <button type="button" className="primary" onClick={() => setPoseEnCours(true)}>
+                  Poser un nouvel écran
+                </button>
+              )}
+            </div>
             <PendingPanel pending={pending} onPaired={() => void refreshScreens()} />
             <MurDEcrans
               screens={screens}
@@ -227,7 +250,7 @@ export function App() {
           </>
         )}
 
-        {tab === "screens" && selected && (
+        {tab === "screens" && selected && !poseEnCours && (
           <>
             <button type="button" className="retour" onClick={() => setSelectedId(null)}>
               ← Tous les écrans

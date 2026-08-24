@@ -390,6 +390,12 @@ export const api = {
 
   journal: () => call<{ entrees: EntreeJournal[] }>("/journal"),
 
+  /** Ce qu'il faut taper sur un boîtier neuf, et si l'adresse tient debout. */
+  installation: () =>
+    call<{ adresse: string; commande: string; adresseLocale: boolean; sansTls: boolean }>(
+      "/installation",
+    ),
+
   identite: {
     lire: () => call<{ identite: { nom: string; accent: string | null } }>("/identite"),
     enregistrer: (identite: { nom: string; accent: string | null }) =>

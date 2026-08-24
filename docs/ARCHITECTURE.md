@@ -1139,6 +1139,59 @@ d'ambiance, un fond.
 Centrée verticalement, une journée entière laissait deux grandes bandes vides
 sur une dalle et l'oeil cherchait où commencer.
 
+## Poser un boîtier, depuis la console
+
+Entre « j'ai un Raspberry Pi dans un carton » et « il affiche quelque chose »,
+il n'y avait rien qu'une personne n'ayant pas lu le dépôt sache franchir. Un
+assistant en quatre étapes comble le trou : matériel, carte, installation,
+emplacement.
+
+### Le serveur sert son propre installateur
+
+`GET /installer.sh` rend le script avec **l'adresse du serveur déjà inscrite**,
+et `/telechargements/…` sert le lecteur déployable. Poser un écran devient une
+commande à recopier.
+
+Sans ça il faudrait construire un artefact sur un poste de développement, le
+copier sur une clé, et retaper une adresse à la main devant un écran — trois
+occasions de se tromper, dont une silencieuse. Servir le lecteur depuis le même
+endroit garantit en prime que serveur et boîtiers ne peuvent pas se
+désynchroniser.
+
+Les téléchargements sont sur liste blanche : deux noms de fichiers, rien
+d'autre. Une route qui servirait un chemin quelconque exposerait le disque.
+
+### L'assistant attend le boîtier
+
+C'est ce qui change tout pour qui n'est pas informaticien : l'étape « lancer
+l'installation » surveille l'arrivée d'un nouveau venu et passe à la suite
+toute seule. On n'a pas à savoir si ça a marché — l'écran le dit.
+
+Un boîtier qui attendait **déjà** est proposé aussi. L'ignorer obligerait à
+débrancher et rebrancher pour la seule raison qu'on a ouvert l'assistant trop
+tard. Mais on ne saute pas d'étape pour lui : ce serait bousculer quelqu'un au
+milieu de sa lecture.
+
+### L'adresse, qui échoue en silence
+
+Un serveur configuré sur `localhost` produit une commande qui s'exécute sans
+erreur et un boîtier qui ne joindra jamais rien. L'assistant vérifie l'adresse
+et le dit **avant** la pose, plutôt que de le laisser découvrir devant un écran
+monté à quatre mètres. Il signale aussi l'absence de TLS : acceptable sur le
+réseau interne d'un établissement, à corriger avant toute exposition.
+
+### Deux défauts trouvés en cliquant
+
+Le message de réussite disparaissait une seconde après le rattachement : celui-ci
+retire le boîtier de la liste d'attente, le formulaire se démontait donc, et le
+message partait avec lui. L'état vit maintenant dans l'assistant.
+
+Le code d'étiquette était fixé à `01`, ce qui faisait échouer la pose du
+deuxième écran d'un même palier — et l'erreur parlait d'un code que personne
+n'avait choisi. Le prochain numéro libre est calculé, et **annoncé avant** de
+valider. Il comble par le haut, jamais par le milieu : réutiliser un numéro
+libéré ferait réapparaître un code que quelqu'un a peut-être noté sur un plan.
+
 ## Ce qui n'est pas encore fait
 
 Le socle tourne, mais il reste volontairement incomplet :
