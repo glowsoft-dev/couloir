@@ -53,10 +53,13 @@ export function PublishPanel({
   screen,
   classes,
   onPublished,
+  secondaire,
 }: {
   screen: ScreenStatus;
   classes: SchoolClass[];
   onPublished: () => void;
+  /** Ce dont on se sert rarement : historique, actions sur le boîtier. */
+  secondaire?: React.ReactNode;
 }) {
   const [media, setMedia] = useState<Media[]>([]);
   const [items, setItems] = useState<Draft[]>([]);
@@ -331,38 +334,66 @@ export function PublishPanel({
   const nothingLive = live.loaded && live.version === null;
 
   return (
-    <>
-      <section className="panel">
-        <header>
-          <h2>Ce qu'affiche {screen.code}</h2>
-          <span className="spacer" />
-          {live.loaded && !nothingLive && (
-            <span className="pill" title="Version actuellement diffusée">
-              v{live.version}
-            </span>
-          )}
-          {dirty && (
-            <span className="pill brouillon" title="Ces changements ne sont pas encore diffusés">
-              brouillon
-            </span>
-          )}
-          <span className={`pill ${screen.online ? "accent" : "warn"}`}>
-            {screen.online ? "en ligne" : "hors ligne"}
+    <div className="editeur">
+      {/*
+        L'aperçu à gauche, collant : on ne compose pas à l'aveugle. Il était
+        en bas d'un long formulaire, donc hors de vue pendant tout le travail
+        — on découvrait le résultat après coup, et on remontait corriger.
+      */}
+      <aside className="editeur-apercu">
+        <MachineÀRemonterLeTemps instant={instantSimulé} onChange={setInstantSimulé} items={items} />
+        <ScreenPreview
+          manifest={preview}
+          screenCode={screen.code}
+          error={previewError}
+          {...(instantSimulé !== null ? { instant: instantSimulé } : {})}
+        />
+
+        {/* Publier reste sous les yeux : au bout du formulaire, il fallait
+            dérouler toute la page pour agir. */}
+        <div className="barre-publier">
+          <span className="barre-etat">
+            {dirty ? (
+              <span className="pill brouillon">modifications non diffusées</span>
+            ) : nothingLive ? (
+              <span className="pill warn">rien de publié</span>
+            ) : (
+              <span className="pill">version {live.version} en ligne</span>
+            )}
           </span>
-        </header>
 
-        <div className="body">
-          {message && (
-            <p className={`notice ${message.error ? "error" : ""}`}>
-              {message.text}
-              {undoTo !== null && !message.error && (
-                <button type="button" className="link" onClick={() => void undo()} disabled={busy}>
-                  Revenir à la version {undoTo}
-                </button>
-              )}
-            </p>
+          <button type="button" className="primary" onClick={publish} disabled={!ready || busy}>
+            {busy ? "Publication…" : dirty || nothingLive ? "Publier" : "Republier"}
+          </button>
+          {dirty && live.version !== null && (
+            <button type="button" onClick={() => void reopen()} disabled={busy}>
+              Annuler
+            </button>
           )}
+        </div>
 
+        {message && (
+          <p className={`notice ${message.error ? "error" : ""}`}>
+            {message.text}
+            {undoTo !== null && !message.error && (
+              <button type="button" className="link" onClick={() => void undo()} disabled={busy}>
+                Revenir à la version {undoTo}
+              </button>
+            )}
+          </p>
+        )}
+
+        {/* Un bouton grisé sans explication laisse chercher. */}
+        {items.length === 0 && actualites === 0 && layout !== "emploi-du-temps" && (
+          <p className="hint">
+            Ajoutez au moins un contenu, ou des actualités du site, pour pouvoir publier.
+          </p>
+        )}
+        {invalidText && <p className="hint">Un texte sans titre ne peut pas être publié.</p>}
+      </aside>
+
+      <div className="editeur-travail">
+        <div className="body">
           {!live.loaded && <p className="hint">Lecture de ce qui est diffusé…</p>}
 
           {nothingLive && (
@@ -857,40 +888,17 @@ export function PublishPanel({
             />
           </div>
 
-          <div className="row-actions">
-            <button type="button" className="primary" onClick={publish} disabled={!ready || busy}>
-              {busy ? "Publication…" : dirty || nothingLive ? "Publier" : "Republier"}
-            </button>
-            {dirty && live.version !== null && (
-              <button type="button" onClick={() => void reopen()} disabled={busy}>
-                Annuler mes modifications
-              </button>
-            )}
-          </div>
-
-          {/* Un bouton grisé sans explication laisse chercher. */}
-          {items.length === 0 && actualites === 0 && layout !== "emploi-du-temps" && (
-            <p className="hint">
-              Ajoutez au moins un contenu, ou des actualités du site, pour pouvoir publier.
-            </p>
-          )}
-          {invalidText && <p className="hint">Un texte sans titre ne peut pas être publié.</p>}
           {!dirty && live.reopenable && live.version !== null && items.length > 0 && (
             <p className="hint">C'est exactement ce que l'écran diffuse en ce moment.</p>
           )}
         </div>
-      </section>
 
-      <div style={{ marginTop: 20 }}>
-        <MachineÀRemonterLeTemps instant={instantSimulé} onChange={setInstantSimulé} items={items} />
-        <ScreenPreview
-          manifest={preview}
-          screenCode={screen.code}
-          error={previewError}
-          {...(instantSimulé !== null ? { instant: instantSimulé } : {})}
-        />
+        {/* Historique et actions sur le boîtier : utiles, rarement. Repliés
+            en bas plutôt qu'en colonne, où ils pesaient visuellement autant
+            que le travail du jour. */}
+        {secondaire && <div className="editeur-secondaire">{secondaire}</div>}
       </div>
-    </>
+    </div>
   );
 }
 

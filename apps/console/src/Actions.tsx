@@ -107,9 +107,9 @@ export function ScreenActions({ screen }: { screen: ScreenStatus }) {
   }
 
   return (
-    <section className="panel" style={{ marginTop: 20 }}>
+    <section className="panel">
       <header>
-        <h2>Actions sur {screen.code}</h2>
+        <h2>Agir sur le boîtier</h2>
         <span className="spacer" />
         <span className={`pill ${screen.online ? "accent" : "warn"}`}>
           {screen.online ? "joignable" : "muet"}

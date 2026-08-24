@@ -268,26 +268,24 @@ export function App() {
               </span>
             </header>
 
-            <div className="split">
-              <div>
-                <PublishPanel
-                  key={`${selected.id}:${restored}`}
-                  screen={selected}
-                  classes={setup?.classes ?? []}
-                  onPublished={() => void refreshScreens()}
-                />
-              </div>
-              <div>
-                <HistoryPanel
-                  screen={selected}
-                  onRestored={() => {
-                    setRestored((n) => n + 1);
-                    void refreshScreens();
-                  }}
-                />
-                <ScreenActions screen={selected} />
-              </div>
-            </div>
+            <PublishPanel
+              key={`${selected.id}:${restored}`}
+              screen={selected}
+              classes={setup?.classes ?? []}
+              onPublished={() => void refreshScreens()}
+              secondaire={
+                <>
+                  <HistoryPanel
+                    screen={selected}
+                    onRestored={() => {
+                      setRestored((n) => n + 1);
+                      void refreshScreens();
+                    }}
+                  />
+                  <ScreenActions screen={selected} />
+                </>
+              }
+            />
           </>
         )}
 

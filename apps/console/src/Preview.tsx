@@ -129,7 +129,14 @@ export function ScreenPreview({
   return (
     <section className="panel">
       <header>
-        <h2>Aperçu avant publication</h2>
+        {/* « Le rendu réel » et non « Aperçu » : le mot compte, parce que
+            c'est bien le moteur de l'écran qui tourne ici, pas une
+            imitation. Le format tient dans une pastille, la phrase
+            d'explication est devenue une infobulle — elle occupait deux
+            lignes à chaque visite pour une chose qu'on apprend une fois. */}
+        <h2 title="Le rendu réel, celui qui tournera dans le couloir. Les cours affichés sont ceux d'aujourd'hui.">
+          Le rendu réel
+        </h2>
         <span className="spacer" />
         <span className="pill mono">1280 × 720</span>
       </header>
@@ -138,10 +145,7 @@ export function ScreenPreview({
         {error ? (
           <p className="notice error">{error}</p>
         ) : (
-          <p className="hint" style={{ marginBottom: 10 }}>
-            Le rendu réel, celui qui tournera dans le couloir. Les cours affichés sont ceux
-            d'aujourd'hui.
-          </p>
+          <></>
         )}
 
         <div

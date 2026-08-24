@@ -1194,6 +1194,30 @@ libéré ferait réapparaître un code que quelqu'un a peut-être noté sur un p
 
 ## L'éditeur d'écran
 
+### La page d'un écran : trois griefs, trois réponses
+
+**On composait à l'aveugle.** L'aperçu était au bas d'un long formulaire, donc
+hors de vue pendant tout le travail : on découvrait le résultat après coup et
+on remontait corriger. Il passe à gauche, et il colle — le rendu réel reste
+sous les yeux pendant qu'on modifie.
+
+**Publier demandait de dérouler la page entière.** Le bouton suit désormais
+l'aperçu, avec l'état à côté : « version 4 en ligne », « modifications non
+diffusées ». On voit ce qu'on va faire et on peut le faire, au même endroit.
+
+**Tout se ressemblait.** Des cadres blancs bordés, empilés, de même poids
+visuel qu'on soit en train de changer une affiche ou de consulter
+l'historique. L'éditeur est devenu **une seule surface** : ses sections se
+séparent par une règle fine et de l'air, pas par un cadre de plus. Historique
+et actions sur le boîtier — utiles, rarement — descendent au pied de cette
+surface au lieu d'occuper une colonne entière.
+
+Deux redondances retirées au passage. Le titre « Aperçu avant publication »
+sur une page qui ne montre que ça : il dit maintenant **« Le rendu réel »**,
+parce que c'est bien le moteur de l'écran qui tourne là et pas une imitation.
+Et la phrase d'explication en dessous, qui occupait deux lignes à chaque
+visite pour une chose qu'on apprend une fois, est devenue une infobulle.
+
 ### Trois volets plutôt qu'un long formulaire
 
 **Contenu** — la bibliothèque, ce qui tourne, le bandeau, les actualités.

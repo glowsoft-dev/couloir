@@ -70,7 +70,7 @@ export function HistoryPanel({
   const [current, ...past] = versions;
 
   return (
-    <section className="panel" style={{ marginTop: 20 }}>
+    <section className="panel">
       <header>
         <button
           type="button"
