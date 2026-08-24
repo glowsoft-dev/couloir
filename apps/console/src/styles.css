@@ -591,3 +591,38 @@ button.danger:hover:not(:disabled) { color: #fff; border-color: var(--signal); f
 .notice .hint { display: block; margin-top: 6px; }
 
 .field label.inline input[type="checkbox"] { width: auto; margin: 0; }
+
+/* ---------- identité de l'établissement ---------- */
+
+.accent-ligne { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.accent-ligne input[type="text"], .accent-ligne input:not([type]) {
+  width: 130px; font-family: "IBM Plex Mono", monospace; text-transform: uppercase;
+}
+.accent-ligne input[type="color"] {
+  width: 40px; height: 34px; padding: 2px; cursor: pointer;
+  background: var(--surface-2); border-radius: 6px;
+}
+.accent-suggestions { display: flex; gap: 5px; }
+.accent-pastille {
+  width: 26px; height: 26px; padding: 0; border-radius: 50%;
+  border: 1px solid var(--rule-strong); cursor: pointer;
+}
+.accent-pastille:hover { transform: scale(1.12); }
+.accent-pastille:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+
+/* L'aperçu reprend le fond réel des dalles : juger un accent sur le gris de
+   la console ne dit rien de ce qu'on verra dans le couloir. */
+.accent-apercu {
+  display: flex; flex-direction: column; gap: 3px;
+  margin: 12px 0; padding: 16px 18px;
+  background: #0E1211; border: 1px solid var(--rule-strong); border-radius: var(--radius);
+}
+.accent-eyebrow {
+  color: var(--essai); font-size: 10px; font-weight: 600;
+  letter-spacing: 0.14em; text-transform: uppercase;
+}
+.accent-titre { color: #F4F6F4; font-size: 21px; font-weight: 700; letter-spacing: -0.02em; }
+.accent-heure {
+  color: var(--essai); font-family: "IBM Plex Mono", monospace;
+  font-size: 13px; font-weight: 500; margin-top: 4px;
+}

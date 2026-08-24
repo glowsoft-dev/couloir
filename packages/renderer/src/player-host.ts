@@ -159,11 +159,14 @@ function pendingScreen(state: PlayerState | null): Parameters<ReturnType<typeof 
         label: "Saisissez ce code dans la console pour rattacher cet écran",
         ipAddress: "",
       },
+      accent: null,
       watermark: null,
     };
   }
   return {
     mode: "normal",
+    // L'écran d'attente précède tout manifeste : aucune identité connue.
+    accent: null,
     zones: [
       {
         zoneId: "attente",

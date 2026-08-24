@@ -224,6 +224,39 @@ export class ServiceActualites {
   }
 }
 
+/**
+ * L'identité de l'établissement.
+ *
+ * Rangée ici parce qu'elle voyage par le même chemin que les actualités :
+ * la console la pose, le composeur l'inscrit dans chaque manifeste, l'écran
+ * l'applique.
+ */
+export interface Identite {
+  nom: string;
+  accent: string | null;
+}
+
+export class ServiceIdentite {
+  constructor(private readonly sql: Sql) {}
+
+  async lire(): Promise<Identite> {
+    const lignes = await this.sql<{ nom: string; accent: string | null }[]>`
+      SELECT nom, accent FROM identite
+    `;
+    return lignes[0] ?? { nom: "Établissement", accent: null };
+  }
+
+  async enregistrer(identite: { nom: string; accent?: string | null }): Promise<Identite> {
+    await this.sql`
+      INSERT INTO identite (unique_ligne, nom, accent, modifie_le)
+      VALUES (TRUE, ${identite.nom.trim() || "Établissement"}, ${identite.accent ?? null}, now())
+      ON CONFLICT (unique_ligne) DO UPDATE SET
+        nom = EXCLUDED.nom, accent = EXCLUDED.accent, modifie_le = now()
+    `;
+    return this.lire();
+  }
+}
+
 function maintenant(): string {
   return new Date().toISOString().replace(/\.\d+Z$/, "Z");
 }

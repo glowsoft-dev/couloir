@@ -193,6 +193,28 @@ export const ScreenSettings = z.object({
     .default([]),
   /** Petit code discret affiché dans un coin, pour repérer l'écran. */
   showScreenCodeWatermark: z.boolean().default(false),
+  /**
+   * L'identité de l'établissement.
+   *
+   * Configurée, jamais codée en dur : ce logiciel n'appartient pas à une
+   * école en particulier, et une couleur inscrite dans le noyau de rendu se
+   * paierait en fourche le jour où un deuxième établissement l'installe.
+   *
+   * Le fond reste sombre quelle que soit la charte. Un couloir n'est pas une
+   * page web : une dalle claire éblouit le soir, consomme davantage, et
+   * perd en contraste à quatre mètres. C'est l'accent qui porte l'identité.
+   */
+  branding: z
+    .object({
+      /** Couleur d'accent, en hexadécimal — « #11A6C4 ». */
+      accent: z
+        .string()
+        .regex(/^#[0-9a-fA-F]{6}$/)
+        .optional(),
+      /** Le nom affiché sur la carte d'identité de l'écran. */
+      nom: z.string().max(80).optional(),
+    })
+    .optional(),
 });
 export type ScreenSettings = z.infer<typeof ScreenSettings>;
 

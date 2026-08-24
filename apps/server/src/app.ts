@@ -5,7 +5,7 @@ import Fastify, { type FastifyInstance } from "fastify";
 import multipart from "@fastify/multipart";
 import fastifyCookie from "@fastify/cookie";
 import type { DepotComptes } from "./comptes/depot.js";
-import type { ServiceActualites } from "./connecteurs/service.js";
+import type { ServiceActualites, ServiceIdentite } from "./connecteurs/service.js";
 import fastifyStatic from "@fastify/static";
 import {
   EnrollClaimRequest,
@@ -70,6 +70,8 @@ export interface AppOptions {
   devRoutes?: boolean;
   /** Le connecteur d'actualités. Absent = la route rend une liste vide. */
   actualites?: ServiceActualites;
+  /** L'identité de l'établissement, inscrite dans chaque manifeste. */
+  identite?: ServiceIdentite;
   /**
    * Les comptes nominatifs.
    *
@@ -560,6 +562,7 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
       commands: commandBus,
       ...(options.comptes ? { comptes: options.comptes } : {}),
       ...(options.actualites ? { actualites: options.actualites } : {}),
+      ...(options.identite ? { identite: options.identite } : {}),
       ...(options.cookieSécurisé !== undefined ? { cookieSécurisé: options.cookieSécurisé } : {}),
     });
   }

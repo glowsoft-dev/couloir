@@ -9,7 +9,11 @@ import type { CommandBus } from "./commands.js";
 import type { Manifest } from "@couloir/protocol";
 import type { TimetableRepository } from "./timetable/repository.js";
 import type { DepotComptes } from "./comptes/depot.js";
-import { ErreurConnecteur, type ServiceActualites } from "./connecteurs/service.js";
+import {
+  ErreurConnecteur,
+  type ServiceActualites,
+  type ServiceIdentite,
+} from "./connecteurs/service.js";
 import { NOM_COOKIE, enregistrerRoutesComptes, journaliserAction, pouvoirRequis } from "./comptes/routes.js";
 import { peut } from "./comptes/roles.js";
 
@@ -168,6 +172,8 @@ export interface ConsoleApiOptions {
   cookieSécurisé?: boolean;
   /** Le connecteur d'actualités. Absent = l'onglet reste indisponible. */
   actualites?: ServiceActualites;
+  /** L'identité de l'établissement, inscrite dans chaque manifeste. */
+  identite?: ServiceIdentite;
 }
 
 export function registerConsoleApi(app: FastifyInstance, options: ConsoleApiOptions): void {
@@ -354,6 +360,45 @@ export function registerConsoleApi(app: FastifyInstance, options: ConsoleApiOpti
       };
     },
   );
+
+  // --- Identité de l'établissement ---------------------------------------
+
+  const Identite = z.object({
+    nom: z.string().min(1).max(80),
+    accent: z
+      .string()
+      .regex(/^#[0-9a-fA-F]{6}$/, "La couleur doit s'écrire « #11A6C4 ».")
+      .nullable()
+      .optional(),
+  });
+
+  app.get(`${CONSOLE_PREFIX}/identite`, async (_request, reply) => {
+    if (!options.identite) {
+      return reply.code(503).send({ code: "sans-base", message: "Indisponible.", retryable: false });
+    }
+    return { identite: await options.identite.lire() };
+  });
+
+  app.put(`${CONSOLE_PREFIX}/identite`, async (request, reply) => {
+    if (!options.identite) {
+      return reply.code(503).send({ code: "sans-base", message: "Indisponible.", retryable: false });
+    }
+    const parsed = Identite.safeParse(request.body);
+    if (!parsed.success) {
+      return reply.code(400).send({
+        code: "invalid-body",
+        message: parsed.error.issues[0]?.message ?? "Identité incomplète.",
+        retryable: false,
+      });
+    }
+    const identite = await options.identite.enregistrer(parsed.data);
+    if (options.comptes) {
+      await journaliserAction(request, options.comptes, "changement d'identité", identite.nom);
+    }
+    // Les manifestes déjà publiés portent l'ancienne identité : on ne les
+    // réécrit pas dans le dos de qui a publié. Le prochain envoi la portera.
+    return { identite };
+  });
 
   // --- Actualités du site ------------------------------------------------
 
@@ -816,7 +861,9 @@ async function resolveSpec(
   // Deux chemins distincts finiraient par diverger, et les actualités
   // deviendraient injoignables sur une installation où les médias marchent.
   const actualitesUrl = `${baseUrl}/connectors/news`;
+  const identite = await options.identite?.lire();
   return {
+    ...(identite ? { identite } : {}),
     ...body,
     ...(timetableUrl !== undefined ? { timetableUrl } : {}),
     ...(actualitesUrl !== undefined ? { actualitesUrl } : {}),

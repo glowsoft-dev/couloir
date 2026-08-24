@@ -117,6 +117,81 @@ describe("économie de rendu", () => {
     expect(container.querySelector("[data-slide]")).not.toBe(first);
   });
 
+  it("remplace le nœud quand un contenu change sous le même identifiant", () => {
+    // Le composeur numérote les contenus — `item-1`, `item-2` — et réutilise
+    // donc les mêmes noms d'une publication à l'autre. Remplacer une affiche
+    // par un texte au même rang gardait l'ancienne image à l'écran jusqu'au
+    // prochain rechargement de la page : ce qui n'arrive jamais sur un
+    // boîtier posé dans un couloir.
+    const renderer = mountRenderer(container);
+
+    const avecImage: ScreenState = {
+      ...zonesScreen(),
+      zones: [
+        {
+          ...zonesScreen().zones[0]!,
+          slide: {
+            kind: "media",
+            slideId: "item-1",
+            asset: { id: "affiche", sha256: "x", bytes: 1, mime: "image/png", url: "/a" },
+          },
+        },
+      ],
+    };
+    const avecTexte: ScreenState = {
+      ...zonesScreen(),
+      zones: [
+        {
+          ...zonesScreen().zones[0]!,
+          slide: {
+            kind: "template",
+            slideId: "item-1",
+            templateId: "annonce",
+            fields: { titre: "Bienvenue" },
+          },
+        },
+      ],
+    };
+
+    renderer.update(avecImage);
+    expect(container.querySelector("img")).not.toBeNull();
+
+    renderer.update(avecTexte);
+    expect(container.querySelector("img")).toBeNull();
+    expect(container.textContent).toContain("Bienvenue");
+  });
+
+  it("redessine une diapositive de données quand sa charge change", () => {
+    // Un écran qui n'affiche qu'une seule diapositive de données ne tourne
+    // jamais : sans cette comparaison, il ne verrait jamais ses données
+    // changer.
+    const renderer = mountRenderer(container);
+    const avec = (titre: string): ScreenState => ({
+      ...zonesScreen(),
+      zones: [
+        {
+          ...zonesScreen().zones[0]!,
+          slide: {
+            kind: "data",
+            slideId: "actualite-0",
+            sourceId: "actus",
+            view: "news-single",
+            params: { index: "0" },
+            staleLabel: null,
+            payload: { articles: [{ titre }] },
+          },
+        },
+      ],
+    });
+
+    renderer.update(avec("Portes ouvertes"));
+    expect(container.textContent).toContain("Portes ouvertes");
+
+    renderer.update(avec("Conseil de classe"));
+    expect(container.textContent).toContain("Conseil de classe");
+    expect(container.textContent).not.toContain("Portes ouvertes");
+  });
+
   it("retire une zone qui a disparu de la mise en page", () => {
     const renderer = mountRenderer(container);
     renderer.update(zonesScreen());

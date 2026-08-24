@@ -1,4 +1,5 @@
 import { Actualites } from "./Actualites.js";
+import { Identite } from "./Identite.js";
 import { useState } from "react";
 import { type TimetableSetup, api } from "./api.js";
 
@@ -22,6 +23,9 @@ export function SettingsView({ setup, onChanged }: { setup: TimetableSetup; onCh
         <div>
           <ClassesPanel setup={setup} onChanged={onChanged} />
           <HolidaysPanel setup={setup} onChanged={onChanged} />
+          <div style={{ marginTop: 20 }}>
+            <Identite />
+          </div>
         </div>
       </div>
       {/* Sous la grille et non dedans : l'aperçu des articles a besoin de

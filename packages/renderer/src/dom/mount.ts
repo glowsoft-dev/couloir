@@ -116,7 +116,7 @@ export function mountRenderer(container: HTMLElement, options: MountOptions = {}
       node.style.width = `${zone.rect.widthPercent}%`;
       node.style.height = `${zone.rect.heightPercent}%`;
 
-      const currentSlideId = zone.slide?.slideId ?? null;
+      const currentSlideId = zone.slide ? empreinteDeDiapo(zone.slide) : null;
       if (mountedSlides.get(zone.zoneId) === currentSlideId) continue;
 
       node.replaceChildren();
@@ -148,8 +148,21 @@ export function mountRenderer(container: HTMLElement, options: MountOptions = {}
     }
   }
 
+  /** La dernière couleur posée, pour ne pas toucher au style à chaque tour. */
+  let accentPosé: string | null = null;
+
   return {
     update(screen) {
+      // L'identité de l'établissement tient dans une variable CSS : tout le
+      // reste de la feuille s'y réfère déjà. Le fond, lui, ne change pas —
+      // une dalle claire éblouit le soir et perd en contraste à quatre
+      // mètres.
+      if (screen.accent !== accentPosé) {
+        accentPosé = screen.accent;
+        if (screen.accent) root.style.setProperty("--accent", screen.accent);
+        else root.style.removeProperty("--accent");
+      }
+
       if (renderFullScreen(screen)) return;
       renderZones(screen);
     },
@@ -162,6 +175,40 @@ export function mountRenderer(container: HTMLElement, options: MountOptions = {}
       style.remove();
     },
   };
+}
+
+/**
+ * Ce qui identifie une diapositive à l'écran.
+ *
+ * Son identifiant ne suffit pas : le composeur numérote les contenus
+ * — `item-1`, `item-2` — et réutilise donc les mêmes noms d'une publication
+ * à l'autre. Remplacer une affiche par un texte au même rang gardait
+ * l'ancienne image à l'écran jusqu'au prochain rechargement de la page, ce
+ * qui n'arrive jamais sur un boîtier posé dans un couloir.
+ *
+ * On compare donc ce qui est réellement dessiné. La charge d'une source y
+ * figure aussi : sans elle, un écran qui n'affiche qu'une seule diapositive
+ * de données ne verrait jamais ses données changer, faute de rotation pour
+ * la remonter. Elle tient en quelques kilo-octets, et la comparaison a lieu
+ * deux fois par seconde — c'est sans effet sur un boîtier d'entrée de gamme.
+ */
+function empreinteDeDiapo(slide: RenderedSlide): string {
+  // L'identifiant ET le contenu. Deux diapositives distinctes qui dessinent
+  // la même chose restent deux diapositives — elles occupent deux rangs de
+  // la rotation et deux lignes de preuve de diffusion.
+  const contenu = (): string => {
+    switch (slide.kind) {
+      case "media":
+        return `media:${slide.asset.id}`;
+      case "template":
+        return `template:${slide.templateId}:${JSON.stringify(slide.fields)}`;
+      case "widget":
+        return `widget:${slide.widget}:${JSON.stringify(slide.config)}`;
+      case "data":
+        return `data:${slide.sourceId}:${slide.view}:${JSON.stringify(slide.params)}:${slide.staleLabel ?? ""}:${JSON.stringify(slide.payload)}`;
+    }
+  };
+  return `${slide.slideId}|${contenu()}`;
 }
 
 function el(doc: Document, tag: string, className: string, text?: string): HTMLElement {

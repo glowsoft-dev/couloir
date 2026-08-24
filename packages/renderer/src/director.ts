@@ -53,6 +53,14 @@ export interface ScreenState {
   identify: IdentifyInfo | null;
   /** Petit code discret dans un coin, pour repérer l'écran depuis le couloir. */
   watermark: string | null;
+  /**
+   * La couleur d'accent de l'établissement.
+   *
+   * Portée par l'état plutôt que lue du manifeste par la couche DOM : le
+   * réalisateur reste la seule pièce qui décide, et l'affichage la seule qui
+   * dessine. `null` = la couleur par défaut du rendu.
+   */
+  accent: string | null;
 }
 
 /** Un changement de diapositive, qui deviendra une preuve de diffusion. */
@@ -99,13 +107,15 @@ export function direct(input: DirectorInput): DirectorOutput {
   );
 
   const watermark = manifest.settings.showScreenCodeWatermark ? (input.screenCode ?? null) : null;
+  /** L'identité de l'établissement. `null` = la couleur par défaut du rendu. */
+  const accent = manifest.settings.branding?.accent ?? null;
 
   // L'urgence passe avant tout, y compris l'extinction programmée : elle
   // rallume l'écran.
   const emergency = manifest.emergency;
   if (emergency && nowMs < Date.parse(emergency.validUntil)) {
     return {
-      screen: { mode: "emergency", zones: [], emergency, identify: null, watermark },
+      screen: { mode: "emergency", zones: [], emergency, identify: null, watermark, accent },
       rotations: new Map(input.rotations),
       transitions: [],
     };
@@ -113,7 +123,7 @@ export function direct(input: DirectorInput): DirectorOutput {
 
   if (input.identify) {
     return {
-      screen: { mode: "identify", zones: [], emergency: null, identify: input.identify, watermark: null },
+      screen: { mode: "identify", zones: [], emergency: null, identify: input.identify, watermark: null, accent },
       rotations: new Map(input.rotations),
       transitions: [],
     };
@@ -121,7 +131,7 @@ export function direct(input: DirectorInput): DirectorOutput {
 
   if (isDisplayOffPeriod(manifest.settings, nowMs)) {
     return {
-      screen: { mode: "display-off", zones: [], emergency: null, identify: null, watermark: null },
+      screen: { mode: "display-off", zones: [], emergency: null, identify: null, watermark: null, accent },
       rotations: new Map(input.rotations),
       transitions: [],
     };
@@ -242,6 +252,7 @@ export function direct(input: DirectorInput): DirectorOutput {
           emergency: null,
           identify: null,
           watermark,
+          accent,
         },
         rotations,
         transitions,
@@ -254,7 +265,7 @@ export function direct(input: DirectorInput): DirectorOutput {
     : collapseEmptyZones(zones);
 
   return {
-    screen: { mode, zones: finalZones, emergency: null, identify: null, watermark },
+    screen: { mode, zones: finalZones, emergency: null, identify: null, watermark, accent },
     rotations,
     transitions,
   };

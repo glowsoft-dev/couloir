@@ -316,6 +316,12 @@ export const api = {
 
   journal: () => call<{ entrees: EntreeJournal[] }>("/journal"),
 
+  identite: {
+    lire: () => call<{ identite: { nom: string; accent: string | null } }>("/identite"),
+    enregistrer: (identite: { nom: string; accent: string | null }) =>
+      call<{ identite: { nom: string; accent: string | null } }>("/identite", json("PUT", identite)),
+  },
+
   actualites: {
     lire: () =>
       call<{

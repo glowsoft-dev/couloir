@@ -68,6 +68,8 @@ export interface PublishSpec {
   actualites?: number;
   /** L'adresse à laquelle les écrans vont lire les actualités. */
   actualitesUrl?: string;
+  /** L'identité de l'établissement : nom affiché et couleur d'accent. */
+  identite?: { nom: string; accent: string | null };
 }
 
 export interface ComposeInput {
@@ -132,6 +134,24 @@ function normaliserVisibilite(v: Visibility | undefined): Visibility | undefined
   return propre;
 }
 
+/**
+ * La carte d'identité de l'écran.
+ *
+ * C'est elle qu'on voit quand le réseau est tombé, ou quand plus rien n'est
+ * dans sa période d'affichage. Elle porte le nom de l'établissement :
+ * « Établissement » ne renseigne personne sur l'écran qu'on regarde.
+ */
+function carteDIdentite(nom: string | undefined): Slide {
+  return {
+    kind: "template",
+    id: "repli-identite",
+    templateId: "identite-ecole",
+    fields: { eyebrow: "Bienvenue", titre: nom?.trim() || "Établissement" },
+    assetIds: [],
+    durationMs: 20_000,
+  };
+}
+
 export function compose(input: ComposeInput): Manifest {
   const { spec } = input;
   // Un écran qui ne diffuse que les actualités du site est légitime : c'est
@@ -143,7 +163,7 @@ export function compose(input: ComposeInput): Manifest {
     );
   }
 
-  const slides: Slide[] = [FALLBACK_SLIDE];
+  const slides: Slide[] = [carteDIdentite(spec.identite?.nom)];
   const assets: AssetRef[] = [];
   const mainSlideIds: string[] = [];
 
@@ -301,6 +321,14 @@ export function compose(input: ComposeInput): Manifest {
       timezone: "Europe/Paris",
       displayOff: spec.displayOff ?? [],
       showScreenCodeWatermark: true,
+      ...(spec.identite?.accent || spec.identite?.nom
+        ? {
+            branding: {
+              ...(spec.identite.accent ? { accent: spec.identite.accent } : {}),
+              ...(spec.identite.nom ? { nom: spec.identite.nom } : {}),
+            },
+          }
+        : {}),
       ...input.settings,
     },
     layout: buildLayout(withTimetable, withTicker),
