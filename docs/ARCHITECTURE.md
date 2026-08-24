@@ -923,6 +923,21 @@ l'afficheur du bâtiment B, sans réglage supplémentaire. Un écran dont le
 bâtiment n'est pas apparié prend l'afficheur sans bâtiment — mieux vaut
 l'établissement entier que pas d'emploi du temps.
 
+### Choisir, ou laisser faire
+
+Sans réglage, l'écran prend l'afficheur de son bâtiment. C'est le cas courant
+et il ne demande rien.
+
+Un choix explicite l'emporte : un écran du hall peut vouloir l'établissement
+entier, un écran du bâtiment B peut vouloir montrer aussi celui du C. Un seul
+afficheur retenu, l'écran s'y tient ; plusieurs, il les fait défiler — les
+mêmes règles que pour les classes, parce que deux mécanismes voisins aux
+règles différentes se retiennent mal.
+
+Une source **par** afficheur, là où les classes partagent une source et se
+départagent par un sélecteur : chaque afficheur a sa propre adresse, il n'y a
+rien à partager.
+
 ### Une chaîne de certificats incomplète, et ce qu'on en fait
 
 Le serveur NetYPareo du campus n'envoie que son propre certificat, sans

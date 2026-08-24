@@ -90,6 +90,13 @@ export interface PublishSpec {
   ticker?: string;
   /** Vide = toutes les classes défilent. Une seule = écran fixe. */
   timetableClassIds?: string[];
+  /**
+   * Quels afficheurs NetYPareo cet écran montre.
+   *
+   * Vide = celui de son bâtiment, déduit tout seul. Un = fixe. Plusieurs =
+   * ils défilent.
+   */
+  timetableAfficheurs?: string[];
   /** Plages d'extinction de la dalle. Un message d'urgence la rallume. */
   displayOff?: DisplayOffWindow[];
   /** Combien d'actualités du site tournent avec le reste. 0 = aucune. */

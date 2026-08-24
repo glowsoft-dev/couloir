@@ -732,6 +732,41 @@ describe("parcours de la console", () => {
       .toBeUndefined();
   });
 
+  it("monte une source par afficheur choisi, et les fait défiler", async () => {
+    // C'est l'inverse des classes, qui partagent une source et se
+    // départagent par un sélecteur : chaque afficheur a sa propre adresse,
+    // il n'y a rien à partager.
+    const manifest = composeWith({
+      layout: "principal-et-cours",
+      items: [{ assetId: poster.id }],
+      timetableAfficheurs: [
+        { id: "2", url: "http://serveur.test/connectors/netypareo/2", label: "Bâtiment A" },
+        { id: "4", url: "http://serveur.test/connectors/netypareo/4", label: "Bâtiment C" },
+      ],
+    } as never);
+
+    expect(manifest.dataSources.map((s) => s.id)).toEqual(["edt-2", "edt-4"]);
+    expect(manifest.playlists.find((p) => p.id === "cours")?.slideIds).toEqual([
+      "cours-2",
+      "cours-4",
+    ]);
+    expect(findBrokenReferences(manifest)).toEqual([]);
+  });
+
+  it("retire la colonne dès qu'un afficheur ne répond plus, sans toucher au reste", async () => {
+    // `hide` et non `keep-with-date` : un cours faux envoie quelqu'un dans
+    // la mauvaise salle. C'est l'inverse du choix fait pour les actualités.
+    const manifest = composeWith({
+      layout: "principal-et-cours",
+      items: [{ assetId: poster.id }],
+      timetableAfficheurs: [
+        { id: "3", url: "http://serveur.test/connectors/netypareo/3", label: "Bâtiment B" },
+      ],
+    } as never);
+
+    expect(manifest.dataSources.find((s) => s.id === "edt-3")?.stalePolicy).toBe("hide");
+  });
+
   it("refuse de publier sur un écran inconnu", async () => {
     const { app, auth } = await ready();
     const response = await app.inject({

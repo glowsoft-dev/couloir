@@ -70,6 +70,12 @@ export interface PublishSpec {
   actualitesUrl?: string;
   /** L'identité de l'établissement : nom affiché et couleur d'accent. */
   identite?: { nom: string; accent: string | null };
+  /**
+   * Les afficheurs d'emploi du temps retenus, avec leur adresse résolue.
+   *
+   * Vide = source unique. Un = fixe. Plusieurs = ils défilent.
+   */
+  timetableAfficheurs?: { id: string; url: string; label: string }[];
 }
 
 export interface ComposeInput {
@@ -233,6 +239,8 @@ export function compose(input: ComposeInput): Manifest {
   const withTimetable = spec.layout === "principal-et-cours";
   const withTicker = Boolean(spec.ticker?.trim());
   const nombreActualites = Math.max(0, Math.min(spec.actualites ?? 0, 10));
+  /** Les sources d'emploi du temps réellement montées, une par afficheur. */
+  const sourcesEdt: { id: string; url: string }[] = [];
 
   /**
    * Les actualités rejoignent la rotation principale.
@@ -262,8 +270,19 @@ export function compose(input: ComposeInput): Manifest {
     }
   }
 
+  /**
+   * Les afficheurs d'emploi du temps retenus pour cet écran.
+   *
+   * Vide, on retombe sur la source unique — la grille saisie à la main, ou
+   * l'afficheur déduit du bâtiment. Un seul : l'écran s'y tient. Plusieurs :
+   * il les fait défiler. Exactement les mêmes règles que pour les classes,
+   * parce que deux mécanismes voisins aux règles différentes se retiennent
+   * mal.
+   */
+  const afficheursEdt = spec.timetableAfficheurs ?? [];
+
   if (withTimetable) {
-    if (!spec.timetableUrl) {
+    if (!spec.timetableUrl && afficheursEdt.length === 0) {
       throw new CompositionError("Cette mise en page a besoin d'une source d'emploi du temps.");
     }
     // Une diapositive par classe, toutes branchées sur LA MÊME source :
@@ -271,7 +290,25 @@ export function compose(input: ComposeInput): Manifest {
     // de diffusion.
     const columnSlideIds: string[] = [];
     const columnClasses = spec.timetableClasses ?? [];
-    if (columnClasses.length === 0) {
+
+    if (afficheursEdt.length > 0) {
+      // Une source PAR afficheur : chacun a sa propre adresse, donc son
+      // propre appel. C'est l'inverse des classes, qui partagent une source
+      // et se départagent par un sélecteur — ici il n'y a rien à partager.
+      for (const a of afficheursEdt) {
+        const id = `cours-${a.id}`;
+        sourcesEdt.push({ id: `edt-${a.id}`, url: a.url });
+        slides.push({
+          kind: "data",
+          id,
+          sourceId: `edt-${a.id}`,
+          view: "timetable-day",
+          params: {},
+          durationMs: 20_000,
+        });
+        columnSlideIds.push(id);
+      }
+    } else if (columnClasses.length === 0) {
       slides.push({
         kind: "data",
         id: "cours-du-jour",
@@ -336,7 +373,15 @@ export function compose(input: ComposeInput): Manifest {
     slides,
     assets,
     dataSources: [
-      ...(withTimetable
+      ...sourcesEdt.map((source) => ({
+        id: source.id,
+        kind: "timetable" as const,
+        url: source.url,
+        ttlSec: 900,
+        maxStaleSec: 14_400,
+        stalePolicy: "hide" as const,
+      })),
+      ...(withTimetable && sourcesEdt.length === 0
         ? [
             {
               id: "edt",

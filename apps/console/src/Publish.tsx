@@ -66,6 +66,11 @@ export function PublishPanel({
   const [actualites, setActualites] = useState(0);
   /** La source est-elle configurée ? Sans elle, le réglage n'a aucun sens. */
   const [sourceActive, setSourceActive] = useState<boolean | null>(null);
+  /** Les afficheurs NetYPareo disponibles, et ceux retenus pour cet écran. */
+  const [afficheurs, setAfficheurs] = useState<
+    { afficheur: string; batiment: string | null; libelle: string }[]
+  >([]);
+  const [afficheursChoisis, setAfficheursChoisis] = useState<string[]>([]);
   /**
    * L'instant depuis lequel on regarde l'aperçu.
    *
@@ -92,6 +97,10 @@ export function PublishPanel({
       .lire()
       .then((r) => setSourceActive(r.reglages.actif && Boolean(r.reglages.url)))
       .catch(() => setSourceActive(false));
+    void api.netypareo
+      .lire()
+      .then((r) => setAfficheurs(r.reglages.actif ? r.reglages.afficheurs : []))
+      .catch(() => setAfficheurs([]));
   }, []);
 
   /**
@@ -117,6 +126,7 @@ export function PublishPanel({
         setClassIds(spec.timetableClassIds ?? []);
         setDisplayOff(spec.displayOff ?? []);
         setActualites(spec.actualites ?? 0);
+        setAfficheursChoisis(spec.timetableAfficheurs ?? []);
       } else {
         setLayout("plein-ecran");
         setItems([]);
@@ -124,6 +134,7 @@ export function PublishPanel({
         setClassIds([]);
         setDisplayOff([]);
         setActualites(0);
+        setAfficheursChoisis([]);
       }
       setLive({ version, loaded: true, reopenable: spec !== null });
       setDirty(false);
@@ -146,6 +157,7 @@ export function PublishPanel({
         : {}),
       ...(displayOff.length > 0 ? { displayOff } : {}),
       ...(actualites > 0 ? { actualites } : {}),
+      ...(afficheursChoisis.length > 0 ? { timetableAfficheurs: afficheursChoisis } : {}),
     };
   }
 
@@ -176,7 +188,17 @@ export function PublishPanel({
 
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [screen.id, layout, items, ticker, classIds, displayOff, actualites, live.loaded]);
+  }, [
+    screen.id,
+    layout,
+    items,
+    ticker,
+    classIds,
+    displayOff,
+    actualites,
+    afficheursChoisis,
+    live.loaded,
+  ]);
 
   /** Toute modification rend le brouillon différent de ce qui est diffusé. */
   function touch<T>(apply: () => T): T {
@@ -351,7 +373,43 @@ export function PublishPanel({
             </select>
           </div>
 
-          {layout === "principal-et-cours" && (
+          {layout === "principal-et-cours" && afficheurs.length > 0 && (
+            <div className="field">
+              <label>Emploi du temps affiché</label>
+              <div className="day-picker">
+                {afficheurs.map((a) => {
+                  const choisi = afficheursChoisis.includes(a.afficheur);
+                  return (
+                    <button
+                      key={a.afficheur}
+                      type="button"
+                      className="day-chip"
+                      aria-pressed={choisi}
+                      title={a.batiment ? `Bâtiment ${a.batiment}` : "Tout l'établissement"}
+                      onClick={() =>
+                        touch(() =>
+                          setAfficheursChoisis((c) =>
+                            choisi ? c.filter((id) => id !== a.afficheur) : [...c, a.afficheur],
+                          ),
+                        )
+                      }
+                    >
+                      {a.libelle || `n°${a.afficheur}`}
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="hint">
+                {afficheursChoisis.length === 0
+                  ? `Aucune sélection : l'écran prend celui de son bâtiment (${screen.building}), tout seul.`
+                  : afficheursChoisis.length === 1
+                    ? "Un seul : l'écran s'y tient."
+                    : `${afficheursChoisis.length} afficheurs, présentés à tour de rôle.`}
+              </p>
+            </div>
+          )}
+
+          {layout === "principal-et-cours" && afficheurs.length === 0 && (
             <div className="field">
               <label>Classes affichées dans la colonne</label>
               {classes.length === 0 ? (

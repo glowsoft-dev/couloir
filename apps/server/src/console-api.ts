@@ -101,6 +101,13 @@ const PublishBody = z.object({
    * absent : l'écran les fait défiler, dans l'ordre de la console.
    */
   timetableClassIds: z.array(z.string().uuid()).optional(),
+  /**
+   * Quels afficheurs NetYPareo cet écran montre.
+   *
+   * Absent : celui de son bâtiment, déduit tout seul. Un seul : il s'y
+   * tient. Plusieurs : ils défilent. Mêmes règles que pour les classes.
+   */
+  timetableAfficheurs: z.array(z.string()).optional(),
   /** Combien d'actualités du site tournent avec le reste. 0 = aucune. */
   actualites: z.number().int().min(0).max(10).optional(),
   /**
@@ -937,7 +944,38 @@ async function resolveSpec(
    * finirait par diverger. La grille locale reste le repli, et le seul
    * recours pour un établissement qui n'a pas ce logiciel.
    */
-  const afficheur = await options.netypareo?.afficheurPour(batiment);
+  /**
+   * Les afficheurs d'emploi du temps de cet écran.
+   *
+   * Un choix explicite l'emporte sur la déduction par bâtiment : un écran
+   * du hall peut vouloir l'établissement entier, un écran du bâtiment B
+   * peut vouloir aussi celui du C. Sans choix, le bâtiment décide — c'est le
+   * cas courant, et il ne demande aucun réglage.
+   */
+  const reglagesEdt = await options.netypareo?.reglages();
+  const choisis = body.timetableAfficheurs ?? [];
+  const afficheursRetenus =
+    reglagesEdt?.actif && choisis.length > 0
+      ? choisis
+          .map((id) => reglagesEdt.afficheurs.find((a) => a.afficheur === id))
+          .filter((a): a is NonNullable<typeof a> => a !== undefined)
+          .map((a) => ({
+            id: a.afficheur,
+            url: `${baseUrl}/connectors/netypareo/${encodeURIComponent(a.afficheur)}`,
+            label: a.libelle || `Afficheur ${a.afficheur}`,
+          }))
+      : [];
+
+  if (choisis.length > 0 && afficheursRetenus.length === 0) {
+    throw new CompositionError(
+      "Les afficheurs choisis n'existent plus. Vérifiez le branchement NetYPareo dans les Réglages.",
+    );
+  }
+
+  const afficheur =
+    afficheursRetenus.length > 0
+      ? afficheursRetenus[0]!.id
+      : await options.netypareo?.afficheurPour(batiment);
 
   // Avec NetYPareo, l'afficheur porte déjà tout le bâtiment : il n'y a pas de
   // classes à choisir, et en exiger une bloquerait la publication.
@@ -961,9 +999,14 @@ async function resolveSpec(
   // deviendraient injoignables sur une installation où les médias marchent.
   const actualitesUrl = `${baseUrl}/connectors/news`;
   const identite = await options.identite?.lire();
+  // Le corps porte des IDENTIFIANTS d'afficheurs, la composition porte leurs
+  // adresses résolues. Même nom, deux formes : on retire le premier plutôt
+  // que de laisser le hasard de l'ordre des propriétés en décider.
+  const { timetableAfficheurs: _choisis, ...reste } = body;
   return {
     ...(identite ? { identite } : {}),
-    ...body,
+    ...reste,
+    ...(afficheursRetenus.length > 0 ? { timetableAfficheurs: afficheursRetenus } : {}),
     ...(timetableUrl !== undefined ? { timetableUrl } : {}),
     ...(actualitesUrl !== undefined ? { actualitesUrl } : {}),
     ...(timetableClasses ? { timetableClasses } : {}),
