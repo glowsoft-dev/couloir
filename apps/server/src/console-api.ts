@@ -286,12 +286,32 @@ export function registerConsoleApi(app: FastifyInstance, options: ConsoleApiOpti
 
   // --- Le parc ---------------------------------------------------------
 
-  app.get(`${CONSOLE_PREFIX}/screens`, async () => ({
-    screens: await store.listScreenStatuses(),
-    // Les boîtiers en attente : c'est ce qui permet de rattacher un écran
-    // sans avoir à recopier son code à la main.
-    pending: await store.listPendingDevices(),
-  }));
+  /**
+   * Le parc.
+   *
+   * `?avecManifeste=1` joint à chaque écran ce qu'il diffuse. C'est ce qui
+   * permet à la console de dessiner le mur d'aperçus en UNE requête : vingt
+   * écrans feraient sinon vingt allers-retours, et la page se remplirait par
+   * à-coups sous les yeux de l'utilisateur.
+   */
+  app.get<{ Querystring: { avecManifeste?: string } }>(
+    `${CONSOLE_PREFIX}/screens`,
+    async (request) => {
+      const screens = await store.listScreenStatuses();
+      if (request.query.avecManifeste !== "1") {
+        return { screens, pending: await store.listPendingDevices() };
+      }
+      const manifestes = await Promise.all(
+        screens.map(async (screen) => [screen.id, await store.getManifest(screen.id)] as const),
+      );
+      return {
+        screens,
+        pending: await store.listPendingDevices(),
+        manifestes: Object.fromEntries(manifestes),
+      };
+    },
+  );
+
 
   app.get<{ Params: { screenId: string } }>(
     `${CONSOLE_PREFIX}/screens/:screenId`,

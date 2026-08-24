@@ -1042,6 +1042,69 @@ couloir est une décision qui appartient à l'établissement, pas au logiciel.
 La console les repère et les signale avant qu'on branche la source ; c'est
 dans NetYPareo qu'on les exclut de l'afficheur.
 
+## La console, refaite pour des gens dont ce n'est pas le métier
+
+### Le mur d'écrans est la page d'accueil
+
+On arrive sur ce que chaque écran affiche **en ce moment**, à l'échelle. C'est
+le seul repère qui vaille : on reconnaît son couloir à ce qu'il montre, pas à
+un numéro de version. Cliquer sur une vignette ouvre l'écran.
+
+Ce ne sont pas des captures. C'est le vrai moteur de rendu, alimenté par le
+manifeste réellement publié et par les mêmes sources vivantes. Ce qu'on voit
+là est ce qui est là-bas.
+
+Le rendu est dessiné à sa taille réelle — 1280 × 720 — puis réduit par une
+transformation. Le composer petit donnerait des tailles de texte fausses : le
+noyau calcule ses échelles typographiques sur la hauteur de la dalle, et une
+miniature de 320 px afficherait des titres qu'aucun écran de couloir ne
+produira jamais.
+
+**Un piège qu'il a fallu corriger** : les manifestes portent l'adresse par
+laquelle les ÉCRANS joignent le serveur, souvent une IP. La console qui les
+rejouait telles quelles se heurtait au blocage d'origine croisée, et ses
+aperçus montraient des colonnes vides là où les dalles en montrent de
+pleines — l'aperçu mentait précisément là où l'on compte sur lui. Le serveur
+qui sert la console étant celui qui sert les connecteurs, on garde le chemin
+et on jette l'origine.
+
+### Une chose à la fois
+
+Le mur, ou un écran — jamais les deux. La liste, l'éditeur, l'historique et
+les actions affichés ensemble donnaient une page dont on ne savait par où
+l'attaquer.
+
+### La charte du campus, sur clair
+
+La console reprend le bleu de la CCI. Clair, à l'inverse des dalles : ce ne
+sont pas les mêmes usages. Une dalle se regarde de loin dans un couloir
+parfois sombre ; une console se pilote de près sur un bureau éclairé, par des
+gens habitués aux logiciels de bureau et non aux consoles techniques.
+
+Le bleu du campus, `#11A6C4`, ne fait que **2,89:1 sur blanc** — trop peu pour
+du texte, qui demande 4,5. Il reste donc la couleur des aplats, et le texte
+prend `#0A7B92`, la même teinte assombrie, à 4,93:1. L'identité tient à la
+teinte, pas à la luminosité, et personne ne doit plisser les yeux pour lire un
+libellé. Même raisonnement pour les boutons pleins : du blanc sur le bleu vif
+donnerait aussi 2,89.
+
+### Ce qui a changé dans les mots
+
+Les titres de panneaux étaient en petites capitales espacées : ça se déchiffre,
+ça ne se lit pas. Les étiquettes de champ aussi. Les deux sont revenues à la
+taille du texte, dans l'encre normale — ce sont des questions posées à
+quelqu'un, pas des en-têtes de tableau.
+
+Les onglets suivent ce qu'on fait, du plus fréquent au plus rare : « Mes
+écrans », « Changements du jour », « Emploi du temps », puis les réglages.
+
+### Le rouge au survol, pas au repos
+
+Trois boutons rouges en permanence faisaient croire à un panneau dangereux et
+poussaient à ne plus rien toucher. Les actions qui laissent un couloir noir se
+signalent maintenant au survol ; la vraie garde est la confirmation qui suit,
+et celle-là, on la lit.
+
 ## Ce qui n'est pas encore fait
 
 Le socle tourne, mais il reste volontairement incomplet :

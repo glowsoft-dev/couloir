@@ -6,6 +6,7 @@ import {
   direct,
   mountRenderer,
 } from "@couloir/renderer";
+import { sourceLocale } from "./api.js";
 
 /**
  * L'aperçu fidèle d'un écran.
@@ -61,7 +62,7 @@ export function ScreenPreview({
     void Promise.all(
       manifest.dataSources.map(async (source) => {
         try {
-          const response = await fetch(source.url, { cache: "no-store" });
+          const response = await fetch(sourceLocale(source.url), { cache: "no-store" });
           if (!response.ok) return null;
           return [source.id, { fetchedAtMs: Date.now(), payload: await response.json() }] as const;
         } catch {

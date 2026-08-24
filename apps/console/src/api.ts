@@ -240,6 +240,31 @@ export interface TimetableSetup {
 }
 
 /** Le message du serveur est déjà rédigé pour un humain : on le garde tel quel. */
+/**
+ * L'adresse d'une source, ramenée à notre propre origine.
+ *
+ * Les manifestes portent l'adresse par laquelle les ÉCRANS joignent le
+ * serveur — souvent une IP, un nom de domaine, rarement celle qu'affiche la
+ * barre du navigateur. La console qui les rejouerait telles quelles se
+ * heurterait au blocage d'origine croisée, et ses aperçus montreraient des
+ * colonnes vides là où les dalles en montrent de pleines : l'aperçu
+ * mentirait précisément là où l'on compte sur lui.
+ *
+ * Le serveur qui sert la console est celui qui sert les connecteurs : on
+ * garde donc le chemin, on jette l'origine. Une source hébergée ailleurs est
+ * laissée intacte — elle n'a rien à voir avec nous.
+ */
+export function sourceLocale(url: string): string {
+  try {
+    const adresse = new URL(url);
+    return adresse.pathname.startsWith("/connectors/") || adresse.pathname.startsWith("/v1/")
+      ? `${adresse.pathname}${adresse.search}`
+      : url;
+  } catch {
+    return url;
+  }
+}
+
 export class ApiError extends Error {
   constructor(
     message: string,
@@ -392,7 +417,16 @@ export const api = {
       call<{ charge: ChargeActualites }>("/actualites/essai", json("POST", { ...reglages, actif: true })),
   },
 
-  screens: () => call<{ screens: ScreenStatus[]; pending: PendingDevice[] }>("/screens"),
+  /**
+   * Le parc. `avecManifeste` joint ce que chaque écran diffuse, en une seule
+   * requête — le mur d'aperçus se remplirait sinon par à-coups.
+   */
+  screens: (avecManifeste = false) =>
+    call<{
+      screens: ScreenStatus[];
+      pending: PendingDevice[];
+      manifestes?: Record<string, unknown | null>;
+    }>(`/screens${avecManifeste ? "?avecManifeste=1" : ""}`),
   screen: (id: string) => call<{ screen: ScreenStatus; manifest: unknown }>(`/screens/${id}`),
 
   media: () => call<{ media: Media[] }>("/media"),

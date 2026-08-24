@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { ScreenActions } from "./Actions.js";
 import { EmergencyBar } from "./Emergency.js";
 import { GridView } from "./Grid.js";
+import { MurDEcrans } from "./MurDEcrans.js";
 import { HistoryPanel } from "./History.js";
 import { PublishPanel } from "./Publish.js";
 import { PendingPanel, ScreenList } from "./Screens.js";
@@ -35,10 +36,17 @@ import {
 
 type Tab = "today" | "screens" | "grid" | "settings" | "comptes";
 
+/**
+ * L'ordre des onglets suit ce qu'on fait, du plus fréquent au plus rare.
+ *
+ * « Mes écrans » d'abord : c'est la question qu'on se pose en arrivant —
+ * qu'est-ce qui est affiché en ce moment. Les réglages annuels ferment la
+ * marche.
+ */
 const TABS: { id: Tab; label: string; administrateur?: boolean }[] = [
-  { id: "today", label: "Aujourd'hui" },
-  { id: "screens", label: "Écrans" },
-  { id: "grid", label: "Grille" },
+  { id: "screens", label: "Mes écrans" },
+  { id: "today", label: "Changements du jour" },
+  { id: "grid", label: "Emploi du temps" },
   { id: "settings", label: "Réglages" },
   { id: "comptes", label: "Comptes", administrateur: true },
 ];
@@ -52,8 +60,10 @@ export function App() {
    * la page ne peut pas lire. C'est justement ce qui la protège.
    */
   const [moi, setMoi] = useState<Utilisateur | null | undefined>(undefined);
-  const [tab, setTab] = useState<Tab>("today");
+  const [tab, setTab] = useState<Tab>("screens");
   const [screens, setScreens] = useState<ScreenStatus[]>([]);
+  /** Ce que chaque écran diffuse, pour dessiner le mur d'aperçus. */
+  const [manifestes, setManifestes] = useState<Record<string, unknown | null>>({});
   const [pending, setPending] = useState<PendingDevice[]>([]);
   const [setup, setSetup] = useState<TimetableSetup | null>(null);
   const [emergency, setEmergency] = useState<Emergency | null>(null);
@@ -67,12 +77,17 @@ export function App() {
    * qui est pire que de ne rien afficher.
    */
   const [restored, setRestored] = useState(0);
+  /** Le nom de l'établissement, affiché dans la barre. */
+  const [etablissement, setEtablissement] = useState<string | null>(null);
+  /** Vrai quand l'emploi du temps vient d'un logiciel externe. */
+  const [emploiDuTempsExterne, setEmploiDuTempsExterne] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const refreshScreens = useCallback(async () => {
     try {
-      const result = await api.screens();
+      const result = await api.screens(true);
       setScreens(result.screens);
+      if (result.manifestes) setManifestes(result.manifestes);
       setPending(result.pending);
       setEmergency((await api.emergency.current()).emergency);
       setError(null);
@@ -110,6 +125,14 @@ export function App() {
       .moi()
       .then((r) => setMoi(r.utilisateur))
       .catch(() => setMoi(null));
+    void api.identite
+      .lire()
+      .then((r) => setEtablissement(r.identite.nom))
+      .catch(() => {});
+    void api.netypareo
+      .lire()
+      .then((r) => setEmploiDuTempsExterne(r.reglages.actif && r.reglages.afficheurs.length > 0))
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -135,8 +158,10 @@ export function App() {
   return (
     <div className="app">
       <div className="topbar">
+        {/* Le nom de l'établissement, pas celui du logiciel : c'est chez
+            eux qu'on est, et ça se voit dès la barre. */}
         <span className="brand">
-          Couloir <span>console</span>
+          {etablissement ?? "Couloir"} <span>écrans</span>
         </span>
 
         <nav className="tabs">
@@ -182,49 +207,65 @@ export function App() {
           screens={screens}
           pending={pending}
           classes={setup?.classes.length ?? 0}
+          emploiDuTempsExterne={emploiDuTempsExterne}
           onGo={(destination) => setTab(destination)}
         />
 
-        {tab === "screens" && (
-          <div className="split">
-            <div>
-              <ScreenList screens={screens} selectedId={selectedId} onSelect={(s) => setSelectedId(s.id)} />
-              <PendingPanel pending={pending} onPaired={() => void refreshScreens()} />
+        {/*
+          Deux états, jamais les deux à la fois : le mur, ou un écran.
+          Tout montrer d'un coup — la liste, l'éditeur, l'historique, les
+          actions — donnait une page dont on ne savait par où l'attaquer.
+        */}
+        {tab === "screens" && !selected && (
+          <>
+            <PendingPanel pending={pending} onPaired={() => void refreshScreens()} />
+            <MurDEcrans
+              screens={screens}
+              manifestes={manifestes}
+              onChoisir={(s) => setSelectedId(s.id)}
+            />
+          </>
+        )}
+
+        {tab === "screens" && selected && (
+          <>
+            <button type="button" className="retour" onClick={() => setSelectedId(null)}>
+              ← Tous les écrans
+            </button>
+
+            <header className="entete-ecran">
+              <div>
+                <h1>{selected.label}</h1>
+                <p>
+                  {selected.code} · bâtiment {selected.building} · {selected.area}
+                </p>
+              </div>
+              <span className={`pill ${selected.online ? "accent" : "signal"}`}>
+                {selected.online ? "en ligne" : "ne répond pas"}
+              </span>
+            </header>
+
+            <div className="split">
+              <div>
+                <PublishPanel
+                  key={`${selected.id}:${restored}`}
+                  screen={selected}
+                  classes={setup?.classes ?? []}
+                  onPublished={() => void refreshScreens()}
+                />
+              </div>
+              <div>
+                <HistoryPanel
+                  screen={selected}
+                  onRestored={() => {
+                    setRestored((n) => n + 1);
+                    void refreshScreens();
+                  }}
+                />
+                <ScreenActions screen={selected} />
+              </div>
             </div>
-            <div>
-              {selected ? (
-                <>
-                  <PublishPanel
-                    key={`${selected.id}:${restored}`}
-                    screen={selected}
-                    classes={setup?.classes ?? []}
-                    onPublished={() => void refreshScreens()}
-                  />
-                  <HistoryPanel
-                    screen={selected}
-                    onRestored={() => {
-                      setRestored((n) => n + 1);
-                      void refreshScreens();
-                    }}
-                  />
-                  <ScreenActions screen={selected} />
-                </>
-              ) : (
-                <section className="panel">
-                  <header>
-                    <h2>Publication</h2>
-                  </header>
-                  <div className="body">
-                    <p className="empty">
-                      {screens.length === 0
-                        ? "Aucun écran n'est encore rattaché. Branchez un boîtier : son code d'appairage apparaîtra à gauche."
-                        : "Choisissez un écran à gauche pour voir et modifier ce qu'il affiche."}
-                    </p>
-                  </div>
-                </section>
-              )}
-            </div>
-          </div>
+          </>
         )}
 
         {tab === "comptes" && administrateur && <Comptes moi={moi} />}
@@ -264,15 +305,21 @@ function FirstRun({
   screens,
   pending,
   classes,
+  emploiDuTempsExterne,
   onGo,
 }: {
   screens: ScreenStatus[];
   pending: PendingDevice[];
   classes: number;
+  emploiDuTempsExterne: boolean;
   onGo: (tab: Tab) => void;
 }) {
   const published = screens.some((screen) => screen.manifestVersion > 0);
-  if (screens.length > 0 && classes > 0 && published) return null;
+  // Les classes ne servent qu'à la grille saisie à la main. Quand l'emploi
+  // du temps vient d'un logiciel externe, réclamer des classes enverrait
+  // faire un travail que personne n'a à faire.
+  const classesRequises = !emploiDuTempsExterne;
+  if (screens.length > 0 && (!classesRequises || classes > 0) && published) return null;
 
   const step =
     screens.length === 0
@@ -287,7 +334,7 @@ function FirstRun({
             action: null,
             tab: "screens" as Tab,
           }
-      : classes === 0
+      : classesRequises && classes === 0
         ? {
             text: "Créez vos classes pour pouvoir afficher les cours à côté du contenu.",
             action: "Créer les classes" as const,
