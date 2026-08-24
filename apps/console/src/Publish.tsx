@@ -4,6 +4,8 @@ import { ScreenPreview } from "./Preview.js";
 import { Periode } from "./Periode.js";
 import { Schedule } from "./Schedule.js";
 import {
+  CHAMPS_EDT,
+  type ChampEdt,
   type DisplayOffWindow,
   type Media,
   type PublishItem,
@@ -72,6 +74,13 @@ export function PublishPanel({
   >([]);
   const [afficheursChoisis, setAfficheursChoisis] = useState<string[]>([]);
   /**
+   * Les colonnes montrées dans l'emploi du temps.
+   *
+   * `null` = réglage jamais touché, donc tout. On distingue de la liste vide,
+   * qui veut dire « seulement l'heure et l'intitulé » — un choix délibéré.
+   */
+  const [champsEdt, setChampsEdt] = useState<ChampEdt[] | null>(null);
+  /**
    * L'instant depuis lequel on regarde l'aperçu.
    *
    * `null` = maintenant. Sinon, on voit ce que l'écran affichera ce jour-là :
@@ -127,6 +136,7 @@ export function PublishPanel({
         setDisplayOff(spec.displayOff ?? []);
         setActualites(spec.actualites ?? 0);
         setAfficheursChoisis(spec.timetableAfficheurs ?? []);
+        setChampsEdt(spec.timetableChamps ?? null);
       } else {
         setLayout("plein-ecran");
         setItems([]);
@@ -135,6 +145,7 @@ export function PublishPanel({
         setDisplayOff([]);
         setActualites(0);
         setAfficheursChoisis([]);
+        setChampsEdt(null);
       }
       setLive({ version, loaded: true, reopenable: spec !== null });
       setDirty(false);
@@ -158,6 +169,7 @@ export function PublishPanel({
       ...(displayOff.length > 0 ? { displayOff } : {}),
       ...(actualites > 0 ? { actualites } : {}),
       ...(afficheursChoisis.length > 0 ? { timetableAfficheurs: afficheursChoisis } : {}),
+      ...(champsEdt !== null ? { timetableChamps: champsEdt } : {}),
     };
   }
 
@@ -197,6 +209,7 @@ export function PublishPanel({
     displayOff,
     actualites,
     afficheursChoisis,
+    champsEdt,
     live.loaded,
   ]);
 
@@ -405,6 +418,43 @@ export function PublishPanel({
                   : afficheursChoisis.length === 1
                     ? "Un seul : l'écran s'y tient."
                     : `${afficheursChoisis.length} afficheurs, présentés à tour de rôle.`}
+              </p>
+            </div>
+          )}
+
+          {layout === "principal-et-cours" && (
+            <div className="field">
+              <label>Ce que montre la colonne des cours</label>
+              <div className="day-picker">
+                {CHAMPS_EDT.map((champ) => {
+                  const montré = champsEdt === null || champsEdt.includes(champ.id);
+                  return (
+                    <button
+                      key={champ.id}
+                      type="button"
+                      className="day-chip"
+                      aria-pressed={montré}
+                      title={champ.aide}
+                      onClick={() =>
+                        touch(() =>
+                          setChampsEdt((actuels) => {
+                            const base = actuels ?? CHAMPS_EDT.map((c) => c.id);
+                            return montré
+                              ? base.filter((c) => c !== champ.id)
+                              : [...base, champ.id];
+                          }),
+                        )
+                      }
+                    >
+                      {champ.libelle}
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="hint">
+                L'heure de début et le nom du groupe sont toujours affichés — sans eux la colonne
+                ne dit plus rien. Le reste se règle écran par écran : un couloir de bâtiment veut la
+                salle, un écran d'accueil préfère souvent s'en passer.
               </p>
             </div>
           )}

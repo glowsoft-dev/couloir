@@ -278,6 +278,137 @@ describe("économie de rendu", () => {
     expect(container.querySelector(".couloir-fin")).toBeNull();
   });
 
+  it("ne montre que les colonnes demandées", () => {
+    // Réglé écran par écran : un couloir de bâtiment veut la salle, un écran
+    // d'accueil s'en passe, et certains établissements ne souhaitent pas
+    // afficher les noms d'enseignants.
+    const renderer = mountRenderer(container);
+    const avec = (champs: string | undefined) => ({
+      ...zonesScreen(),
+      zones: [
+        {
+          ...zonesScreen().zones[0]!,
+          slide: {
+            kind: "data" as const,
+            slideId: "cours",
+            sourceId: "edt",
+            view: "timetable-day" as const,
+            params: champs === undefined ? {} : { champs },
+            staleLabel: null,
+            payload: {
+              days: [
+                {
+                  classId: "b",
+                  classLabel: "Bâtiment B",
+                  entries: [
+                    {
+                      time: "08:30",
+                      endTime: "12:00",
+                      subject: "BTS Gestion",
+                      detail: "Relation client",
+                      room: "B11",
+                      teacher: "M. MAGNIEN C.",
+                    },
+                  ],
+                },
+              ],
+            },
+          },
+        },
+      ],
+    });
+
+    renderer.update(avec("salle"));
+    let texte = container.textContent ?? "";
+    expect(texte).toContain("B11");
+    expect(texte).toContain("BTS Gestion");
+    expect(texte).not.toContain("M. MAGNIEN C.");
+    expect(texte).not.toContain("Relation client");
+    expect(texte).not.toContain("12:00");
+
+    renderer.update(avec("heureFin,module"));
+    texte = container.textContent ?? "";
+    expect(texte).toContain("12:00");
+    expect(texte).toContain("Relation client");
+    expect(texte).not.toContain("B11");
+  });
+
+  it("montre tout quand le réglage n'a jamais été touché", () => {
+    // Une publication faite avant ce réglage ne doit pas se retrouver
+    // amputée.
+    const renderer = mountRenderer(container);
+    renderer.update({
+      ...zonesScreen(),
+      zones: [
+        {
+          ...zonesScreen().zones[0]!,
+          slide: {
+            kind: "data",
+            slideId: "cours",
+            sourceId: "edt",
+            view: "timetable-day",
+            params: {},
+            staleLabel: null,
+            payload: {
+              days: [
+                {
+                  classId: "b",
+                  classLabel: "Bâtiment B",
+                  entries: [
+                    { time: "08:30", endTime: "12:00", subject: "BTS", detail: "Module", room: "B11", teacher: "M. X" },
+                  ],
+                },
+              ],
+            },
+          },
+        },
+      ],
+    });
+
+    const texte = container.textContent ?? "";
+    for (const attendu of ["08:30", "12:00", "BTS", "Module", "B11", "M. X"]) {
+      expect(texte).toContain(attendu);
+    }
+  });
+
+  it("garde l'heure et l'intitulé même quand plus rien n'est coché", () => {
+    // Sans eux la colonne ne dit plus rien : ils ne sont pas décochables.
+    const renderer = mountRenderer(container);
+    renderer.update({
+      ...zonesScreen(),
+      zones: [
+        {
+          ...zonesScreen().zones[0]!,
+          slide: {
+            kind: "data",
+            slideId: "cours",
+            sourceId: "edt",
+            view: "timetable-day",
+            params: { champs: "" },
+            staleLabel: null,
+            payload: {
+              days: [
+                {
+                  classId: "b",
+                  classLabel: "Bâtiment B",
+                  entries: [
+                    { time: "08:30", endTime: "12:00", subject: "BTS", detail: "Module", room: "B11", teacher: "M. X" },
+                  ],
+                },
+              ],
+            },
+          },
+        },
+      ],
+    });
+
+    const texte = container.textContent ?? "";
+    expect(texte).toContain("08:30");
+    expect(texte).toContain("BTS");
+    expect(texte).not.toContain("B11");
+    expect(texte).not.toContain("M. X");
+  });
+
   it("retire une zone qui a disparu de la mise en page", () => {
     const renderer = mountRenderer(container);
     renderer.update(zonesScreen());

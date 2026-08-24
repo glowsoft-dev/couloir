@@ -987,6 +987,26 @@ puis « quoi ».
 Les mettre en colonnes séparées aurait réduit l'intitulé, qui est justement
 ce qu'on lit de loin.
 
+### Chaque écran décide de ce qu'il montre
+
+Les six informations ne se valent pas partout. Un couloir de bâtiment veut la
+salle — c'est la question qu'on s'y pose. Un écran d'accueil s'en passe et
+préfère des intitulés lisibles de plus loin. Certains établissements ne
+souhaitent pas afficher de noms d'enseignants.
+
+Quatre colonnes se cochent donc écran par écran, à la publication : heure de
+fin, module, salle, enseignant. L'heure de début et le nom du groupe ne sont
+pas décochables — sans eux la colonne ne dit plus rien.
+
+Le réglage voyage dans le sélecteur de la diapositive, là où voyage déjà le
+choix de la classe. Absent, tout est montré : une publication faite avant ce
+réglage ne doit pas se retrouver amputée. Une liste vide, en revanche, veut
+dire « seulement l'heure et l'intitulé » — c'est un choix délibéré, et le
+distinguer de l'absence évite de le confondre avec un oubli.
+
+Retirer une colonne ne laisse pas de trou : la mise en page la fait
+disparaître et l'intitulé prend la place.
+
 ### Ce qui ne tient pas sur un mur
 
 Le premier jet versait le commentaire de séance dans la pastille réservée aux

@@ -108,6 +108,13 @@ const PublishBody = z.object({
    * tient. Plusieurs : ils défilent. Mêmes règles que pour les classes.
    */
   timetableAfficheurs: z.array(z.string()).optional(),
+  /**
+   * Ce que la colonne des cours montre sur cet écran.
+   *
+   * Absent = tout, comme avant ce réglage. Liste vide = seulement l'heure et
+   * l'intitulé.
+   */
+  timetableChamps: z.array(z.enum(["heureFin", "module", "salle", "enseignant"])).optional(),
   /** Combien d'actualités du site tournent avec le reste. 0 = aucune. */
   actualites: z.number().int().min(0).max(10).optional(),
   /**

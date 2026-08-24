@@ -343,6 +343,29 @@ interface Article {
  * diapositive qui dit laquelle. Sans sélecteur, on prend la première — un
  * écran ne doit pas rester vide à cause d'un paramètre oublié.
  */
+/**
+ * Ce que la colonne des cours montre.
+ *
+ * Réglé par écran : un couloir de bâtiment veut la salle, un écran d'accueil
+ * s'en passe et préfère les intitulés lisibles de loin. Certains
+ * établissements ne souhaitent pas afficher les noms d'enseignants.
+ *
+ * Absent, tout est montré — c'est le comportement d'origine, et une
+ * publication faite avant ce réglage ne doit pas se retrouver amputée.
+ */
+const CHAMPS_PAR_DEFAUT = ["heureFin", "module", "salle", "enseignant"] as const;
+
+function champsAffichés(brut: string | undefined): Set<string> {
+  if (brut === undefined) return new Set(CHAMPS_PAR_DEFAUT);
+  // Une chaîne vide veut dire « rien de facultatif », pas « tout ».
+  return new Set(
+    brut
+      .split(",")
+      .map((c) => c.trim())
+      .filter(Boolean),
+  );
+}
+
 function pickDay(payload: unknown, classId: string | undefined): TimetableDay | null {
   const days = (payload as { days?: TimetableDay[] } | null)?.days;
   if (Array.isArray(days)) {
@@ -405,6 +428,8 @@ function renderDataView(
     const day = pickDay(slide.payload, slide.params["classId"]);
     if (!day) return;
 
+    const montre = champsAffichés(slide.params["champs"]);
+
     wrapper.appendChild(el(doc, "p", "couloir-eyebrow", day.classLabel));
 
     // Vacances, week-end : on le dit. Une liste vide ressemble à une panne.
@@ -426,7 +451,7 @@ function renderDataView(
       // L'heure de fin, plus discrète, sous l'heure de début : dans un
       // couloir on se demande d'abord « ça commence quand », et seulement
       // ensuite « est-ce que c'est encore en cours ».
-      if (entry.endTime && entry.endTime !== entry.time) {
+      if (montre.has("heureFin") && entry.endTime && entry.endTime !== entry.time) {
         time.appendChild(el(doc, "span", "couloir-fin", entry.endTime));
       }
 
@@ -435,15 +460,19 @@ function renderDataView(
       if (entry.note) label.appendChild(el(doc, "span", "couloir-badge", entry.note));
       // Le module sous l'intitulé : le groupe dit à qui la séance s'adresse,
       // le module dit ce qui s'y passe. L'un sans l'autre laisse chercher.
-      if (entry.detail) label.appendChild(el(doc, "span", "couloir-detail", entry.detail));
+      if (montre.has("module") && entry.detail) {
+        label.appendChild(el(doc, "span", "couloir-detail", entry.detail));
+      }
 
       // Salle et enseignant dans la même colonne : ce sont les deux réponses
       // à « où » et « avec qui », et les séparer en deux colonnes réduirait
       // l'intitulé, qui est ce qu'on lit de loin.
       const lieu = doc.createElement("span");
       lieu.className = "room";
-      lieu.appendChild(doc.createTextNode(entry.room));
-      if (entry.teacher) lieu.appendChild(el(doc, "span", "couloir-prof", entry.teacher));
+      if (montre.has("salle")) lieu.appendChild(doc.createTextNode(entry.room));
+      if (montre.has("enseignant") && entry.teacher) {
+        lieu.appendChild(el(doc, "span", "couloir-prof", entry.teacher));
+      }
 
       row.append(time, label, lieu);
       list.appendChild(row);

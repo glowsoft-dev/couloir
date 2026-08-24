@@ -76,6 +76,12 @@ export interface PublishSpec {
    * Vide = source unique. Un = fixe. Plusieurs = ils défilent.
    */
   timetableAfficheurs?: { id: string; url: string; label: string }[];
+  /**
+   * Ce que la colonne des cours montre, écran par écran.
+   *
+   * Absent = tout. Une liste vide = seulement l'heure et l'intitulé.
+   */
+  timetableChamps?: string[];
 }
 
 export interface ComposeInput {
@@ -280,6 +286,15 @@ export function compose(input: ComposeInput): Manifest {
    * mal.
    */
   const afficheursEdt = spec.timetableAfficheurs ?? [];
+  /**
+   * Les colonnes retenues, portées par le sélecteur de la diapositive.
+   *
+   * `undefined` laisse le rendu tout montrer : une publication faite avant
+   * ce réglage ne doit pas se retrouver amputée.
+   */
+  const paramsEdt: Record<string, string> = spec.timetableChamps
+    ? { champs: spec.timetableChamps.join(",") }
+    : {};
 
   if (withTimetable) {
     if (!spec.timetableUrl && afficheursEdt.length === 0) {
@@ -303,7 +318,7 @@ export function compose(input: ComposeInput): Manifest {
           id,
           sourceId: `edt-${a.id}`,
           view: "timetable-day",
-          params: {},
+          params: { ...paramsEdt },
           durationMs: 20_000,
         });
         columnSlideIds.push(id);
@@ -314,7 +329,7 @@ export function compose(input: ComposeInput): Manifest {
         id: "cours-du-jour",
         sourceId: "edt",
         view: "timetable-day",
-        params: {},
+        params: { ...paramsEdt },
         durationMs: 20_000,
       });
       columnSlideIds.push("cours-du-jour");
@@ -326,7 +341,7 @@ export function compose(input: ComposeInput): Manifest {
           id,
           sourceId: "edt",
           view: "timetable-day",
-          params: { classId: schoolClass.id },
+          params: { classId: schoolClass.id, ...paramsEdt },
           durationMs: 20_000,
         });
         columnSlideIds.push(id);

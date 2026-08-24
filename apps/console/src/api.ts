@@ -97,6 +97,12 @@ export interface PublishSpec {
    * ils défilent.
    */
   timetableAfficheurs?: string[];
+  /**
+   * Ce que la colonne des cours montre sur cet écran.
+   *
+   * Absent = tout. Liste vide = seulement l'heure et l'intitulé.
+   */
+  timetableChamps?: ChampEdt[];
   /** Plages d'extinction de la dalle. Un message d'urgence la rallume. */
   displayOff?: DisplayOffWindow[];
   /** Combien d'actualités du site tournent avec le reste. 0 = aucune. */
@@ -125,6 +131,16 @@ export interface ReglagesActualites {
   actif: boolean;
   modifieLe: string | null;
 }
+
+/** Les colonnes facultatives de l'emploi du temps. */
+export type ChampEdt = "heureFin" | "module" | "salle" | "enseignant";
+
+export const CHAMPS_EDT: { id: ChampEdt; libelle: string; aide: string }[] = [
+  { id: "heureFin", libelle: "Heure de fin", aide: "Sous l'heure de début." },
+  { id: "module", libelle: "Module", aide: "La matière, sous le nom du groupe." },
+  { id: "salle", libelle: "Salle", aide: "À droite de chaque ligne." },
+  { id: "enseignant", libelle: "Enseignant", aide: "Sous la salle." },
+];
 
 export interface SeanceAfficheur {
   time: string;
