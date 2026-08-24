@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { Manifest } from "@couloir/protocol";
 import { ScreenPreview } from "./Preview.js";
 import { Periode } from "./Periode.js";
+import { VueJour } from "./VueJour.js";
 import { Schedule } from "./Schedule.js";
 import {
   CHAMPS_EDT,
@@ -80,6 +81,10 @@ export function PublishPanel({
    * qui veut dire « seulement l'heure et l'intitulé » — un choix délibéré.
    */
   const [champsEdt, setChampsEdt] = useState<ChampEdt[] | null>(null);
+  /** Ce que l'écran montre quand rien n'est programmé pour maintenant. */
+  const [parDefaut, setParDefaut] = useState<{ assetId?: string; emploiDuTemps?: boolean }>({});
+  /** L'onglet ouvert dans l'éditeur. */
+  const [volet, setVolet] = useState<"contenu" | "journee" | "reglages">("contenu");
   /**
    * L'instant depuis lequel on regarde l'aperçu.
    *
@@ -137,6 +142,7 @@ export function PublishPanel({
         setActualites(spec.actualites ?? 0);
         setAfficheursChoisis(spec.timetableAfficheurs ?? []);
         setChampsEdt(spec.timetableChamps ?? null);
+        setParDefaut(spec.parDefaut ?? {});
       } else {
         setLayout("plein-ecran");
         setItems([]);
@@ -146,6 +152,7 @@ export function PublishPanel({
         setActualites(0);
         setAfficheursChoisis([]);
         setChampsEdt(null);
+        setParDefaut({});
       }
       setLive({ version, loaded: true, reopenable: spec !== null });
       setDirty(false);
@@ -170,6 +177,7 @@ export function PublishPanel({
       ...(actualites > 0 ? { actualites } : {}),
       ...(afficheursChoisis.length > 0 ? { timetableAfficheurs: afficheursChoisis } : {}),
       ...(champsEdt !== null ? { timetableChamps: champsEdt } : {}),
+      ...(parDefaut.assetId || parDefaut.emploiDuTemps ? { parDefaut } : {}),
     };
   }
 
@@ -210,6 +218,7 @@ export function PublishPanel({
     actualites,
     afficheursChoisis,
     champsEdt,
+    parDefaut,
     live.loaded,
   ]);
 
@@ -379,6 +388,34 @@ export function PublishPanel({
             </p>
           )}
 
+
+          {/* Trois volets plutôt qu'un long formulaire à dérouler. On ne
+              cherche pas la même chose selon qu'on change une affiche, qu'on
+              programme une journée ou qu'on règle l'écran une fois pour
+              toutes. */}
+          <div className="volets" role="tablist">
+            {(
+              [
+                ["contenu", "Contenu"],
+                ["journee", "Journée"],
+                ["reglages", "Réglages de l'écran"],
+              ] as const
+            ).map(([id, libelle]) => (
+              <button
+                key={id}
+                type="button"
+                role="tab"
+                className="volet"
+                aria-selected={volet === id}
+                onClick={() => setVolet(id)}
+              >
+                {libelle}
+              </button>
+            ))}
+          </div>
+
+          <div className="volet-corps" hidden={volet !== "reglages"}>
+
           <div className="field">
             <label htmlFor="layout">Mise en page</label>
             <select
@@ -516,6 +553,71 @@ export function PublishPanel({
             </div>
           )}
 
+          <Schedule windows={displayOff} onChange={(next) => touch(() => setDisplayOff(next))} />
+
+            <div className="field">
+              <label>Quand rien n'est programmé</label>
+              <p className="hint" style={{ marginTop: 0 }}>
+                Ce que l'écran montre aux heures où aucun contenu n'est prévu. Sans réglage, il
+                affiche sa carte d'identité — correct, mais c'est le message d'un écran qui a perdu
+                le contact, pas d'un écran qui attend.
+              </p>
+
+              <div className="day-picker">
+                <button
+                  type="button"
+                  className="day-chip"
+                  aria-pressed={!parDefaut.assetId && !parDefaut.emploiDuTemps}
+                  onClick={() => touch(() => setParDefaut({}))}
+                >
+                  Carte d'identité
+                </button>
+                <button
+                  type="button"
+                  className="day-chip"
+                  aria-pressed={Boolean(parDefaut.emploiDuTemps)}
+                  onClick={() =>
+                    touch(() => setParDefaut({ emploiDuTemps: true }))
+                  }
+                >
+                  Les salles du jour
+                </button>
+              </div>
+
+              {media.length > 0 && (
+                <>
+                  <p className="hint">Ou une affiche de la bibliothèque :</p>
+                  <div className="media-grid">
+                    {media.map((m) => (
+                      <button
+                        key={m.id}
+                        type="button"
+                        className="media-tile"
+                        aria-pressed={parDefaut.assetId === m.id}
+                        title={m.filename ?? m.id}
+                        onClick={() =>
+                          touch(() =>
+                            setParDefaut(
+                              parDefaut.assetId === m.id ? {} : { assetId: m.id },
+                            ),
+                          )
+                        }
+                      >
+                        {m.mime.startsWith("image/") ? (
+                          <img src={`/v1/assets/${m.id}`} alt="" />
+                        ) : (
+                          <span className="kind">{m.mime.split("/")[1] ?? "fichier"}</span>
+                        )}
+                        <span className="name">{m.filename ?? m.id}</span>
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+
+          <div className="volet-corps" hidden={volet !== "contenu"}>
           <div className="field">
             <label>Bibliothèque</label>
             {media.length === 0 ? (
@@ -745,7 +847,15 @@ export function PublishPanel({
             )}
           </div>
 
-          <Schedule windows={displayOff} onChange={(next) => touch(() => setDisplayOff(next))} />
+          </div>
+
+          <div className="volet-corps" hidden={volet !== "journee"}>
+            <VueJour
+              items={items}
+              media={media}
+              onChange={(suivants) => touch(() => setItems(suivants))}
+            />
+          </div>
 
           <div className="row-actions">
             <button type="button" className="primary" onClick={publish} disabled={!ready || busy}>

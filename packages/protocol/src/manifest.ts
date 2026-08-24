@@ -264,6 +264,18 @@ export const Manifest = z.object({
   emergency: EmergencyMessage.nullable().default(null),
   /** Playlist embarquée dans l'image système, valable indéfiniment. */
   fallbackPlaylistId: z.string(),
+  /**
+   * Ce qu'on joue quand rien n'est programmé pour maintenant.
+   *
+   * Distinct du repli, et la distinction n'est pas cosmétique. Le repli dit
+   * « je n'ai plus de contact avec le serveur » — c'est la carte d'identité
+   * de l'écran, et elle rassure celui qui passe devant. Le défaut dit
+   * « personne n'a rien prévu à cette heure-ci » : l'établissement choisit
+   * alors ce qu'on voit, une affiche d'accueil ou les salles du jour.
+   *
+   * Absent, on retombe sur le repli.
+   */
+  defaultPlaylistId: z.string().optional(),
 });
 export type Manifest = z.infer<typeof Manifest>;
 

@@ -1192,6 +1192,52 @@ n'avait choisi. Le prochain numéro libre est calculé, et **annoncé avant** de
 valider. Il comble par le haut, jamais par le milieu : réutiliser un numéro
 libéré ferait réapparaître un code que quelqu'un a peut-être noté sur un plan.
 
+## L'éditeur d'écran
+
+### Trois volets plutôt qu'un long formulaire
+
+**Contenu** — la bibliothèque, ce qui tourne, le bandeau, les actualités.
+**Journée** — les tranches horaires.
+**Réglages de l'écran** — la mise en page, l'emploi du temps, l'extinction, le
+contenu par défaut.
+
+On ne cherche pas la même chose selon qu'on change une affiche, qu'on programme
+une journée ou qu'on règle l'écran une fois pour toutes. Le formulaire unique
+obligeait à parcourir les trois pour en atteindre un.
+
+### La vue jour n'est pas un mécanisme de plus
+
+On glisse une affiche dans un créneau, et elle ne paraît qu'à ce moment-là.
+C'est **la même donnée** que la période d'affichage réglée dans l'onglet
+Contenu : une autre façon de l'éditer, pas un autre modèle. Modifier l'une se
+voit immédiatement dans l'autre, parce qu'il n'y a rien à synchroniser.
+
+Le repère suit le curseur pendant le glissé et affiche l'heure : on dépose à
+une heure, pas à un endroit. Les minutes s'arrondissent au quart d'heure —
+personne ne programme une affiche à 10 h 07.
+
+Les contenus sans horaire restent visibles à part, sous « toute la journée » :
+ils tournent en continu. Les ignorer aurait laissé croire qu'un écran sans
+bloc programmé n'affiche rien.
+
+### Le contenu par défaut, distinct du repli
+
+`fallbackPlaylistId` dit « je n'ai plus de contact avec le serveur » — c'est la
+carte d'identité de l'écran, et elle rassure celui qui passe devant.
+`defaultPlaylistId` dit « personne n'a rien prévu à cette heure-ci » :
+l'établissement choisit alors ce qu'on voit, une affiche d'accueil ou les
+salles du jour.
+
+Confondre les deux ferait afficher une carte d'identité là où l'école a choisi
+une affiche. Le défaut passe donc par la rotation habituelle — il peut compter
+plusieurs diapositives, et il n'y a pas de raison qu'elles ne tournent pas — et
+ne porte jamais de période : il ne serait pas un défaut s'il pouvait lui-même
+disparaître.
+
+Quand le défaut est l'emploi du temps, il réutilise la source que la mise en
+page monte déjà. Deux sources identiques feraient deux appels réseau par écran
+pour la même journée.
+
 ## Ce qui n'est pas encore fait
 
 Le socle tourne, mais il reste volontairement incomplet :

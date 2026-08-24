@@ -119,6 +119,13 @@ const PublishBody = z.object({
   timetableChamps: z.array(z.enum(["heureFin", "module", "salle", "enseignant"])).optional(),
   /** Combien d'actualités du site tournent avec le reste. 0 = aucune. */
   actualites: z.number().int().min(0).max(10).optional(),
+  /** Ce que l'écran montre quand rien n'est programmé pour maintenant. */
+  parDefaut: z
+    .object({
+      assetId: z.string().optional(),
+      emploiDuTemps: z.boolean().optional(),
+    })
+    .optional(),
   /**
    * Plages d'extinction de la dalle, en heure locale.
    *

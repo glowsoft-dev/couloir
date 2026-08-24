@@ -254,18 +254,40 @@ export function direct(input: DirectorInput): DirectorOutput {
    */
   const rienÀMontrer = !input.forceFallback && zones.every((zone) => zone.slide === null);
   if (rienÀMontrer) {
-    const repli = playlistsById.get(manifest.fallbackPlaylistId);
-    const premier = repli?.slideIds[0];
-    const diapo = premier ? slidesById.get(premier) : undefined;
+    /**
+     * Le défaut d'abord, le repli ensuite.
+     *
+     * Le repli dit « je n'ai plus de contact » ; le défaut dit « personne
+     * n'a rien prévu à cette heure-ci ». Confondre les deux ferait afficher
+     * une carte d'identité là où l'école a choisi une affiche d'accueil.
+     */
+    const secours = manifest.defaultPlaylistId ?? manifest.fallbackPlaylistId;
+    const playlist = playlistsById.get(secours);
+    const zoneId = manifest.layout.zones[0]?.id ?? "principal";
+
+    // On passe par la rotation habituelle : un défaut peut compter plusieurs
+    // diapositives, et il n'y a pas de raison qu'elles ne tournent pas.
+    const resultat = advanceRotation({
+      state: input.rotations.get(zoneId),
+      playlistId: secours,
+      slideIds: playlist?.slideIds ?? [],
+      isEligible,
+      durationMsOf,
+      nowMs,
+      mediaEnded: input.mediaEndedZoneIds?.has(zoneId) ?? false,
+    });
+
+    const diapo = resultat.currentSlideId ? slidesById.get(resultat.currentSlideId) : undefined;
     if (diapo) {
+      if (resultat.state) rotations.set(zoneId, resultat.state);
       return {
         screen: {
           mode: "normal",
           zones: [
             {
-              zoneId: manifest.layout.zones[0]?.id ?? "principal",
+              zoneId,
               rect: { xPercent: 0, yPercent: 0, widthPercent: 100, heightPercent: 100 },
-              playlistId: manifest.fallbackPlaylistId,
+              playlistId: secours,
               slide: renderSlide(diapo, assetsById, sourceStates, manifest.settings.timezone),
             },
           ],

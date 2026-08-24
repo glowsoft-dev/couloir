@@ -44,6 +44,51 @@ function écranAvec(dateDeLaJournée: string | undefined) {
 const colonneDesCours = (écran: ReturnType<typeof écranAvec>) =>
   écran.screen.zones.find((z) => z.zoneId === "cours") ?? null;
 
+describe("quand rien n'est programmé", () => {
+  it("joue le contenu par défaut plutôt que la carte d'identité", () => {
+    // Le repli dit « j'ai perdu le contact » ; le défaut dit « personne n'a
+    // rien prévu à cette heure-ci ». Confondre les deux ferait afficher une
+    // carte d'identité là où l'école a choisi une affiche d'accueil.
+    const base = demoManifest("ecran-demo");
+    const manifest = {
+      ...base,
+      defaultPlaylistId: "defaut",
+      playlists: [
+        ...base.playlists,
+        { id: "defaut", slideIds: ["defaut-accueil"] },
+      ],
+      slides: [
+        ...base.slides.map((s) =>
+          s.id === "repli-identite"
+            ? s
+            : { ...s, visibility: { startsAt: "2099-01-01T00:00:00Z" } },
+        ),
+        {
+          kind: "template" as const,
+          id: "defaut-accueil",
+          templateId: "annonce",
+          fields: { titre: "Bienvenue au campus" },
+          assetIds: [],
+          durationMs: 30_000,
+        },
+      ],
+    };
+
+    const { screen } = direct({
+      manifest: manifest as never,
+      nowMs: MAINTENANT,
+      sources: new Map<string, SourceSnapshot>(),
+      availableAssetIds: new Set(["affiche-po-2026"]),
+      rotations: new Map<string, RotationState>(),
+      screenCode: "A·1·12",
+    });
+
+    const diapo = screen.zones[0]?.slide;
+    expect(diapo).not.toBeNull();
+    expect(diapo && "fields" in diapo ? diapo.fields["titre"] : null).toBe("Bienvenue au campus");
+  });
+});
+
 describe("la colonne des cours", () => {
   it("s'affiche quand la journée est celle du jour", () => {
     const zone = colonneDesCours(écranAvec("2026-09-15"));

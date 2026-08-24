@@ -801,6 +801,60 @@ describe("parcours de la console", () => {
     expect((remplit as { fit?: string }).fit).toBe("remplir");
   });
 
+  it("joue le contenu par défaut quand rien n'est programmé", async () => {
+    // Distinct du repli : celui-ci dit « j'ai perdu le contact », le défaut
+    // dit « personne n'a rien prévu à cette heure-ci ».
+    const manifest = composeWith({
+      layout: "plein-ecran",
+      items: [{ assetId: poster.id, visibility: { dailyStart: "10:00", dailyEnd: "11:00" } }],
+      parDefaut: { assetId: video.id },
+    } as never);
+
+    expect(manifest.defaultPlaylistId).toBe("defaut");
+    expect(manifest.playlists.find((p) => p.id === "defaut")?.slideIds).toEqual(["defaut-media"]);
+    // Le repli reste ce qu'il était : la carte d'identité de l'écran.
+    expect(manifest.playlists.find((p) => p.id === "repli")?.slideIds).toEqual(["repli-identite"]);
+    expect(findBrokenReferences(manifest)).toEqual([]);
+  });
+
+  it("ne donne aucune période au contenu par défaut", async () => {
+    // Il ne serait pas un défaut s'il pouvait lui-même disparaître.
+    const manifest = composeWith({
+      layout: "plein-ecran",
+      items: [{ assetId: poster.id }],
+      parDefaut: { assetId: video.id },
+    } as never);
+
+    const defaut = manifest.slides.find((s) => s.id === "defaut-media");
+    expect((defaut as { visibility?: unknown }).visibility).toBeUndefined();
+  });
+
+  it("accepte l'emploi du temps comme contenu par défaut, sans source en double", async () => {
+    const manifest = composeWith({
+      layout: "principal-et-cours",
+      items: [{ assetId: poster.id }],
+      parDefaut: { emploiDuTemps: true },
+      timetableAfficheurs: [
+        { id: "3", url: "http://serveur.test/connectors/netypareo/3", label: "Bâtiment B" },
+      ],
+    } as never);
+
+    expect(manifest.playlists.find((p) => p.id === "defaut")?.slideIds).toEqual(["defaut-cours"]);
+    // Une seule source : la diapositive du défaut réutilise celle de la colonne.
+    expect(manifest.dataSources.filter((s) => s.id === "edt-3")).toHaveLength(1);
+    expect(findBrokenReferences(manifest)).toEqual([]);
+  });
+
+  it("refuse un contenu par défaut disparu de la bibliothèque", async () => {
+    expect(() =>
+      composeWith({
+        layout: "plein-ecran",
+        items: [{ assetId: poster.id }],
+        parDefaut: { assetId: "media-efface" },
+      } as never),
+    ).toThrow(CompositionError);
+  });
+
   it("refuse de publier sur un écran inconnu", async () => {
     const { app, auth } = await ready();
     const response = await app.inject({

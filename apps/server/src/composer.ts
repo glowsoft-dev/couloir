@@ -77,6 +77,13 @@ export interface PublishSpec {
    * c'était la demande d'origine — des cours, mais pas que.
    */
   actualites?: number;
+  /**
+   * Ce que l'écran montre quand rien n'est programmé pour maintenant.
+   *
+   * Absent, il montre sa carte d'identité — correct, mais c'est le message
+   * d'un écran qui a perdu le contact, pas d'un écran qui attend.
+   */
+  parDefaut?: { assetId?: string; emploiDuTemps?: boolean };
   /** L'adresse à laquelle les écrans vont lire les actualités. */
   actualitesUrl?: string;
   /** L'identité de l'établissement : nom affiché et couleur d'accent. */
@@ -260,6 +267,41 @@ export function compose(input: ComposeInput): Manifest {
     { id: "repli", slideIds: [carteDIdentite(spec.identite?.nom).id] },
   ];
 
+  /**
+   * Le contenu par défaut, joué quand rien n'est programmé.
+   *
+   * Sans période d'affichage : il ne serait pas un défaut s'il pouvait
+   * lui-même disparaître.
+   */
+  const defautSlideIds: string[] = [];
+
+  if (spec.parDefaut?.assetId) {
+    const media = input.media.get(spec.parDefaut.assetId);
+    if (!media) {
+      throw new CompositionError(
+        "Le contenu par défaut n'existe plus dans la bibliothèque. Choisissez-en un autre.",
+      );
+    }
+    const estVideo = media.mime.startsWith("video/");
+    slides.push({
+      kind: "media",
+      id: "defaut-media",
+      assetId: media.id,
+      ...(estVideo ? {} : { durationMs: 30_000 }),
+    });
+    if (!assets.some((a) => a.id === media.id)) {
+      assets.push({
+        id: media.id,
+        sha256: media.sha256,
+        bytes: media.bytes,
+        mime: media.mime,
+        url: new URL(`/v1/assets/${media.id}`, input.baseUrl).toString(),
+        urlExpiresAt: addHours(input.issuedAt, 24),
+      });
+    }
+    defautSlideIds.push("defaut-media");
+  }
+
   const timetableSeul = spec.layout === "emploi-du-temps";
   const withTimetable = spec.layout === "principal-et-cours" || timetableSeul;
   const withTicker = Boolean(spec.ticker?.trim());
@@ -315,6 +357,34 @@ export function compose(input: ComposeInput): Manifest {
     ? { champs: spec.timetableChamps.join(",") }
     : {};
 
+  /**
+   * L'emploi du temps comme contenu par défaut.
+   *
+   * Une source de plus n'est pas nécessaire : on réutilise celle que la
+   * mise en page monte déjà quand elle en monte une, et on n'en crée une que
+   * si l'écran n'affichait pas de cours par ailleurs.
+   */
+  if (spec.parDefaut?.emploiDuTemps) {
+    const source = afficheursEdt[0];
+    const url = source?.url ?? spec.timetableUrl;
+    if (!url) {
+      throw new CompositionError(
+        "Aucun emploi du temps n'est disponible pour cet écran. Branchez-en un dans les Réglages.",
+      );
+    }
+    const sourceId = source ? `edt-${source.id}` : "edt";
+    if (!sourcesEdt.some((s) => s.id === sourceId)) sourcesEdt.push({ id: sourceId, url });
+    slides.push({
+      kind: "data",
+      id: "defaut-cours",
+      sourceId,
+      view: "timetable-day",
+      params: { ...paramsEdt },
+      durationMs: 30_000,
+    });
+    defautSlideIds.push("defaut-cours");
+  }
+
   if (withTimetable) {
     if (!spec.timetableUrl && afficheursEdt.length === 0) {
       throw new CompositionError("Cette mise en page a besoin d'une source d'emploi du temps.");
@@ -331,7 +401,12 @@ export function compose(input: ComposeInput): Manifest {
       // et se départagent par un sélecteur — ici il n'y a rien à partager.
       for (const a of afficheursEdt) {
         const id = `cours-${a.id}`;
-        sourcesEdt.push({ id: `edt-${a.id}`, url: a.url });
+        // Le contenu par défaut a pu monter la même source avant nous : deux
+        // sources identiques feraient deux appels réseau par écran pour la
+        // même journée.
+        if (!sourcesEdt.some((s) => s.id === `edt-${a.id}`)) {
+          sourcesEdt.push({ id: `edt-${a.id}`, url: a.url });
+        }
         slides.push({
           kind: "data",
           id,
@@ -380,6 +455,8 @@ export function compose(input: ComposeInput): Manifest {
     playlists.push({ id: "bandeau", slideIds: ["bandeau"] });
   }
 
+  if (defautSlideIds.length > 0) playlists.push({ id: "defaut", slideIds: defautSlideIds });
+
   const manifest: Manifest = {
     schemaVersion: 1,
     screenId: input.screenId,
@@ -406,6 +483,7 @@ export function compose(input: ComposeInput): Manifest {
     playlists,
     slides,
     assets,
+    ...(defautSlideIds.length > 0 ? { defaultPlaylistId: "defaut" } : {}),
     dataSources: [
       ...sourcesEdt.map((source) => ({
         id: source.id,

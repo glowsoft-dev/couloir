@@ -932,3 +932,89 @@ button.ghost.danger:hover:not(:disabled) {
   .mur-entete { flex-wrap: wrap; }
   .mur-entete button { margin-left: 0; width: 100%; }
 }
+
+/* ---------- volets de l'éditeur ---------- */
+
+.volets {
+  display: flex; gap: 4px; margin-bottom: 18px;
+  border-bottom: 1px solid var(--rule);
+}
+.volet {
+  background: none; border: 0; box-shadow: none; border-radius: 0;
+  padding: 9px 14px; margin-bottom: -1px;
+  color: var(--ink-soft); font-weight: 500; cursor: pointer;
+  border-bottom: 2px solid transparent;
+}
+.volet:hover { background: none; color: var(--ink); border-color: transparent; border-bottom-color: var(--rule-strong); }
+.volet[aria-selected="true"] {
+  color: var(--accent-texte); border-bottom-color: var(--accent); font-weight: 600;
+}
+.volet:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+/* ---------- la journée ---------- */
+
+.jour { display: grid; grid-template-columns: minmax(0, 200px) minmax(0, 1fr); gap: 18px; }
+.jour-consigne { margin: 0 0 10px; font-size: 13px; color: var(--ink-soft); }
+
+.jour-bibliotheque .media-tile { cursor: grab; }
+.jour-bibliotheque .media-tile:active { cursor: grabbing; }
+
+.jour-permanents { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--rule); }
+.jour-permanents h3 { margin: 0 0 4px; font-size: 13.5px; font-weight: 600; }
+.jour-permanent {
+  padding: 7px 10px; margin-top: 6px; cursor: grab;
+  background: var(--surface-2); border: 1px solid var(--rule-strong); border-radius: 6px;
+  font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+.jour-grille-cadre { display: grid; grid-template-columns: 46px minmax(0, 1fr); gap: 6px; }
+.jour-heures { display: flex; flex-direction: column; }
+.jour-heure {
+  flex: 1; font-size: 11px; color: var(--ink-faint);
+  font-variant-numeric: tabular-nums; text-align: right; padding-right: 2px;
+  transform: translateY(-.5em);
+}
+
+.jour-grille {
+  position: relative; display: flex; flex-direction: column;
+  min-height: 420px;
+  border: 1px solid var(--rule); border-radius: var(--radius);
+  background: var(--surface); overflow: hidden;
+}
+.jour-grille.survolee { border-color: var(--accent); background: var(--accent-doux); }
+.jour-tranche { flex: 1; border-top: 1px solid var(--rule); }
+.jour-tranche:first-child { border-top: 0; }
+
+/* Le repère suit le curseur pendant le glissé : on dépose à une heure, pas
+   à un endroit — autant la montrer. */
+.jour-repere {
+  position: absolute; left: 0; right: 0; height: 0;
+  border-top: 2px dashed var(--accent);
+  font-size: 11px; color: var(--accent-texte); font-weight: 600;
+  padding-left: 6px; pointer-events: none;
+}
+
+.jour-bloc {
+  position: absolute; left: 6px; right: 6px;
+  display: flex; align-items: flex-start; gap: 8px;
+  padding: 6px 8px; overflow: hidden; cursor: grab;
+  background: var(--accent-doux); border: 1px solid var(--accent);
+  border-radius: 7px;
+}
+.jour-bloc:active { cursor: grabbing; }
+.jour-bloc-titre {
+  flex: 1; min-width: 0; font-size: 12.5px; font-weight: 500;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.jour-bloc-heures { display: flex; gap: 4px; flex: none; }
+.jour-bloc-heures input {
+  width: auto; padding: 2px 5px; font-size: 11px;
+  font-variant-numeric: tabular-nums; border-radius: 4px;
+}
+.jour-bloc button { padding: 2px 6px; font-size: 11px; }
+.jour-vide { grid-column: 2; margin-top: 8px; }
+
+@media (max-width: 760px) {
+  .jour { grid-template-columns: 1fr; }
+  .volets { overflow-x: auto; }
+}
