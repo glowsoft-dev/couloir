@@ -18,10 +18,24 @@ import { join } from "node:path";
 
 const JETON = "demo-couloir";
 const PORT_SERVEUR = 3000;
-const ÉCRANS = [
-  { nom: "écran 1", port: 8080 },
-  { nom: "écran 2", port: 8081 },
-];
+/**
+ * Combien d'écrans simuler.
+ *
+ * Deux suffisent pour éprouver une publication et une urgence. Il en faut
+ * autant que de bâtiments pour voir chacun prendre son propre emploi du
+ * temps — c'est le moment où la correspondance automatique se constate au
+ * lieu de se croire sur parole.
+ */
+const NOMBRE_ÉCRANS = (() => {
+  const drapeau = process.argv.indexOf("--ecrans");
+  const demandé = drapeau >= 0 ? Number(process.argv[drapeau + 1]) : 2;
+  return Number.isFinite(demandé) ? Math.min(Math.max(demandé, 1), 8) : 2;
+})();
+
+const ÉCRANS = Array.from({ length: NOMBRE_ÉCRANS }, (_, i) => ({
+  nom: `écran ${i + 1}`,
+  port: 8080 + i,
+}));
 
 const neuf = process.argv.includes("--neuf");
 const racine = join(tmpdir(), "couloir-demo");
@@ -257,7 +271,9 @@ if (ÉCRANS.some((é) => é.codeAppairage)) {
 
 console.log(`${c.gris("Scénarios à éprouver : docs/tester.md")}`);
 console.log(`${c.gris(`Journaux : ${FICHIER_JOURNAL}`)}`);
-console.log(`${c.gris("--journaux pour les voir défiler · --neuf pour repartir de zéro · Ctrl-C pour arrêter")}\n`);
+console.log(
+  `${c.gris("--journaux pour les voir défiler · --ecrans N pour en simuler plus · --neuf pour repartir de zéro · Ctrl-C pour arrêter")}\n`,
+);
 
 // On ne rend pas la main : les enfants tournent tant que la console est ouverte.
 await new Promise(() => {});

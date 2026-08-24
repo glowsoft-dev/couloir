@@ -18,7 +18,12 @@ lecteurs. Elle affiche ensuite trois adresses et les codes d'appairage.
 | Écran 2 | `http://127.0.0.1:8081` | le second, pour éprouver ce qui vise tout le parc |
 
 `Ctrl-C` arrête tout. `--neuf` repart d'une base vierge. `--journaux` montre
-les journaux du serveur et des écrans.
+les journaux du serveur et des écrans. `--ecrans N` en simule davantage —
+utile pour voir chaque bâtiment prendre son propre emploi du temps :
+
+```bash
+pnpm demo --ecrans 3
+```
 
 Les deux écrans sont de vrais lecteurs : ils téléchargent les médias,
 vérifient les empreintes SHA-256 et gardent leur contenu quand le réseau
