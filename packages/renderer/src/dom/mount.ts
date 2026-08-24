@@ -232,6 +232,10 @@ function renderSlide(
   switch (slide.kind) {
     case "media": {
       wrapper.classList.add("couloir-slide--media");
+      // « entier » par défaut : une affiche posée dans une colonne de deux
+      // tiers se ferait couper les côtés, et c'est le titre qui part en
+      // premier. Perdre du texte est pire qu'une bande de fond.
+      if (slide.fit === "remplir") wrapper.classList.add("couloir-slide--remplir");
       const url = options.assetUrl?.(slide.asset.id) ?? slide.asset.url;
       if (slide.asset.mime.startsWith("video/")) {
         const video = doc.createElement("video");

@@ -72,7 +72,7 @@ function T(e, t, n) {
   const r = C(t, n);
   return !(e.daysOfWeek && e.daysOfWeek.length > 0 && !e.daysOfWeek.includes(r.dayOfWeek) || e.dailyStart && e.dailyEnd && !E(r.minutesOfDay, e.dailyStart, e.dailyEnd));
 }
-function W(e, t, n) {
+function L(e, t, n) {
   const r = e.layout.zones.find((l) => l.id === t);
   if (!r) return null;
   const i = e.settings.timezone, a = e.schedules.filter((l) => l.zoneId === t).filter((l) => T(l, n, i));
@@ -82,7 +82,7 @@ function W(e, t, n) {
     l.priority >= o.priority && (o = l);
   return o.playlistId;
 }
-function L(e, t, n) {
+function W(e, t, n) {
   if (!e) return !0;
   if (e.startsAt && t < Date.parse(e.startsAt) || e.endsAt && t >= Date.parse(e.endsAt)) return !1;
   const r = C(t, n);
@@ -103,20 +103,20 @@ function q(e, t) {
     return i.daysOfWeek.includes(l ? r : n.dayOfWeek);
   });
 }
-const R = 130, _ = 2500, j = 6e4, U = 1.9;
+const R = 130, j = 2500, _ = 6e4, U = 1.9;
 function B(e) {
   const t = e.trim();
   return t === "" ? 0 : t.split(/\s+/).length;
 }
 function Z(e) {
   const t = B(e);
-  return Math.round(_ + t / R * 6e4);
+  return Math.round(j + t / R * 6e4);
 }
 function H(e) {
   return e.kind !== "template" ? "" : Object.values(e.fields).filter((t) => typeof t == "string").join(" ");
 }
 function J(e) {
-  const t = "durationMs" in e && e.durationMs ? e.durationMs : 0, n = Z(H(e)), r = Math.min(Math.max(t, n), j);
+  const t = "durationMs" in e && e.durationMs ? e.durationMs : 0, n = Z(H(e)), r = Math.min(Math.max(t, n), _);
   return { effectiveMs: r, requestedMs: t, extended: r > t };
 }
 function X(e) {
@@ -191,7 +191,7 @@ function Y(e) {
     };
   const p = (m) => {
     const h = r.get(m);
-    if (!h || !L(h.visibility, n, t.settings.timezone)) return !1;
+    if (!h || !W(h.visibility, n, t.settings.timezone)) return !1;
     switch (h.kind) {
       case "media":
         return e.availableAssetIds.has(h.assetId);
@@ -214,7 +214,7 @@ function Y(e) {
     return h ? h.kind === "media" && h.durationMs === void 0 ? null : J(h).effectiveMs : 0;
   }, k = e.forceFallback ? "fallback" : "normal", d = /* @__PURE__ */ new Map(), c = [], f = [];
   for (const m of t.layout.zones) {
-    const h = e.forceFallback ? t.fallbackPlaylistId : W(t, m.id, n) ?? m.playlistId, v = a.get(h), I = e.rotations.get(m.id), F = I && I.playlistId === h ? v?.slideIds[I.index] ?? null : null, S = G({
+    const h = e.forceFallback ? t.fallbackPlaylistId : L(t, m.id, n) ?? m.playlistId, v = a.get(h), I = e.rotations.get(m.id), F = I && I.playlistId === h ? v?.slideIds[I.index] ?? null : null, S = G({
       state: I,
       playlistId: h,
       slideIds: v?.slideIds ?? [],
@@ -271,7 +271,7 @@ function P(e, t, n, r) {
   switch (e.kind) {
     case "media": {
       const i = t.get(e.assetId);
-      return i ? { kind: "media", slideId: e.id, asset: i } : null;
+      return i ? { kind: "media", slideId: e.id, asset: i, fit: e.fit ?? "entier" } : null;
     }
     case "template":
       return { kind: "template", slideId: e.id, templateId: e.templateId, fields: e.fields };
@@ -380,7 +380,10 @@ const ee = `
   .couloir-zone { transition: none }
 }
 
-.couloir-media { width: 100%; height: 100%; object-fit: cover; display: block }
+/* L'image tient en entier par défaut. Rogner ferait disparaitre un titre
+   sans prévenir, et personne ne s'en apercevrait avant de passer devant. */
+.couloir-media { width: 100%; height: 100%; object-fit: contain; display: block }
+.couloir-slide--remplir .couloir-media { object-fit: cover }
 .couloir-slide--media { padding: 0 }
 
 .couloir-eyebrow {
@@ -429,6 +432,12 @@ const ee = `
 .couloir-slide:has(> .couloir-illustration) .couloir-body { max-width: 52ch; }
 
 /* --- colonne emploi du temps --- */
+/* Une journée se lit du haut. Centrée verticalement, elle laisse deux
+   grandes bandes vides sur une dalle entière — et l'oeil cherche où
+   commencer. */
+.couloir-slide:has(> .couloir-list),
+.couloir-slide:has(> .couloir-eyebrow + .couloir-list) { justify-content: flex-start; }
+
 .couloir-list { display: flex; flex-direction: column; gap: .5em; margin: 0; padding: 0; list-style: none }
 .couloir-row {
   display: grid;
@@ -637,7 +646,7 @@ function re(e, t, n, r, i) {
   const a = e.createElement("div");
   switch (a.className = "couloir-slide", a.dataset.slide = n.slideId, n.kind) {
     case "media": {
-      a.classList.add("couloir-slide--media");
+      a.classList.add("couloir-slide--media"), n.fit === "remplir" && a.classList.add("couloir-slide--remplir");
       const o = r.assetUrl?.(n.asset.id) ?? n.asset.url;
       if (n.asset.mime.startsWith("video/")) {
         const l = e.createElement("video");
@@ -824,12 +833,12 @@ async function de(e, t) {
   }
 }
 export {
-  _ as GLANCE_TIME_MS,
-  j as MAX_SENSIBLE_DURATION_MS,
+  j as GLANCE_TIME_MS,
+  _ as MAX_SENSIBLE_DURATION_MS,
   U as MIN_BODY_TEXT_HEIGHT_PERCENT,
   R as READING_WORDS_PER_MINUTE,
   ee as RENDERER_CSS,
-  W as activePlaylistId,
+  L as activePlaylistId,
   G as advanceRotation,
   Q as collapseEmptyZones,
   B as countWords,
@@ -839,7 +848,7 @@ export {
   q as isDisplayOffPeriod,
   A as isDisplayable,
   T as isScheduleActive,
-  L as isVisible,
+  W as isVisible,
   E as isWithinDailyWindow,
   C as localMoment,
   Z as minReadableDurationMs,

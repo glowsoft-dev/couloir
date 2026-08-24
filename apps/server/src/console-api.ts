@@ -62,7 +62,7 @@ export const CONSOLE_PREFIX = `${API_PREFIX}/console` as const;
  * qui alimente la rotation.
  */
 const PublishBody = z.object({
-  layout: z.enum(["plein-ecran", "principal-et-cours"]),
+  layout: z.enum(["plein-ecran", "principal-et-cours", "emploi-du-temps"]),
   items: z
     .array(
       z.object({
@@ -75,6 +75,8 @@ const PublishBody = z.object({
           })
           .optional(),
         durationMs: z.number().int().positive().max(60_000).optional(),
+        /** `remplir` rogne les bords. Défaut : l'image tient en entier. */
+        fit: z.enum(["entier", "remplir"]).optional(),
         /**
          * Quand cette affiche fait partie de la rotation.
          *
@@ -1006,7 +1008,11 @@ async function resolveSpec(
 
   // Avec NetYPareo, l'afficheur porte déjà tout le bâtiment : il n'y a pas de
   // classes à choisir, et en exiger une bloquerait la publication.
-  if (body.layout === "principal-et-cours" && options.timetable && !afficheur) {
+  if (
+    (body.layout === "principal-et-cours" || body.layout === "emploi-du-temps") &&
+    options.timetable &&
+    !afficheur
+  ) {
     const all = await options.timetable.listClasses();
     const wanted = body.timetableClassIds;
     timetableClasses = wanted?.length ? all.filter((c) => wanted.includes(c.id)) : all;

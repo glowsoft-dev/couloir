@@ -51,6 +51,8 @@ export interface PublishItem {
   durationMs?: number;
   /** Absente = le contenu passe toujours. C'est le cas courant. */
   visibility?: Visibility;
+  /** `remplir` rogne les bords. Défaut : l'image tient en entier. */
+  fit?: "entier" | "remplir";
 }
 
 export type CommandKind =
@@ -85,7 +87,7 @@ export interface DisplayOffWindow {
 }
 
 export interface PublishSpec {
-  layout: "plein-ecran" | "principal-et-cours";
+  layout: "plein-ecran" | "principal-et-cours" | "emploi-du-temps";
   items: PublishItem[];
   ticker?: string;
   /** Vide = toutes les classes défilent. Une seule = écran fixe. */

@@ -95,6 +95,18 @@ export const Slide = z.discriminatedUnion("kind", [
     id: z.string(),
     assetId: z.string(),
     visibility: Visibility.optional(),
+    /**
+     * Comment l'image occupe sa zone.
+     *
+     * `entier` par défaut : l'image tient en entier, quitte à laisser des
+     * bandes. `remplir` la fait couvrir toute la zone, en rognant les bords.
+     *
+     * Le défaut n'est pas neutre. Une affiche est faite pour une dalle
+     * entière ; posée dans une colonne de deux tiers, « remplir » lui coupe
+     * les côtés — et c'est le titre qui part en premier. Perdre du texte est
+     * pire qu'une bande de fond.
+     */
+    fit: z.enum(["entier", "remplir"]).optional(),
     /** Absent pour une vidéo : elle dure le temps qu'elle dure. */
     durationMs: z.number().int().positive().optional(),
   }),

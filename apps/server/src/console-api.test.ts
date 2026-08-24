@@ -767,6 +767,40 @@ describe("parcours de la console", () => {
     expect(manifest.dataSources.find((s) => s.id === "edt-3")?.stalePolicy).toBe("hide");
   });
 
+  it("compose un écran d'emploi du temps seul, sans zone principale", async () => {
+    // La mise en page d'un hall où l'on cherche une salle. Le premier jet
+    // laissait une programmation visant la zone principale supprimée — le
+    // composeur, qui revalide sa propre sortie, l'a refusée.
+    const manifest = composeWith({
+      layout: "emploi-du-temps",
+      items: [],
+      timetableAfficheurs: [
+        { id: "1", url: "http://serveur.test/connectors/netypareo/1", label: "Intégral" },
+      ],
+      ticker: "Cherchez votre salle",
+    } as never);
+
+    expect(findBrokenReferences(manifest)).toEqual([]);
+    expect(manifest.layout.id).toBe("emploi-du-temps");
+    expect(manifest.layout.zones.map((z) => z.id)).toEqual(["cours", "bandeau"]);
+    expect(manifest.layout.zones[0]!.rect.widthPercent).toBe(100);
+    expect(manifest.schedules.some((s) => s.zoneId === "principal")).toBe(false);
+  });
+
+  it("laisse l'image entière par défaut, et la fait remplir sur demande", async () => {
+    // Rogner ferait disparaître un titre sans prévenir : c'est le défaut le
+    // plus coûteux, parce que personne ne s'en aperçoit avant de passer
+    // devant l'écran.
+    const manifest = composeWith({
+      layout: "plein-ecran",
+      items: [{ assetId: poster.id }, { assetId: video.id, fit: "remplir" }],
+    } as never);
+
+    const [entiere, remplit] = manifest.slides.filter((s) => s.kind === "media");
+    expect((entiere as { fit?: string }).fit).toBeUndefined();
+    expect((remplit as { fit?: string }).fit).toBe("remplir");
+  });
+
   it("refuse de publier sur un écran inconnu", async () => {
     const { app, auth } = await ready();
     const response = await app.inject({

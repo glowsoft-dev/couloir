@@ -64,7 +64,10 @@ export const RENDERER_CSS = `
   .couloir-zone { transition: none }
 }
 
-.couloir-media { width: 100%; height: 100%; object-fit: cover; display: block }
+/* L'image tient en entier par défaut. Rogner ferait disparaitre un titre
+   sans prévenir, et personne ne s'en apercevrait avant de passer devant. */
+.couloir-media { width: 100%; height: 100%; object-fit: contain; display: block }
+.couloir-slide--remplir .couloir-media { object-fit: cover }
 .couloir-slide--media { padding: 0 }
 
 .couloir-eyebrow {
@@ -113,6 +116,12 @@ export const RENDERER_CSS = `
 .couloir-slide:has(> .couloir-illustration) .couloir-body { max-width: 52ch; }
 
 /* --- colonne emploi du temps --- */
+/* Une journée se lit du haut. Centrée verticalement, elle laisse deux
+   grandes bandes vides sur une dalle entière — et l'oeil cherche où
+   commencer. */
+.couloir-slide:has(> .couloir-list),
+.couloir-slide:has(> .couloir-eyebrow + .couloir-list) { justify-content: flex-start; }
+
 .couloir-list { display: flex; flex-direction: column; gap: .5em; margin: 0; padding: 0; list-style: none }
 .couloir-row {
   display: grid;

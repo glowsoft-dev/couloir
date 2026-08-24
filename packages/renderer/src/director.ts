@@ -19,7 +19,7 @@ import { type SourceSnapshot, type SourceState, isDisplayable, resolveSource, st
 export type ScreenMode = "normal" | "fallback" | "emergency" | "identify" | "display-off";
 
 export type RenderedSlide =
-  | { kind: "media"; slideId: string; asset: AssetRef }
+  | { kind: "media"; slideId: string; asset: AssetRef; fit: "entier" | "remplir" }
   | { kind: "template"; slideId: string; templateId: string; fields: Record<string, string | number | boolean> }
   | { kind: "widget"; slideId: string; widget: string; config: Record<string, unknown> }
   | {
@@ -300,7 +300,9 @@ function renderSlide(
   switch (slide.kind) {
     case "media": {
       const asset = assetsById.get(slide.assetId);
-      return asset ? { kind: "media", slideId: slide.id, asset } : null;
+      return asset
+        ? { kind: "media", slideId: slide.id, asset, fit: slide.fit ?? "entier" }
+        : null;
     }
     case "template":
       return { kind: "template", slideId: slide.id, templateId: slide.templateId, fields: slide.fields };

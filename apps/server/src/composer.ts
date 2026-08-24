@@ -16,7 +16,16 @@ import type { StoredMedia } from "./media.js";
  * combinaisons, ce qu'on ne ferait jamais en cliquant dans une interface.
  */
 
-export type LayoutChoice = "plein-ecran" | "principal-et-cours";
+/**
+ * Les trois mises en page.
+ *
+ * `plein-ecran` — les contenus occupent toute la dalle.
+ * `principal-et-cours` — les contenus à gauche, l'emploi du temps à droite.
+ * `emploi-du-temps` — l'emploi du temps seul, en grand. C'est celle d'un
+ *   hall où l'on cherche une salle : y glisser des affiches réduirait le
+ *   texte que les gens sont venus lire.
+ */
+export type LayoutChoice = "plein-ecran" | "principal-et-cours" | "emploi-du-temps";
 
 /**
  * Quand une affiche fait partie de la rotation.
@@ -41,6 +50,8 @@ export interface PublishItem {
   durationMs?: number;
   /** Absente = l'affiche passe toujours. C'est le cas courant. */
   visibility?: Visibility;
+  /** `remplir` rogne les bords pour couvrir la zone. Défaut : image entière. */
+  fit?: "entier" | "remplir";
 }
 
 export interface PublishSpec {
@@ -169,7 +180,13 @@ export function compose(input: ComposeInput): Manifest {
   // Un écran qui ne diffuse que les actualités du site est légitime : c'est
   // la configuration d'un hall d'accueil. Ce qu'on refuse, c'est un écran
   // sans rien du tout.
-  if (spec.items.length === 0 && !(spec.actualites && spec.actualites > 0)) {
+  // L'emploi du temps seul n'a besoin d'aucun contenu : c'est justement son
+  // objet.
+  if (
+    spec.layout !== "emploi-du-temps" &&
+    spec.items.length === 0 &&
+    !(spec.actualites && spec.actualites > 0)
+  ) {
     throw new CompositionError(
       "Ajoutez au moins un contenu, ou des actualités du site, avant de publier.",
     );
@@ -198,6 +215,7 @@ export function compose(input: ComposeInput): Manifest {
         kind: "media",
         id,
         assetId: media.id,
+        ...(item.fit === "remplir" ? { fit: "remplir" as const } : {}),
         ...(quand ? { visibility: quand } : {}),
         ...(isVideo ? {} : { durationMs: item.durationMs ?? DEFAULT_ITEM_DURATION_MS }),
       });
@@ -239,10 +257,11 @@ export function compose(input: ComposeInput): Manifest {
 
   const playlists: Playlist[] = [
     { id: "principale", slideIds: mainSlideIds },
-    { id: "repli", slideIds: [FALLBACK_SLIDE.id] },
+    { id: "repli", slideIds: [carteDIdentite(spec.identite?.nom).id] },
   ];
 
-  const withTimetable = spec.layout === "principal-et-cours";
+  const timetableSeul = spec.layout === "emploi-du-temps";
+  const withTimetable = spec.layout === "principal-et-cours" || timetableSeul;
   const withTicker = Boolean(spec.ticker?.trim());
   const nombreActualites = Math.max(0, Math.min(spec.actualites ?? 0, 10));
   /** Les sources d'emploi du temps réellement montées, une par afficheur. */
@@ -383,7 +402,7 @@ export function compose(input: ComposeInput): Manifest {
         : {}),
       ...input.settings,
     },
-    layout: buildLayout(withTimetable, withTicker),
+    layout: buildLayout(withTimetable, withTicker, timetableSeul),
     playlists,
     slides,
     assets,
@@ -431,7 +450,7 @@ export function compose(input: ComposeInput): Manifest {
           ]
         : []),
     ],
-    schedules: buildSchedules(withTimetable, withTicker),
+    schedules: buildSchedules(withTimetable, withTicker, timetableSeul),
     emergency: null,
     fallbackPlaylistId: "repli",
   };
@@ -447,10 +466,15 @@ export function compose(input: ComposeInput): Manifest {
   return manifest;
 }
 
-function buildLayout(withTimetable: boolean, withTicker: boolean): Layout {
+function buildLayout(withTimetable: boolean, withTicker: boolean, timetableSeul = false): Layout {
   const contentHeight = withTicker ? 91 : 100;
-  const zones: Layout["zones"] = [
-    {
+  const zones: Layout["zones"] = [];
+
+  // L'emploi du temps seul : pas de zone principale du tout. Une zone vide
+  // que le rendu replierait laisserait la colonne des cours à un tiers de la
+  // dalle, alors qu'on la veut entière.
+  if (!timetableSeul) {
+    zones.push({
       id: "principal",
       rect: {
         xPercent: 0,
@@ -459,13 +483,18 @@ function buildLayout(withTimetable: boolean, withTicker: boolean): Layout {
         heightPercent: contentHeight,
       },
       playlistId: "principale",
-    },
-  ];
+    });
+  }
 
   if (withTimetable) {
     zones.push({
       id: "cours",
-      rect: { xPercent: 66, yPercent: 0, widthPercent: 34, heightPercent: contentHeight },
+      rect: {
+        xPercent: timetableSeul ? 0 : 66,
+        yPercent: 0,
+        widthPercent: timetableSeul ? 100 : 34,
+        heightPercent: contentHeight,
+      },
       playlistId: "cours",
     });
   }
@@ -478,13 +507,26 @@ function buildLayout(withTimetable: boolean, withTicker: boolean): Layout {
     });
   }
 
-  return { id: withTimetable ? "principal-et-cours" : "plein-ecran", orientation: "landscape", zones };
+  const id = timetableSeul
+    ? "emploi-du-temps"
+    : withTimetable
+      ? "principal-et-cours"
+      : "plein-ecran";
+  return { id, orientation: "landscape", zones };
 }
 
-function buildSchedules(withTimetable: boolean, withTicker: boolean): Manifest["schedules"] {
-  const schedules: Manifest["schedules"] = [
-    { id: "s-principal", zoneId: "principal", playlistId: "principale", priority: 0 },
-  ];
+function buildSchedules(
+  withTimetable: boolean,
+  withTicker: boolean,
+  timetableSeul = false,
+): Manifest["schedules"] {
+  const schedules: Manifest["schedules"] = [];
+  // Pas de zone principale dans la mise en page « emploi du temps seul » :
+  // la programmer viserait une zone qui n'existe pas. Le composeur revalide
+  // sa propre sortie et l'aurait refusé — il l'a d'ailleurs refusé.
+  if (!timetableSeul) {
+    schedules.push({ id: "s-principal", zoneId: "principal", playlistId: "principale", priority: 0 });
+  }
   if (withTimetable) {
     schedules.push({ id: "s-cours", zoneId: "cours", playlistId: "cours", priority: 0 });
   }

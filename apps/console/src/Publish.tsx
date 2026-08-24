@@ -59,7 +59,7 @@ export function PublishPanel({
 }) {
   const [media, setMedia] = useState<Media[]>([]);
   const [items, setItems] = useState<Draft[]>([]);
-  const [layout, setLayout] = useState<"plein-ecran" | "principal-et-cours">("plein-ecran");
+  const [layout, setLayout] = useState<PublishSpec["layout"]>("plein-ecran");
   const [ticker, setTicker] = useState("");
   /** Vide = toutes les classes défilent. Une seule = écran fixe. */
   const [classIds, setClassIds] = useState<string[]>([]);
@@ -310,10 +310,15 @@ export function PublishPanel({
     }
   }
 
+  /** Les deux mises en page qui portent une colonne de cours. */
+  const avecCours = layout === "principal-et-cours" || layout === "emploi-du-temps";
+
   const invalidText = items.some((item) => item.text && !item.text.titre.trim());
   // Un écran qui ne diffuse que les actualités du site est une configuration
   // parfaitement légitime : c'est même celle du hall d'accueil.
-  const ready = (items.length > 0 || actualites > 0) && !invalidText;
+  // L'emploi du temps seul n'a besoin d'aucun contenu : c'est son objet.
+  const ready =
+    (layout === "emploi-du-temps" || items.length > 0 || actualites > 0) && !invalidText;
   const nothingLive = live.loaded && live.version === null;
 
   return (
@@ -381,12 +386,20 @@ export function PublishPanel({
               value={layout}
               onChange={(e) => touch(() => setLayout(e.target.value as typeof layout))}
             >
-              <option value="plein-ecran">Plein écran</option>
-              <option value="principal-et-cours">Contenu + colonne des cours</option>
+              <option value="plein-ecran">Vos contenus, en plein écran</option>
+              <option value="principal-et-cours">Vos contenus + l'emploi du temps à droite</option>
+              <option value="emploi-du-temps">L'emploi du temps seul, en grand</option>
             </select>
+            <p className="hint">
+              {layout === "plein-ecran"
+                ? "Affiches, vidéos et textes occupent toute la dalle."
+                : layout === "principal-et-cours"
+                  ? "Les contenus à gauche sur deux tiers, l'emploi du temps à droite."
+                  : "Rien d'autre que les cours et les salles. C'est la mise en page d'un hall où l'on cherche une salle."}
+            </p>
           </div>
 
-          {layout === "principal-et-cours" && afficheurs.length > 0 && (
+          {avecCours && afficheurs.length > 0 && (
             <div className="field">
               <label>Emploi du temps affiché</label>
               <div className="day-picker">
@@ -422,7 +435,7 @@ export function PublishPanel({
             </div>
           )}
 
-          {layout === "principal-et-cours" && (
+          {avecCours && (
             <div className="field">
               <label>Ce que montre la colonne des cours</label>
               <div className="day-picker">
@@ -459,7 +472,7 @@ export function PublishPanel({
             </div>
           )}
 
-          {layout === "principal-et-cours" && afficheurs.length === 0 && (
+          {avecCours && afficheurs.length === 0 && (
             <div className="field">
               <label>Classes affichées dans la colonne</label>
               {classes.length === 0 ? (
@@ -607,6 +620,37 @@ export function PublishPanel({
                   {/* Groupés : la grille de la rangée compte quatre colonnes,
                       pas six, et trois boutons à la suite la feraient passer
                       sur deux lignes. */}
+                  {!item.text && (
+                    <button
+                      type="button"
+                      className="ajustement"
+                      aria-pressed={item.fit === "remplir"}
+                      title={
+                        item.fit === "remplir"
+                          ? "L'image couvre toute la zone, quitte à rogner les bords."
+                          : "L'image tient en entier, quitte à laisser des bandes."
+                      }
+                      onClick={() =>
+                        touch(() =>
+                          setItems((current) =>
+                            current.map((it) =>
+                              it.key === item.key
+                                ? ({
+                                    ...it,
+                                    ...(it.fit === "remplir"
+                                      ? { fit: undefined }
+                                      : { fit: "remplir" as const }),
+                                  } as Draft)
+                                : it,
+                            ),
+                          ),
+                        )
+                      }
+                    >
+                      {item.fit === "remplir" ? "Remplit" : "Entière"}
+                    </button>
+                  )}
+
                   <Periode
                     valeur={item.visibility}
                     libellé={`Contenu ${index + 1}`}
@@ -715,7 +759,7 @@ export function PublishPanel({
           </div>
 
           {/* Un bouton grisé sans explication laisse chercher. */}
-          {items.length === 0 && actualites === 0 && (
+          {items.length === 0 && actualites === 0 && layout !== "emploi-du-temps" && (
             <p className="hint">
               Ajoutez au moins un contenu, ou des actualités du site, pour pouvoir publier.
             </p>

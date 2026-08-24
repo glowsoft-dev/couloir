@@ -1105,6 +1105,40 @@ poussaient à ne plus rien toucher. Les actions qui laissent un couloir noir se
 signalent maintenant au survol ; la vraie garde est la confirmation qui suit,
 et celle-là, on la lit.
 
+## Trois mises en page, et une image qu'on ne coupe pas
+
+`plein-ecran` — les contenus occupent la dalle.
+`principal-et-cours` — les contenus sur deux tiers, l'emploi du temps à droite.
+`emploi-du-temps` — l'emploi du temps seul, en grand.
+
+La troisième est celle d'un hall où l'on cherche une salle. Y glisser des
+affiches réduirait le texte que les gens sont précisément venus lire. Elle n'a
+donc **aucune zone principale** — pas une zone vide que le rendu replierait,
+mais pas de zone du tout, sans quoi la colonne des cours resterait à un tiers
+de la dalle.
+
+Le composeur a d'ailleurs refusé le premier jet : il revalide sa propre sortie,
+et une programmation visait encore la zone principale supprimée. C'est le
+genre d'erreur qui, sans cette revalidation, se serait découverte sur un écran
+posé à quatre mètres de haut.
+
+### L'image tient en entier par défaut
+
+Une affiche est faite pour une dalle entière. Posée dans une colonne de deux
+tiers, `object-fit: cover` lui coupe les côtés — et c'est le titre qui part en
+premier : « SAMEDI 12 SEPTEMBRE » devient « EDI 12 SEPTEMBRE ». Personne ne
+s'en aperçoit avant de passer devant l'écran.
+
+Le défaut est donc `contain` : l'image tient en entier, quitte à laisser des
+bandes. Perdre du texte est pire qu'une bande de fond. Chaque contenu porte un
+bouton « Entière / Remplit » pour ceux qui veulent le bord à bord — une photo
+d'ambiance, un fond.
+
+### Une liste se lit du haut
+
+Centrée verticalement, une journée entière laissait deux grandes bandes vides
+sur une dalle et l'oeil cherchait où commencer.
+
 ## Ce qui n'est pas encore fait
 
 Le socle tourne, mais il reste volontairement incomplet :
