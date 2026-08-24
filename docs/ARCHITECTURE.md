@@ -970,6 +970,23 @@ l'enseignant à sa civilité plutôt qu'à sa position : se fier à l'ordre fera
 passer une salle pour un nom le jour où l'enseignant n'est pas renseigné. Et
 « A distance » figure là où on attendrait une salle.
 
+### Six informations, six affichées
+
+NetYPareo donne, pour chaque séance : heure de début, heure de fin, groupe,
+module, salle, enseignant. Le premier jet n'en dessinait que quatre —
+l'enseignant et l'heure de fin arrivaient jusqu'au boîtier et n'apparaissaient
+nulle part. Laisser deux informations au fond de la charge utile, c'est faire
+monter quelqu'un à l'échelle pour savoir avec qui a lieu le cours.
+
+Elles se rangent par ordre de question posée. L'heure de fin sous l'heure de
+début : dans un couloir on se demande d'abord « ça commence quand », et
+seulement ensuite « est-ce que c'est encore en cours ». L'enseignant sous la
+salle : « où » puis « avec qui ». Le module sous le groupe : « pour qui »
+puis « quoi ».
+
+Les mettre en colonnes séparées aurait réduit l'intitulé, qui est justement
+ce qu'on lit de loin.
+
 ### Ce qui ne tient pas sur un mur
 
 Le premier jet versait le commentaire de séance dans la pastille réservée aux

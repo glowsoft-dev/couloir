@@ -422,7 +422,13 @@ function renderDataView(
       if (entry.change === "cancelled") row.classList.add("couloir-row--cancelled");
 
       const time = doc.createElement("time");
-      time.textContent = entry.time;
+      time.appendChild(doc.createTextNode(entry.time));
+      // L'heure de fin, plus discrète, sous l'heure de début : dans un
+      // couloir on se demande d'abord « ça commence quand », et seulement
+      // ensuite « est-ce que c'est encore en cours ».
+      if (entry.endTime && entry.endTime !== entry.time) {
+        time.appendChild(el(doc, "span", "couloir-fin", entry.endTime));
+      }
 
       const label = doc.createElement("span");
       label.appendChild(doc.createTextNode(entry.subject));
@@ -431,7 +437,15 @@ function renderDataView(
       // le module dit ce qui s'y passe. L'un sans l'autre laisse chercher.
       if (entry.detail) label.appendChild(el(doc, "span", "couloir-detail", entry.detail));
 
-      row.append(time, label, el(doc, "span", "room", entry.room));
+      // Salle et enseignant dans la même colonne : ce sont les deux réponses
+      // à « où » et « avec qui », et les séparer en deux colonnes réduirait
+      // l'intitulé, qui est ce qu'on lit de loin.
+      const lieu = doc.createElement("span");
+      lieu.className = "room";
+      lieu.appendChild(doc.createTextNode(entry.room));
+      if (entry.teacher) lieu.appendChild(el(doc, "span", "couloir-prof", entry.teacher));
+
+      row.append(time, label, lieu);
       list.appendChild(row);
     }
     wrapper.appendChild(list);

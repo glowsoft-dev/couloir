@@ -1,4 +1,4 @@
-const F = {
+const N = {
   Mon: 1,
   Tue: 2,
   Wed: 3,
@@ -7,7 +7,7 @@ const F = {
   Sat: 6,
   Sun: 7
 };
-function D(e, t) {
+function F(e, t) {
   const n = new Intl.DateTimeFormat("en-CA", {
     timeZone: t,
     year: "numeric",
@@ -16,7 +16,7 @@ function D(e, t) {
   }).formatToParts(new Date(e)), r = (i) => n.find((o) => o.type === i)?.value ?? "";
   return `${r("year")}-${r("month")}-${r("day")}`;
 }
-function E(e, t) {
+function C(e, t) {
   const n = new Intl.DateTimeFormat("en-US", {
     timeZone: t,
     weekday: "short",
@@ -25,7 +25,7 @@ function E(e, t) {
     hour12: !1
   }).formatToParts(new Date(e)), r = (l) => n.find((a) => a.type === l)?.value ?? "", i = Number(r("hour")) % 24, o = Number(r("minute"));
   return {
-    dayOfWeek: F[r("weekday")] ?? 1,
+    dayOfWeek: N[r("weekday")] ?? 1,
     minutesOfDay: i * 60 + o
   };
 }
@@ -33,11 +33,11 @@ function x(e) {
   const [t, n] = e.split(":");
   return Number(t) * 60 + Number(n);
 }
-function M(e, t, n) {
+function E(e, t, n) {
   const r = x(t), i = x(n);
   return r === i ? !0 : r < i ? e >= r && e < i : e >= r || e < i;
 }
-function N(e, t, n) {
+function D(e, t, n) {
   if (!t) return { status: "never-loaded" };
   const r = Math.max(0, (n - t.fetchedAtMs) / 1e3);
   if (r <= e.maxStaleSec)
@@ -67,26 +67,26 @@ function $(e, t = "fr-FR", n = "Europe/Paris") {
     minute: "2-digit"
   }).format(new Date(e.fetchedAtMs))}`;
 }
-function W(e, t, n) {
+function T(e, t, n) {
   if (e.startsAt && t < Date.parse(e.startsAt) || e.endsAt && t >= Date.parse(e.endsAt)) return !1;
-  const r = E(t, n);
-  return !(e.daysOfWeek && e.daysOfWeek.length > 0 && !e.daysOfWeek.includes(r.dayOfWeek) || e.dailyStart && e.dailyEnd && !M(r.minutesOfDay, e.dailyStart, e.dailyEnd));
+  const r = C(t, n);
+  return !(e.daysOfWeek && e.daysOfWeek.length > 0 && !e.daysOfWeek.includes(r.dayOfWeek) || e.dailyStart && e.dailyEnd && !E(r.minutesOfDay, e.dailyStart, e.dailyEnd));
 }
-function L(e, t, n) {
+function W(e, t, n) {
   const r = e.layout.zones.find((a) => a.id === t);
   if (!r) return null;
-  const i = e.settings.timezone, o = e.schedules.filter((a) => a.zoneId === t).filter((a) => W(a, n, i));
+  const i = e.settings.timezone, o = e.schedules.filter((a) => a.zoneId === t).filter((a) => T(a, n, i));
   if (o.length === 0) return r.playlistId;
   let l = o[0];
   for (const a of o.slice(1))
     a.priority >= l.priority && (l = a);
   return l.playlistId;
 }
-function T(e, t, n) {
+function L(e, t, n) {
   if (!e) return !0;
   if (e.startsAt && t < Date.parse(e.startsAt) || e.endsAt && t >= Date.parse(e.endsAt)) return !1;
-  const r = E(t, n);
-  if (e.dailyStart && e.dailyEnd && !M(r.minutesOfDay, e.dailyStart, e.dailyEnd))
+  const r = C(t, n);
+  if (e.dailyStart && e.dailyEnd && !E(r.minutesOfDay, e.dailyStart, e.dailyEnd))
     return !1;
   if (e.daysOfWeek && e.daysOfWeek.length > 0) {
     const i = (r.dayOfWeek + 5) % 7 + 1, o = !!(e.dailyStart && e.dailyEnd) && x(e.dailyStart) > x(e.dailyEnd) && r.minutesOfDay < x(e.dailyEnd);
@@ -95,9 +95,9 @@ function T(e, t, n) {
   return !0;
 }
 function q(e, t) {
-  const n = E(t, e.timezone), r = (n.dayOfWeek + 5) % 7 + 1;
+  const n = C(t, e.timezone), r = (n.dayOfWeek + 5) % 7 + 1;
   return e.displayOff.some((i) => {
-    if (!M(n.minutesOfDay, i.from, i.to)) return !1;
+    if (!E(n.minutesOfDay, i.from, i.to)) return !1;
     if (i.daysOfWeek.length === 0) return !0;
     const o = x(i.from), l = x(i.to), a = o > l && n.minutesOfDay < l;
     return i.daysOfWeek.includes(a ? r : n.dayOfWeek);
@@ -128,7 +128,7 @@ function X(e) {
     caption: Math.round(t * 0.8)
   };
 }
-function C(e, t, n) {
+function M(e, t, n) {
   for (let r = 1; r <= e.length; r++) {
     const i = (t + r) % e.length, o = e[i];
     if (o !== void 0 && n(o)) return i;
@@ -157,18 +157,18 @@ function G(e) {
     return s(V(r, i));
   const u = r[t.index];
   if (u === void 0 || !i(u))
-    return s(C(r, t.index, i));
+    return s(M(r, t.index, i));
   const p = o(u), b = l - t.slideStartedAtMs;
   if (!(p === null ? e.mediaEnded === !0 : b >= p))
     return { state: t, currentSlideId: u, changed: !1 };
-  const d = C(r, t.index, i);
+  const d = M(r, t.index, i);
   return s(d === null ? null : d);
 }
 function Y(e) {
   const { manifest: t, nowMs: n } = e, r = new Map(t.slides.map((m) => [m.id, m])), i = new Map(t.assets.map((m) => [m.id, m])), o = new Map(t.playlists.map((m) => [m.id, m])), l = new Map(
     t.dataSources.map((m) => [
       m.id,
-      N(m, e.sources.get(m.id), n)
+      D(m, e.sources.get(m.id), n)
     ])
   ), a = t.settings.showScreenCodeWatermark ? e.screenCode ?? null : null, s = t.settings.branding?.accent ?? null, u = t.emergency;
   if (u && n < Date.parse(u.validUntil))
@@ -191,7 +191,7 @@ function Y(e) {
     };
   const p = (m) => {
     const g = r.get(m);
-    if (!g || !T(g.visibility, n, t.settings.timezone)) return !1;
+    if (!g || !L(g.visibility, n, t.settings.timezone)) return !1;
     switch (g.kind) {
       case "media":
         return e.availableAssetIds.has(g.assetId);
@@ -204,7 +204,7 @@ function Y(e) {
         if (v === void 0 || !A(v)) return !1;
         if (g.view.startsWith("timetable") && "payload" in v) {
           const I = K(v.payload, g.params.classId);
-          if (I?.date && I.date !== D(n, t.settings.timezone)) return !1;
+          if (I?.date && I.date !== F(n, t.settings.timezone)) return !1;
         }
         return !0;
       }
@@ -214,7 +214,7 @@ function Y(e) {
     return g ? g.kind === "media" && g.durationMs === void 0 ? null : J(g).effectiveMs : 0;
   }, k = e.forceFallback ? "fallback" : "normal", d = /* @__PURE__ */ new Map(), c = [], f = [];
   for (const m of t.layout.zones) {
-    const g = e.forceFallback ? t.fallbackPlaylistId : L(t, m.id, n) ?? m.playlistId, v = o.get(g), I = e.rotations.get(m.id), O = I && I.playlistId === g ? v?.slideIds[I.index] ?? null : null, S = G({
+    const g = e.forceFallback ? t.fallbackPlaylistId : W(t, m.id, n) ?? m.playlistId, v = o.get(g), I = e.rotations.get(m.id), O = I && I.playlistId === g ? v?.slideIds[I.index] ?? null : null, S = G({
       state: I,
       playlistId: g,
       slideIds: v?.slideIds ?? [],
@@ -434,13 +434,25 @@ const ee = `
   display: grid;
   grid-template-columns: auto 1fr auto;
   gap: .8em;
-  align-items: baseline;
+  /* start et non baseline : chaque colonne porte maintenant deux lignes, et
+     un alignement sur la première ligne de texte décalerait les blocs.
+     (Pas d'accent grave dans ce fichier : il est écrit dans un littéral de
+     gabarit, et un seul y terminerait la chaîne.) */
+  align-items: start;
   font-size: var(--fs-body);
   padding-bottom: .45em;
   border-bottom: 1px solid var(--rule);
 }
 .couloir-row time { font-variant-numeric: tabular-nums; color: var(--accent); font-weight: 600 }
-.couloir-row .room { color: var(--ink-soft); font-size: .85em }
+.couloir-row .room {
+  color: var(--ink-soft); font-size: .85em;
+  display: flex; flex-direction: column; align-items: flex-end; gap: .05em;
+  text-align: right;
+}
+/* L'enseignant sous la salle, et l'heure de fin sous l'heure de début : deux
+   informations utiles qu'on ne cherche qu'après avoir trouvé la première. */
+.couloir-prof { color: var(--ink-faint); font-size: .82em; font-weight: 400 }
+.couloir-fin { display: block; color: var(--ink-faint); font-size: .8em; font-weight: 400 }
 /* Le module passe sous l'intitulé, en plus discret : on lit d'abord à qui la
    séance s'adresse, puis ce qui s'y passe. */
 .couloir-detail {
@@ -700,9 +712,11 @@ function ae(e, t, n) {
       const l = o.change && o.change !== "none", a = e.createElement("li");
       a.className = l ? "couloir-row couloir-row--changed" : "couloir-row", o.change === "cancelled" && a.classList.add("couloir-row--cancelled");
       const s = e.createElement("time");
-      s.textContent = o.time;
+      s.appendChild(e.createTextNode(o.time)), o.endTime && o.endTime !== o.time && s.appendChild(y(e, "span", "couloir-fin", o.endTime));
       const u = e.createElement("span");
-      u.appendChild(e.createTextNode(o.subject)), o.note && u.appendChild(y(e, "span", "couloir-badge", o.note)), o.detail && u.appendChild(y(e, "span", "couloir-detail", o.detail)), a.append(s, u, y(e, "span", "room", o.room)), i.appendChild(a);
+      u.appendChild(e.createTextNode(o.subject)), o.note && u.appendChild(y(e, "span", "couloir-badge", o.note)), o.detail && u.appendChild(y(e, "span", "couloir-detail", o.detail));
+      const p = e.createElement("span");
+      p.className = "room", p.appendChild(e.createTextNode(o.room)), o.teacher && p.appendChild(y(e, "span", "couloir-prof", o.teacher)), a.append(s, u, p), i.appendChild(a);
     }
     t.appendChild(i);
     return;
@@ -808,23 +822,23 @@ export {
   U as MIN_BODY_TEXT_HEIGHT_PERCENT,
   R as READING_WORDS_PER_MINUTE,
   ee as RENDERER_CSS,
-  L as activePlaylistId,
+  W as activePlaylistId,
   G as advanceRotation,
   Q as collapseEmptyZones,
   B as countWords,
-  D as dateLocale,
+  F as dateLocale,
   Y as direct,
   J as effectiveDuration,
   q as isDisplayOffPeriod,
   A as isDisplayable,
-  W as isScheduleActive,
-  T as isVisible,
-  M as isWithinDailyWindow,
-  E as localMoment,
+  T as isScheduleActive,
+  L as isVisible,
+  E as isWithinDailyWindow,
+  C as localMoment,
   Z as minReadableDurationMs,
   te as mountRenderer,
   x as parseClock,
-  N as resolveSource,
+  D as resolveSource,
   H as slideText,
   $ as stalenessLabel,
   ce as startPlayer,

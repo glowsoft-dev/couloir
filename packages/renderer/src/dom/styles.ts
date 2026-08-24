@@ -118,13 +118,25 @@ export const RENDERER_CSS = `
   display: grid;
   grid-template-columns: auto 1fr auto;
   gap: .8em;
-  align-items: baseline;
+  /* start et non baseline : chaque colonne porte maintenant deux lignes, et
+     un alignement sur la première ligne de texte décalerait les blocs.
+     (Pas d'accent grave dans ce fichier : il est écrit dans un littéral de
+     gabarit, et un seul y terminerait la chaîne.) */
+  align-items: start;
   font-size: var(--fs-body);
   padding-bottom: .45em;
   border-bottom: 1px solid var(--rule);
 }
 .couloir-row time { font-variant-numeric: tabular-nums; color: var(--accent); font-weight: 600 }
-.couloir-row .room { color: var(--ink-soft); font-size: .85em }
+.couloir-row .room {
+  color: var(--ink-soft); font-size: .85em;
+  display: flex; flex-direction: column; align-items: flex-end; gap: .05em;
+  text-align: right;
+}
+/* L'enseignant sous la salle, et l'heure de fin sous l'heure de début : deux
+   informations utiles qu'on ne cherche qu'après avoir trouvé la première. */
+.couloir-prof { color: var(--ink-faint); font-size: .82em; font-weight: 400 }
+.couloir-fin { display: block; color: var(--ink-faint); font-size: .8em; font-weight: 400 }
 /* Le module passe sous l'intitulé, en plus discret : on lit d'abord à qui la
    séance s'adresse, puis ce qui s'y passe. */
 .couloir-detail {

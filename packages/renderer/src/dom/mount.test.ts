@@ -192,6 +192,92 @@ describe("économie de rendu", () => {
     expect(container.textContent).not.toContain("Portes ouvertes");
   });
 
+  it("dessine tout ce que la séance porte : horaires, groupe, module, salle, enseignant", () => {
+    // Six informations arrivent du logiciel de l'école. En laisser deux au
+    // fond de la charge utile, c'est faire monter quelqu'un à l'échelle pour
+    // savoir avec qui a lieu le cours.
+    const renderer = mountRenderer(container);
+    renderer.update({
+      ...zonesScreen(),
+      zones: [
+        {
+          ...zonesScreen().zones[0]!,
+          slide: {
+            kind: "data",
+            slideId: "cours",
+            sourceId: "edt",
+            view: "timetable-day",
+            params: {},
+            staleLabel: null,
+            payload: {
+              days: [
+                {
+                  classId: "bat-b",
+                  classLabel: "Bâtiment B",
+                  entries: [
+                    {
+                      time: "08:30",
+                      endTime: "12:00",
+                      subject: "BTS Gestion 2e année",
+                      detail: "Gérer la relation client",
+                      room: "CCI SALLE B11",
+                      teacher: "M. MAGNIEN C.",
+                    },
+                  ],
+                },
+              ],
+            },
+          },
+        },
+      ],
+    });
+
+    const texte = container.textContent ?? "";
+    for (const attendu of [
+      "08:30",
+      "12:00",
+      "BTS Gestion 2e année",
+      "Gérer la relation client",
+      "CCI SALLE B11",
+      "M. MAGNIEN C.",
+    ]) {
+      expect(texte).toContain(attendu);
+    }
+  });
+
+  it("ne laisse pas de trou quand l'enseignant ou l'heure de fin manquent", () => {
+    const renderer = mountRenderer(container);
+    renderer.update({
+      ...zonesScreen(),
+      zones: [
+        {
+          ...zonesScreen().zones[0]!,
+          slide: {
+            kind: "data",
+            slideId: "cours",
+            sourceId: "edt",
+            view: "timetable-day",
+            params: {},
+            staleLabel: null,
+            payload: {
+              days: [
+                {
+                  classId: "bat-b",
+                  classLabel: "Bâtiment B",
+                  entries: [{ time: "08:30", subject: "Atelier", room: "A distance" }],
+                },
+              ],
+            },
+          },
+        },
+      ],
+    });
+
+    expect(container.textContent).toContain("A distance");
+    expect(container.querySelector(".couloir-prof")).toBeNull();
+    expect(container.querySelector(".couloir-fin")).toBeNull();
+  });
+
   it("retire une zone qui a disparu de la mise en page", () => {
     const renderer = mountRenderer(container);
     renderer.update(zonesScreen());
