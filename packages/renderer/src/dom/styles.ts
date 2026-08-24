@@ -125,6 +125,12 @@ export const RENDERER_CSS = `
 }
 .couloir-row time { font-variant-numeric: tabular-nums; color: var(--accent); font-weight: 600 }
 .couloir-row .room { color: var(--ink-soft); font-size: .85em }
+/* Le module passe sous l'intitulé, en plus discret : on lit d'abord à qui la
+   séance s'adresse, puis ce qui s'y passe. */
+.couloir-detail {
+  display: block; color: var(--ink-soft); font-size: .78em;
+  font-weight: 400; line-height: 1.25; margin-top: .1em;
+}
 .couloir-row--changed { color: var(--signal) }
 /* Annulé : barré, mais TOUJOURS affiché. Le faire disparaître priverait
    l'élève de l'information qui l'intéresse le plus. */

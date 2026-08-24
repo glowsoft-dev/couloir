@@ -187,15 +187,15 @@ li::marker{color:var(--ink-faint)}
 
 <main class="doc">
 
-<p class="eyebrow">Couloir · 23 août 2026</p>
+<p class="eyebrow">Couloir · 24 août 2026</p>
 <h1>Ce qui marche aujourd'hui</h1>
 <p class="deck">L'état réel du projet, vérifié dans le code — pas ce qui était prévu.</p>
 
 <div class="tally">
-  <div class="c-ok"><b>48</b><span>utilisables</span></div>
+  <div class="c-ok"><b>50</b><span>utilisables</span></div>
   <div class="c-half"><b>1</b><span>écrit, pas branché</span></div>
   <div class="c-none"><b>10</b><span>pas commencés</span></div>
-  <div><b>253</b><span>tests verts</span></div>
+  <div><b>272</b><span>tests verts</span></div>
 </div>
 
 <div class="legend" style="margin-top:22px">
@@ -414,6 +414,14 @@ li::marker{color:var(--ink-faint)}
       <b>Vacances annoncées</b>
       <span class="why">L'écran dit « Vacances de la Toussaint » au lieu d'afficher une liste vide qui ressemblerait à une panne.</span>
     </div></div>
+    <div class="item ok"><div class="bar"></div><div class="text">
+      <b>Emploi du temps depuis NetYPareo</b>
+      <span class="why">Branché sur les « afficheurs planning » de NetYPareo, faits pour des écrans de couloir. Un écran du bâtiment B lit l'afficheur du bâtiment B, sans réglage : la correspondance se fait sur le code d'étiquette. Plus de double saisie — deux saisies finissent toujours par diverger, et c'est l'écran qui a tort.</span>
+    </div></div>
+    <div class="item ok"><div class="bar"></div><div class="text">
+      <b>Identité de l'établissement</b>
+      <span class="why">Nom et couleur d'accent réglables. Le fond des dalles reste sombre quelle que soit la charte : une dalle claire éblouit le soir et perd en contraste à quatre mètres. La console mesure le contraste de la couleur choisie et prévient quand il est trop faible.</span>
+    </div></div>
     <div class="item none"><div class="bar"></div><div class="text">
       <b>Import d'une grille existante</b>
       <span class="why">Tout se saisit à la main. Un import CSV ferait gagner des heures au démarrage.</span>
@@ -537,6 +545,6 @@ li::marker{color:var(--ink-faint)}
   </div>
 </section>
 
-<p class="endnote">État vérifié dans le code le 23 août 2026 — 253 tests automatisés, dont la résilience réseau, la persistance, les comptes, le moteur d'emploi du temps et les périodes d'affichage.</p>
+<p class="endnote">État vérifié dans le code le 24 août 2026 — 272 tests automatisés, dont la résilience réseau, la persistance, les comptes, le moteur d'emploi du temps et les périodes d'affichage.</p>
 
 </main>

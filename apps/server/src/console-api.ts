@@ -14,6 +14,7 @@ import {
   type ServiceActualites,
   type ServiceIdentite,
 } from "./connecteurs/service.js";
+import type { ServiceNetypareo } from "./connecteurs/service-netypareo.js";
 import { NOM_COOKIE, enregistrerRoutesComptes, journaliserAction, pouvoirRequis } from "./comptes/routes.js";
 import { peut } from "./comptes/roles.js";
 
@@ -174,6 +175,8 @@ export interface ConsoleApiOptions {
   actualites?: ServiceActualites;
   /** L'identité de l'établissement, inscrite dans chaque manifeste. */
   identite?: ServiceIdentite;
+  /** Le branchement sur NetYPareo. */
+  netypareo?: ServiceNetypareo;
 }
 
 export function registerConsoleApi(app: FastifyInstance, options: ConsoleApiOptions): void {
@@ -398,6 +401,76 @@ export function registerConsoleApi(app: FastifyInstance, options: ConsoleApiOpti
     // Les manifestes déjà publiés portent l'ancienne identité : on ne les
     // réécrit pas dans le dos de qui a publié. Le prochain envoi la portera.
     return { identite };
+  });
+
+  // --- NetYPareo -----------------------------------------------------------
+
+  const ReglagesNety = z.object({
+    baseUrl: z.string().min(1),
+    actif: z.boolean().default(true),
+    afficheurs: z
+      .array(
+        z.object({
+          afficheur: z.string().min(1),
+          batiment: z.string().nullable().optional(),
+          libelle: z.string().optional(),
+        }),
+      )
+      .default([]),
+  });
+
+  app.get(`${CONSOLE_PREFIX}/netypareo`, async (_request, reply) => {
+    if (!options.netypareo) {
+      return reply.code(503).send({ code: "sans-base", message: "Indisponible.", retryable: false });
+    }
+    return { reglages: await options.netypareo.reglages() };
+  });
+
+  app.put(`${CONSOLE_PREFIX}/netypareo`, async (request, reply) => {
+    if (!options.netypareo) {
+      return reply.code(503).send({ code: "sans-base", message: "Indisponible.", retryable: false });
+    }
+    const parsed = ReglagesNety.safeParse(request.body);
+    if (!parsed.success) {
+      return reply.code(400).send({
+        code: "invalid-body",
+        message: "Réglage incomplet.",
+        retryable: false,
+        details: parsed.error.flatten(),
+      });
+    }
+    const reglages = await options.netypareo.enregistrer(parsed.data);
+    if (options.comptes) {
+      await journaliserAction(request, options.comptes, "réglage de NetYPareo", reglages.baseUrl, {
+        afficheurs: reglages.afficheurs.length,
+      });
+    }
+    return { reglages };
+  });
+
+  /** L'essai avant de brancher : on voit ce que les écrans afficheraient. */
+  app.post(`${CONSOLE_PREFIX}/netypareo/essai`, async (request, reply) => {
+    if (!options.netypareo) {
+      return reply.code(503).send({ code: "sans-base", message: "Indisponible.", retryable: false });
+    }
+    const Essai = z.object({ baseUrl: z.string().min(1), afficheur: z.string().min(1) });
+    const parsed = Essai.safeParse(request.body);
+    if (!parsed.success) {
+      return reply.code(400).send({ code: "invalid-body", message: "Essai incomplet.", retryable: false });
+    }
+    try {
+      return { journee: await options.netypareo.essayer(parsed.data.baseUrl, parsed.data.afficheur) };
+    } catch (cause) {
+      if (cause instanceof ErreurConnecteur) {
+        return reply.code(400).send({
+          code: "source-refusee",
+          message: cause.message,
+          ...(cause.conseil ? { conseil: cause.conseil } : {}),
+          retryable: false,
+        });
+      }
+      throw cause;
+    }
   });
 
   // --- Actualités du site ------------------------------------------------
@@ -690,7 +763,12 @@ export function registerConsoleApi(app: FastifyInstance, options: ConsoleApiOpti
       }
 
       try {
-        const spec = await resolveSpec(parsed.data, options, resolvePublicUrl(options.publicUrl, request.headers.host));
+        const spec = await resolveSpec(
+          parsed.data,
+          options,
+          resolvePublicUrl(options.publicUrl, request.headers.host),
+          screen.building,
+        );
         const manifest = compose({
           screenId: screen.id,
           version: 0,
@@ -729,7 +807,12 @@ export function registerConsoleApi(app: FastifyInstance, options: ConsoleApiOpti
         return reply.code(404).send({ code: "unknown-screen", message: "Écran inconnu.", retryable: false });
       }
 
-      const spec = await resolveSpec(parsed.data, options, resolvePublicUrl(options.publicUrl, request.headers.host));
+      const spec = await resolveSpec(
+          parsed.data,
+          options,
+          resolvePublicUrl(options.publicUrl, request.headers.host),
+          screen.building,
+        );
 
       try {
         const existing = await store.getManifest(screen.id);
@@ -841,10 +924,24 @@ async function resolveSpec(
   body: z.infer<typeof PublishBody>,
   options: ConsoleApiOptions,
   baseUrl: string,
+  /** L'écran visé : son bâtiment décide de l'afficheur NetYPareo. */
+  batiment?: string,
 ): Promise<PublishSpec> {
   let timetableClasses: { id: string; label: string }[] | undefined;
 
-  if (body.layout === "principal-et-cours" && options.timetable) {
+  /**
+   * D'où vient l'emploi du temps.
+   *
+   * NetYPareo quand il est branché : c'est le logiciel où l'école tient
+   * réellement ses plannings, et ressaisir à la main ce qui existe déjà
+   * finirait par diverger. La grille locale reste le repli, et le seul
+   * recours pour un établissement qui n'a pas ce logiciel.
+   */
+  const afficheur = await options.netypareo?.afficheurPour(batiment);
+
+  // Avec NetYPareo, l'afficheur porte déjà tout le bâtiment : il n'y a pas de
+  // classes à choisir, et en exiger une bloquerait la publication.
+  if (body.layout === "principal-et-cours" && options.timetable && !afficheur) {
     const all = await options.timetable.listClasses();
     const wanted = body.timetableClassIds;
     timetableClasses = wanted?.length ? all.filter((c) => wanted.includes(c.id)) : all;
@@ -855,7 +952,9 @@ async function resolveSpec(
     }
   }
 
-  const timetableUrl = body.timetableUrl ?? options.timetableUrl;
+  const timetableUrl = afficheur
+    ? `${baseUrl}/connectors/netypareo/${encodeURIComponent(afficheur)}`
+    : (body.timetableUrl ?? options.timetableUrl);
   // L'adresse que les ÉCRANS appellent, résolue exactement comme celle des
   // médias : une adresse configurée si elle existe, sinon l'en-tête `Host`.
   // Deux chemins distincts finiraient par diverger, et les actualités

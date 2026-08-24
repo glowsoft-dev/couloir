@@ -315,6 +315,8 @@ interface TimetableEntry {
   time: string;
   endTime?: string;
   subject: string;
+  /** Le module, sous l'intitulé : « Architectures de données décisionnelles ». */
+  detail?: string;
   room: string;
   teacher?: string;
   change?: "none" | "cancelled" | "room" | "teacher" | "added";
@@ -423,8 +425,11 @@ function renderDataView(
       time.textContent = entry.time;
 
       const label = doc.createElement("span");
-      label.textContent = entry.subject;
+      label.appendChild(doc.createTextNode(entry.subject));
       if (entry.note) label.appendChild(el(doc, "span", "couloir-badge", entry.note));
+      // Le module sous l'intitulé : le groupe dit à qui la séance s'adresse,
+      // le module dit ce qui s'y passe. L'un sans l'autre laisse chercher.
+      if (entry.detail) label.appendChild(el(doc, "span", "couloir-detail", entry.detail));
 
       row.append(time, label, el(doc, "span", "room", entry.room));
       list.appendChild(row);

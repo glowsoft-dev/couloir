@@ -7,6 +7,7 @@ import type { TimetableRepository } from "./timetable/repository.js";
 import { MediaStore } from "./media.js";
 import { DepotComptes } from "./comptes/depot.js";
 import { ServiceActualites, ServiceIdentite } from "./connecteurs/service.js";
+import { ServiceNetypareo } from "./connecteurs/service-netypareo.js";
 import { seedDemoScreen } from "./seed.js";
 import { MemoryStore, type Store } from "./store.js";
 
@@ -34,6 +35,7 @@ let timetable: TimetableRepository | undefined;
 let comptes: DepotComptes | undefined;
 let actualites: ServiceActualites | undefined;
 let identite: ServiceIdentite | undefined;
+let netypareo: ServiceNetypareo | undefined;
 let closeDatabase = async () => {};
 
 if (useMemory) {
@@ -49,6 +51,7 @@ if (useMemory) {
   comptes = new DepotComptes(sql);
   actualites = new ServiceActualites(sql);
   identite = new ServiceIdentite(sql);
+  netypareo = new ServiceNetypareo(sql);
   closeDatabase = () => store.close();
 
   // Les sessions expirées ne servent qu'à faire grossir la table. Une fois
@@ -102,6 +105,7 @@ const app = buildApp({
   ...(comptes ? { comptes } : {}),
   ...(actualites ? { actualites } : {}),
   ...(identite ? { identite } : {}),
+  ...(netypareo ? { netypareo } : {}),
   ...(consoleToken ? { consoleToken } : {}),
   ...(timetable ? { timetable } : {}),
   timetableUrl: process.env["COULOIR_TIMETABLE_URL"] ?? `${publicUrl}/v1/timetable/day`,

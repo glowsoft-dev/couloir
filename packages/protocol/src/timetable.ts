@@ -33,6 +33,14 @@ export const TimetableEntry = z.object({
   time: z.string().regex(/^\d{2}:\d{2}$/),
   endTime: z.string().regex(/^\d{2}:\d{2}$/),
   subject: z.string(),
+  /**
+   * Précision sous l'intitulé : le module, la matière exacte.
+   *
+   * Sur un écran de bâtiment, `subject` porte le groupe — « BTS Gestion
+   * 2e année », ce qui dit à qui la séance s'adresse — et `detail` porte le
+   * contenu. L'un sans l'autre laisse chercher.
+   */
+  detail: z.string().optional(),
   room: z.string(),
   teacher: z.string().optional(),
   change: TimetableChange.default("none"),

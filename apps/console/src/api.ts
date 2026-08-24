@@ -119,6 +119,30 @@ export interface ReglagesActualites {
   modifieLe: string | null;
 }
 
+export interface SeanceAfficheur {
+  time: string;
+  endTime: string;
+  subject: string;
+  detail?: string;
+  room: string;
+  teacher?: string;
+  note?: string;
+}
+
+export interface JourneeAfficheur {
+  afficheur: string;
+  titre: string;
+  date: string;
+  seances: SeanceAfficheur[];
+  chaineCompletee: boolean;
+}
+
+export interface ReglagesNetypareo {
+  baseUrl: string;
+  actif: boolean;
+  afficheurs: { afficheur: string; batiment: string | null; libelle: string }[];
+}
+
 export interface ManifestVersion {
   version: number;
   issuedAt: string;
@@ -320,6 +344,17 @@ export const api = {
     lire: () => call<{ identite: { nom: string; accent: string | null } }>("/identite"),
     enregistrer: (identite: { nom: string; accent: string | null }) =>
       call<{ identite: { nom: string; accent: string | null } }>("/identite", json("PUT", identite)),
+  },
+
+  netypareo: {
+    lire: () => call<{ reglages: ReglagesNetypareo }>("/netypareo"),
+    enregistrer: (reglages: {
+      baseUrl: string;
+      actif: boolean;
+      afficheurs: { afficheur: string; batiment: string | null; libelle: string }[];
+    }) => call<{ reglages: ReglagesNetypareo }>("/netypareo", json("PUT", reglages)),
+    essayer: (input: { baseUrl: string; afficheur: string }) =>
+      call<{ journee: JourneeAfficheur }>("/netypareo/essai", json("POST", input)),
   },
 
   actualites: {

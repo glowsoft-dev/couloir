@@ -6,6 +6,7 @@ import multipart from "@fastify/multipart";
 import fastifyCookie from "@fastify/cookie";
 import type { DepotComptes } from "./comptes/depot.js";
 import type { ServiceActualites, ServiceIdentite } from "./connecteurs/service.js";
+import type { ServiceNetypareo } from "./connecteurs/service-netypareo.js";
 import fastifyStatic from "@fastify/static";
 import {
   EnrollClaimRequest,
@@ -72,6 +73,8 @@ export interface AppOptions {
   actualites?: ServiceActualites;
   /** L'identité de l'établissement, inscrite dans chaque manifeste. */
   identite?: ServiceIdentite;
+  /** Le branchement sur NetYPareo. Absent = l'emploi du temps reste local. */
+  netypareo?: ServiceNetypareo;
   /**
    * Les comptes nominatifs.
    *
@@ -488,6 +491,50 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
       .send(image.octets);
   });
 
+  /**
+   * L'emploi du temps d'un afficheur NetYPareo, tel que les écrans le lisent.
+   *
+   * Rendu au format que le noyau de rendu connaît déjà : le connecteur
+   * traduit NetYPareo en emploi du temps, et le rendu ignore d'où ça vient.
+   * Le jour où l'établissement change de logiciel, seul ce connecteur bouge.
+   */
+  app.get<{ Params: { afficheur: string } }>(
+    "/connectors/netypareo/:afficheur",
+    async (request, reply) => {
+      if (!options.netypareo) {
+        return reply.code(503).send({
+          code: "non-configure",
+          message: "NetYPareo n'est pas configuré.",
+          retryable: false,
+        });
+      }
+      try {
+        const journee = await options.netypareo.journee(request.params.afficheur);
+        return {
+          days: [
+            {
+              classId: `afficheur-${journee.afficheur}`,
+              classLabel: journee.titre,
+              date: journee.date,
+              entries: journee.seances,
+              ...(journee.seances.length === 0
+                ? // Une liste vide ressemble à une panne. On dit pourquoi.
+                  { notice: "Aucun cours prévu aujourd'hui." }
+                : {}),
+            },
+          ],
+        };
+      } catch (cause) {
+        request.log.warn({ err: cause }, "emploi du temps NetYPareo indisponible");
+        return reply.code(503).send({
+          code: "source-indisponible",
+          message: cause instanceof Error ? cause.message : "Emploi du temps indisponible.",
+          retryable: true,
+        });
+      }
+    },
+  );
+
   app.get("/connectors/news", async (request, reply) => {
     if (!options.actualites) {
       return reply.send({
@@ -563,6 +610,7 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
       ...(options.comptes ? { comptes: options.comptes } : {}),
       ...(options.actualites ? { actualites: options.actualites } : {}),
       ...(options.identite ? { identite: options.identite } : {}),
+      ...(options.netypareo ? { netypareo: options.netypareo } : {}),
       ...(options.cookieSécurisé !== undefined ? { cookieSécurisé: options.cookieSécurisé } : {}),
     });
   }

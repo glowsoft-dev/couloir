@@ -898,6 +898,80 @@ jour où la plage commence**. « Le vendredi de 18:00 à 08:00 » couvre bien le
 vendredi soir jusqu'au samedi matin. Deux règles différentes pour la même
 phrase seraient un piège.
 
+## L'emploi du temps depuis NetYPareo
+
+NetYPareo — le logiciel de gestion des CFA et campus consulaires — expose une
+fonction « afficheur planning » faite exactement pour ça : des écrans de
+couloir. Chaque afficheur est configuré dans NetYPareo, l'établissement entier
+ou un bâtiment, et rend les séances du jour en JSON, sans authentification.
+
+### Pourquoi pas l'export iCalendar
+
+Il est pourtant documenté, et c'est la première piste qu'on trouve. Mais
+l'iCal de NetYPareo est **personnel** : il porte le planning d'un individu, et
+son lien vaut mot de passe. L'afficheur, lui, est déjà pensé pour être public
+et collectif.
+
+Utiliser la porte prévue plutôt que d'en forcer une autre évite d'avoir à
+protéger un secret qu'on n'aurait pas dû détenir.
+
+### La correspondance se fait par bâtiment
+
+NetYPareo configure un afficheur par bâtiment ; nos écrans portent déjà un
+bâtiment dans leur code d'étiquette. Un écran du bâtiment B lit donc
+l'afficheur du bâtiment B, sans réglage supplémentaire. Un écran dont le
+bâtiment n'est pas apparié prend l'afficheur sans bâtiment — mieux vaut
+l'établissement entier que pas d'emploi du temps.
+
+### Une chaîne de certificats incomplète, et ce qu'on en fait
+
+Le serveur NetYPareo du campus n'envoie que son propre certificat, sans
+l'intermédiaire qui le relie à une autorité connue. Les navigateurs et `curl`
+ne s'en aperçoivent pas : ils vont chercher l'intermédiaire manquant à
+l'adresse que le certificat indique lui-même. Node refuse, avec un message
+— « unable to verify the first certificate » — qui ne dit rien à un
+administrateur d'établissement.
+
+On fait donc la même chose que les navigateurs, **sans baisser la garde** : le
+certificat téléchargé ne sert qu'à compléter la chaîne, qui reste vérifiée
+jusqu'à une racine du système. Un intermédiaire falsifié ne remonterait à
+aucune racine connue et la connexion échouerait quand même — c'est pourquoi le
+télécharger en clair ne coûte rien.
+
+La console signale quand c'est arrivé. La correction propre est du côté du
+serveur ; en attendant, personne ne devrait avoir à s'en occuper pour afficher
+un emploi du temps dans un couloir.
+
+### Deux traductions qui méritaient des tests
+
+**Les heures.** NetYPareo écrit « 08h30 ». Une heure mal lue s'affiche quand
+même, et personne ne s'en aperçoit avant qu'un élève ne se présente au mauvais
+moment. Le connecteur retombe sur les minutes depuis minuit, que NetYPareo
+fournit aussi — deux représentations de la même chose, et l'une rattrape
+l'autre.
+
+**Salle et enseignant.** NetYPareo rend deux lignes libres. On reconnaît
+l'enseignant à sa civilité plutôt qu'à sa position : se fier à l'ordre ferait
+passer une salle pour un nom le jour où l'enseignant n'est pas renseigné. Et
+« A distance » figure là où on attendrait une salle.
+
+### Ce qui ne tient pas sur un mur
+
+Le premier jet versait le commentaire de séance dans la pastille réservée aux
+mentions « salle changée ». Un commentaire de deux lignes s'y déployait et
+poussait le reste de la journée hors de l'écran.
+
+Le commentaire ne rejoint donc la précision que s'il tient sur une ligne.
+L'information complète est dans NetYPareo, pas sur un mur de couloir.
+
+### Les rendez-vous individuels
+
+L'afficheur mêle aux groupes des séances dont l'intitulé est un **nom de
+personne** — des rendez-vous individuels. Les afficher en clair dans un
+couloir est une décision qui appartient à l'établissement, pas au logiciel.
+La console les repère et les signale avant qu'on branche la source ; c'est
+dans NetYPareo qu'on les exclut de l'afficheur.
+
 ## Ce qui n'est pas encore fait
 
 Le socle tourne, mais il reste volontairement incomplet :
@@ -923,8 +997,8 @@ Le socle tourne, mais il reste volontairement incomplet :
   bâtiment B » d'un geste reste à faire.
 - **Les preuves de diffusion** — la télémétrie les remonte et les conserve,
   aucun rapport ne les exploite encore.
-- **L'import d'emploi du temps** — la saisie est manuelle. Un import CSV et
-  les vues par salle ou par enseignant restent à faire.
+- **Les vues par salle ou par enseignant** — l'emploi du temps s'affiche par
+  bâtiment ou par classe, pas encore « où est M. Untel ».
 
 
 ---

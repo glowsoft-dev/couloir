@@ -1,5 +1,6 @@
 import { Actualites } from "./Actualites.js";
 import { Identite } from "./Identite.js";
+import { Netypareo } from "./Netypareo.js";
 import { useState } from "react";
 import { type TimetableSetup, api } from "./api.js";
 
@@ -30,6 +31,9 @@ export function SettingsView({ setup, onChanged }: { setup: TimetableSetup; onCh
       </div>
       {/* Sous la grille et non dedans : l'aperçu des articles a besoin de
           toute la largeur pour montrer ce que les écrans afficheront. */}
+      <div style={{ marginTop: 20 }}>
+        <Netypareo />
+      </div>
       <div style={{ marginTop: 20 }}>
         <Actualites />
       </div>

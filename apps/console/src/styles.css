@@ -626,3 +626,41 @@ button.danger:hover:not(:disabled) { color: #fff; border-color: var(--signal); f
   color: var(--essai); font-family: "IBM Plex Mono", monospace;
   font-size: 13px; font-weight: 500; margin-top: 4px;
 }
+
+/* ---------- NetYPareo ---------- */
+
+.nety-ligne {
+  display: grid; grid-template-columns: 70px 90px minmax(0, 1fr) auto auto;
+  gap: 8px; align-items: center;
+  padding: 8px 0; border-top: 1px solid var(--rule);
+}
+.nety-ligne:first-of-type { border-top: 0; }
+.nety-ligne input { padding: 6px 9px; font-size: 12.5px; }
+.nety-ligne .nety-num { font-family: "IBM Plex Mono", monospace; text-align: center; }
+.nety-ligne .nety-bat { text-transform: uppercase; text-align: center; }
+.nety-ligne button { font-size: 12px; padding: 6px 10px; }
+
+.nety-seances { list-style: none; margin: 0 0 4px; padding: 0; }
+.nety-seances li {
+  display: grid; grid-template-columns: 62px minmax(0, 1fr) 150px 120px;
+  gap: 12px; align-items: baseline;
+  padding: 9px 0; border-top: 1px solid var(--rule);
+}
+.nety-seances li:first-child { border-top: 0; }
+.nety-seances time {
+  display: flex; flex-direction: column;
+  color: var(--accent); font-variant-numeric: tabular-nums;
+  font-size: 13px; font-weight: 600;
+}
+.nety-seances time span { color: var(--ink-faint); font-weight: 400; font-size: 11px; }
+.nety-groupe { display: flex; flex-direction: column; gap: 2px; font-size: 13.5px; }
+.nety-module { color: var(--ink-soft); font-size: 12px; line-height: 1.3; }
+.nety-salle { color: var(--ink-soft); font-size: 12.5px; }
+.nety-prof { color: var(--ink-faint); font-size: 12.5px; }
+
+@media (max-width: 900px) {
+  .nety-ligne { grid-template-columns: 64px 80px minmax(0, 1fr); }
+  .nety-ligne button { grid-row: 2; }
+  .nety-seances li { grid-template-columns: 58px minmax(0, 1fr); }
+  .nety-salle, .nety-prof { grid-column: 2; }
+}

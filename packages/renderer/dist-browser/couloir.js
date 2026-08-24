@@ -14,10 +14,10 @@ function E(e, t) {
     hour: "2-digit",
     minute: "2-digit",
     hour12: !1
-  }).formatToParts(new Date(e)), r = (l) => n.find((a) => a.type === l)?.value ?? "", o = Number(r("hour")) % 24, i = Number(r("minute"));
+  }).formatToParts(new Date(e)), r = (l) => n.find((a) => a.type === l)?.value ?? "", i = Number(r("hour")) % 24, o = Number(r("minute"));
   return {
     dayOfWeek: F[r("weekday")] ?? 1,
-    minutesOfDay: o * 60 + i
+    minutesOfDay: i * 60 + o
   };
 }
 function I(e) {
@@ -25,8 +25,8 @@ function I(e) {
   return Number(t) * 60 + Number(n);
 }
 function M(e, t, n) {
-  const r = I(t), o = I(n);
-  return r === o ? !0 : r < o ? e >= r && e < o : e >= r || e < o;
+  const r = I(t), i = I(n);
+  return r === i ? !0 : r < i ? e >= r && e < i : e >= r || e < i;
 }
 function N(e, t, n) {
   if (!t) return { status: "never-loaded" };
@@ -66,10 +66,10 @@ function $(e, t, n) {
 function W(e, t, n) {
   const r = e.layout.zones.find((a) => a.id === t);
   if (!r) return null;
-  const o = e.settings.timezone, i = e.schedules.filter((a) => a.zoneId === t).filter((a) => $(a, n, o));
-  if (i.length === 0) return r.playlistId;
-  let l = i[0];
-  for (const a of i.slice(1))
+  const i = e.settings.timezone, o = e.schedules.filter((a) => a.zoneId === t).filter((a) => $(a, n, i));
+  if (o.length === 0) return r.playlistId;
+  let l = o[0];
+  for (const a of o.slice(1))
     a.priority >= l.priority && (l = a);
   return l.playlistId;
 }
@@ -80,18 +80,18 @@ function L(e, t, n) {
   if (e.dailyStart && e.dailyEnd && !M(r.minutesOfDay, e.dailyStart, e.dailyEnd))
     return !1;
   if (e.daysOfWeek && e.daysOfWeek.length > 0) {
-    const o = (r.dayOfWeek + 5) % 7 + 1, i = !!(e.dailyStart && e.dailyEnd) && I(e.dailyStart) > I(e.dailyEnd) && r.minutesOfDay < I(e.dailyEnd);
-    if (!e.daysOfWeek.includes(i ? o : r.dayOfWeek)) return !1;
+    const i = (r.dayOfWeek + 5) % 7 + 1, o = !!(e.dailyStart && e.dailyEnd) && I(e.dailyStart) > I(e.dailyEnd) && r.minutesOfDay < I(e.dailyEnd);
+    if (!e.daysOfWeek.includes(o ? i : r.dayOfWeek)) return !1;
   }
   return !0;
 }
 function T(e, t) {
   const n = E(t, e.timezone), r = (n.dayOfWeek + 5) % 7 + 1;
-  return e.displayOff.some((o) => {
-    if (!M(n.minutesOfDay, o.from, o.to)) return !1;
-    if (o.daysOfWeek.length === 0) return !0;
-    const i = I(o.from), l = I(o.to), a = i > l && n.minutesOfDay < l;
-    return o.daysOfWeek.includes(a ? r : n.dayOfWeek);
+  return e.displayOff.some((i) => {
+    if (!M(n.minutesOfDay, i.from, i.to)) return !1;
+    if (i.daysOfWeek.length === 0) return !0;
+    const o = I(i.from), l = I(i.to), a = o > l && n.minutesOfDay < l;
+    return i.daysOfWeek.includes(a ? r : n.dayOfWeek);
   });
 }
 const q = 130, R = 2500, _ = 6e4, U = 1.9;
@@ -121,8 +121,8 @@ function J(e) {
 }
 function C(e, t, n) {
   for (let r = 1; r <= e.length; r++) {
-    const o = (t + r) % e.length, i = e[o];
-    if (i !== void 0 && n(i)) return o;
+    const i = (t + r) % e.length, o = e[i];
+    if (o !== void 0 && n(o)) return i;
   }
   return null;
 }
@@ -134,7 +134,7 @@ function X(e, t) {
   return null;
 }
 function V(e) {
-  const { state: t, playlistId: n, slideIds: r, isEligible: o, durationMsOf: i, nowMs: l } = e, a = t && t.playlistId === n ? r[t.index] ?? null : null, s = (c) => {
+  const { state: t, playlistId: n, slideIds: r, isEligible: i, durationMsOf: o, nowMs: l } = e, a = t && t.playlistId === n ? r[t.index] ?? null : null, s = (c) => {
     if (c === null)
       return { state: null, currentSlideId: null, changed: a !== null };
     const f = r[c];
@@ -145,18 +145,18 @@ function V(e) {
     };
   };
   if (!t || t.playlistId !== n || t.index >= r.length)
-    return s(X(r, o));
+    return s(X(r, i));
   const u = r[t.index];
-  if (u === void 0 || !o(u))
-    return s(C(r, t.index, o));
-  const p = i(u), b = l - t.slideStartedAtMs;
+  if (u === void 0 || !i(u))
+    return s(C(r, t.index, i));
+  const p = o(u), b = l - t.slideStartedAtMs;
   if (!(p === null ? e.mediaEnded === !0 : b >= p))
     return { state: t, currentSlideId: u, changed: !1 };
-  const d = C(r, t.index, o);
+  const d = C(r, t.index, i);
   return s(d === null ? null : d);
 }
 function G(e) {
-  const { manifest: t, nowMs: n } = e, r = new Map(t.slides.map((m) => [m.id, m])), o = new Map(t.assets.map((m) => [m.id, m])), i = new Map(t.playlists.map((m) => [m.id, m])), l = new Map(
+  const { manifest: t, nowMs: n } = e, r = new Map(t.slides.map((m) => [m.id, m])), i = new Map(t.assets.map((m) => [m.id, m])), o = new Map(t.playlists.map((m) => [m.id, m])), l = new Map(
     t.dataSources.map((m) => [
       m.id,
       N(m, e.sources.get(m.id), n)
@@ -200,7 +200,7 @@ function G(e) {
     return h ? h.kind === "media" && h.durationMs === void 0 ? null : H(h).effectiveMs : 0;
   }, v = e.forceFallback ? "fallback" : "normal", d = /* @__PURE__ */ new Map(), c = [], f = [];
   for (const m of t.layout.zones) {
-    const h = e.forceFallback ? t.fallbackPlaylistId : W(t, m.id, n) ?? m.playlistId, k = i.get(h), S = e.rotations.get(m.id), O = S && S.playlistId === h ? k?.slideIds[S.index] ?? null : null, x = V({
+    const h = e.forceFallback ? t.fallbackPlaylistId : W(t, m.id, n) ?? m.playlistId, k = o.get(h), S = e.rotations.get(m.id), O = S && S.playlistId === h ? k?.slideIds[S.index] ?? null : null, x = V({
       state: S,
       playlistId: h,
       slideIds: k?.slideIds ?? [],
@@ -220,11 +220,11 @@ function G(e) {
       zoneId: m.id,
       rect: m.rect,
       playlistId: h,
-      slide: z ? P(z, o, l, t.settings.timezone) : null
+      slide: z ? P(z, i, l, t.settings.timezone) : null
     }), e.forceFallback) break;
   }
   if (!e.forceFallback && f.every((m) => m.slide === null)) {
-    const h = i.get(t.fallbackPlaylistId)?.slideIds[0], k = h ? r.get(h) : void 0;
+    const h = o.get(t.fallbackPlaylistId)?.slideIds[0], k = h ? r.get(h) : void 0;
     if (k)
       return {
         screen: {
@@ -234,7 +234,7 @@ function G(e) {
               zoneId: t.layout.zones[0]?.id ?? "principal",
               rect: { xPercent: 0, yPercent: 0, widthPercent: 100, heightPercent: 100 },
               playlistId: t.fallbackPlaylistId,
-              slide: P(k, o, l, t.settings.timezone)
+              slide: P(k, i, l, t.settings.timezone)
             }
           ],
           emergency: null,
@@ -256,23 +256,23 @@ function G(e) {
 function P(e, t, n, r) {
   switch (e.kind) {
     case "media": {
-      const o = t.get(e.assetId);
-      return o ? { kind: "media", slideId: e.id, asset: o } : null;
+      const i = t.get(e.assetId);
+      return i ? { kind: "media", slideId: e.id, asset: i } : null;
     }
     case "template":
       return { kind: "template", slideId: e.id, templateId: e.templateId, fields: e.fields };
     case "widget":
       return { kind: "widget", slideId: e.id, widget: e.widget, config: e.config };
     case "data": {
-      const o = n.get(e.sourceId);
-      return !o || !A(o) ? null : {
+      const i = n.get(e.sourceId);
+      return !i || !A(i) ? null : {
         kind: "data",
         slideId: e.id,
         sourceId: e.sourceId,
         view: e.view,
-        payload: "payload" in o ? o.payload : null,
+        payload: "payload" in i ? i.payload : null,
         params: e.params,
-        staleLabel: D(o, "fr-FR", r)
+        staleLabel: D(i, "fr-FR", r)
       };
     }
   }
@@ -297,10 +297,10 @@ function Y(e) {
     );
   }
   if (n.length === 0) return [];
-  const r = [...t.values()].reduce((s, u) => s + (u[0]?.rect.heightPercent ?? 0), 0), o = n.reduce((s, u) => s + (u[0]?.rect.heightPercent ?? 0), 0), i = o > 0 ? r / o : 1, l = [];
+  const r = [...t.values()].reduce((s, u) => s + (u[0]?.rect.heightPercent ?? 0), 0), i = n.reduce((s, u) => s + (u[0]?.rect.heightPercent ?? 0), 0), o = i > 0 ? r / i : 1, l = [];
   let a = Math.min(...e.map((s) => s.rect.yPercent));
   for (const s of n.sort((u, p) => (u[0]?.rect.yPercent ?? 0) - (p[0]?.rect.yPercent ?? 0))) {
-    const u = (s[0]?.rect.heightPercent ?? 0) * i;
+    const u = (s[0]?.rect.heightPercent ?? 0) * o;
     for (const p of s)
       l.push({ ...p, rect: { ...p.rect, yPercent: a, heightPercent: u } });
     a += u;
@@ -423,6 +423,12 @@ const K = `
 }
 .couloir-row time { font-variant-numeric: tabular-nums; color: var(--accent); font-weight: 600 }
 .couloir-row .room { color: var(--ink-soft); font-size: .85em }
+/* Le module passe sous l'intitulé, en plus discret : on lit d'abord à qui la
+   séance s'adresse, puis ce qui s'y passe. */
+.couloir-detail {
+  display: block; color: var(--ink-soft); font-size: .78em;
+  font-weight: 400; line-height: 1.25; margin-top: .1em;
+}
 .couloir-row--changed { color: var(--signal) }
 /* Annulé : barré, mais TOUJOURS affiché. Le faire disparaître priverait
    l'élève de l'information qui l'intéresse le plus. */
@@ -516,22 +522,22 @@ const K = `
 function Q(e, t = {}) {
   const n = e.ownerDocument, r = n.createElement("style");
   r.textContent = K, e.appendChild(r);
-  const o = n.createElement("div");
-  o.className = "couloir-root", e.appendChild(o);
-  let i = () => {
+  const i = n.createElement("div");
+  i.className = "couloir-root", e.appendChild(i);
+  let o = () => {
   };
   const l = /* @__PURE__ */ new Map();
   let a = "";
   const s = () => {
-    const d = o.clientHeight || 1080, c = J(d);
-    o.style.setProperty("--fs-eyebrow", `${c.eyebrow}px`), o.style.setProperty("--fs-title", `${c.title}px`), o.style.setProperty("--fs-body", `${c.body}px`), o.style.setProperty("--fs-caption", `${c.caption}px`), o.style.setProperty("--pad", `${Math.round(d * 0.045)}px`);
+    const d = i.clientHeight || 1080, c = J(d);
+    i.style.setProperty("--fs-eyebrow", `${c.eyebrow}px`), i.style.setProperty("--fs-title", `${c.title}px`), i.style.setProperty("--fs-body", `${c.body}px`), i.style.setProperty("--fs-caption", `${c.caption}px`), i.style.setProperty("--pad", `${Math.round(d * 0.045)}px`);
   }, u = new ResizeObserver(s);
-  u.observe(o), s();
+  u.observe(i), s();
   function p(d) {
     const c = `${d.mode}:${d.emergency?.id ?? ""}:${d.identify?.screenCode ?? ""}`;
     if (d.mode === "normal" || d.mode === "fallback") return !1;
     if (c === a) return !0;
-    a = c, o.replaceChildren(), l.clear();
+    a = c, i.replaceChildren(), l.clear();
     const f = n.createElement("div");
     return d.mode === "emergency" && d.emergency ? (f.className = "couloir-full couloir-full--emergency", f.append(
       y(n, "p", "couloir-eyebrow", "Message important"),
@@ -540,41 +546,41 @@ function Q(e, t = {}) {
       y(n, "div", "couloir-code", d.identify.screenCode),
       y(n, "p", "couloir-body", d.identify.label),
       y(n, "p", "couloir-body", d.identify.ipAddress)
-    )) : f.className = "couloir-full couloir-full--off", o.appendChild(f), !0;
+    )) : f.className = "couloir-full couloir-full--off", i.appendChild(f), !0;
   }
   function b(d) {
-    a !== "" && (o.replaceChildren(), l.clear(), a = "");
+    a !== "" && (i.replaceChildren(), l.clear(), a = "");
     const c = /* @__PURE__ */ new Set();
     for (const g of d.zones) {
       c.add(g.zoneId);
-      let w = o.querySelector(`[data-zone="${g.zoneId}"]`);
-      w || (w = n.createElement("section"), w.className = "couloir-zone", w.dataset.zone = g.zoneId, o.appendChild(w)), w.style.left = `${g.rect.xPercent}%`, w.style.top = `${g.rect.yPercent}%`, w.style.width = `${g.rect.widthPercent}%`, w.style.height = `${g.rect.heightPercent}%`;
+      let w = i.querySelector(`[data-zone="${g.zoneId}"]`);
+      w || (w = n.createElement("section"), w.className = "couloir-zone", w.dataset.zone = g.zoneId, i.appendChild(w)), w.style.left = `${g.rect.xPercent}%`, w.style.top = `${g.rect.yPercent}%`, w.style.width = `${g.rect.widthPercent}%`, w.style.height = `${g.rect.heightPercent}%`;
       const m = g.slide ? ee(g.slide) : null;
       if (l.get(g.zoneId) !== m) {
         if (w.replaceChildren(), m === null) {
           l.delete(g.zoneId);
           continue;
         }
-        l.set(g.zoneId, m), w.appendChild(te(n, g, g.slide, t, i));
+        l.set(g.zoneId, m), w.appendChild(te(n, g, g.slide, t, o));
       }
     }
-    for (const g of [...o.querySelectorAll("[data-zone]")]) {
+    for (const g of [...i.querySelectorAll("[data-zone]")]) {
       const w = g.dataset.zone;
       w && !c.has(w) && (g.remove(), l.delete(w));
     }
-    let f = o.querySelector(".couloir-watermark");
-    d.watermark ? (f || (f = y(n, "div", "couloir-watermark", d.watermark), o.appendChild(f)), f.textContent = d.watermark) : f?.remove();
+    let f = i.querySelector(".couloir-watermark");
+    d.watermark ? (f || (f = y(n, "div", "couloir-watermark", d.watermark), i.appendChild(f)), f.textContent = d.watermark) : f?.remove();
   }
   let v = null;
   return {
     update(d) {
-      d.accent !== v && (v = d.accent, d.accent ? o.style.setProperty("--accent", d.accent) : o.style.removeProperty("--accent")), !p(d) && b(d);
+      d.accent !== v && (v = d.accent, d.accent ? i.style.setProperty("--accent", d.accent) : i.style.removeProperty("--accent")), !p(d) && b(d);
     },
     onMediaEnded(d) {
-      i = d;
+      o = d;
     },
     destroy() {
-      u.disconnect(), o.remove(), r.remove();
+      u.disconnect(), i.remove(), r.remove();
     }
   };
 }
@@ -594,36 +600,36 @@ function ee(e) {
   return `${e.slideId}|${t()}`;
 }
 function y(e, t, n, r) {
-  const o = e.createElement(t);
-  return o.className = n, r !== void 0 && (o.textContent = r), o;
+  const i = e.createElement(t);
+  return i.className = n, r !== void 0 && (i.textContent = r), i;
 }
-function te(e, t, n, r, o) {
-  const i = e.createElement("div");
-  switch (i.className = "couloir-slide", i.dataset.slide = n.slideId, n.kind) {
+function te(e, t, n, r, i) {
+  const o = e.createElement("div");
+  switch (o.className = "couloir-slide", o.dataset.slide = n.slideId, n.kind) {
     case "media": {
-      i.classList.add("couloir-slide--media");
+      o.classList.add("couloir-slide--media");
       const l = r.assetUrl?.(n.asset.id) ?? n.asset.url;
       if (n.asset.mime.startsWith("video/")) {
         const a = e.createElement("video");
-        a.className = "couloir-media", a.src = l, a.muted = !0, a.autoplay = !0, a.playsInline = !0, a.addEventListener("ended", () => o(t.zoneId)), a.addEventListener("error", () => o(t.zoneId)), i.appendChild(a);
+        a.className = "couloir-media", a.src = l, a.muted = !0, a.autoplay = !0, a.playsInline = !0, a.addEventListener("ended", () => i(t.zoneId)), a.addEventListener("error", () => i(t.zoneId)), o.appendChild(a);
       } else {
         const a = e.createElement("img");
-        a.className = "couloir-media", a.src = l, a.alt = "", i.appendChild(a);
+        a.className = "couloir-media", a.src = l, a.alt = "", o.appendChild(a);
       }
-      return i;
+      return o;
     }
     case "template": {
       const l = (p) => {
         const b = n.fields[p];
         return typeof b == "string" ? b : void 0;
       }, a = l("eyebrow"), s = l("titre") ?? l("title"), u = l("texte") ?? l("body");
-      return a && i.appendChild(y(e, "p", "couloir-eyebrow", a)), s && i.appendChild(y(e, "h1", "couloir-title", s)), u && i.appendChild(y(e, "p", "couloir-body", u)), i;
+      return a && o.appendChild(y(e, "p", "couloir-eyebrow", a)), s && o.appendChild(y(e, "h1", "couloir-title", s)), u && o.appendChild(y(e, "p", "couloir-body", u)), o;
     }
     case "widget": {
       if (n.widget === "ticker") {
-        i.classList.add("couloir-slide--ticker");
+        o.classList.add("couloir-slide--ticker");
         const l = typeof n.config.text == "string" ? n.config.text : "", a = y(e, "div", "couloir-ticker-viewport");
-        a.appendChild(y(e, "span", "couloir-ticker-text", l)), i.appendChild(a);
+        a.appendChild(y(e, "span", "couloir-ticker-text", l)), o.appendChild(a);
         const s = y(e, "div", "couloir-clock", ""), u = () => {
           s.textContent = new Intl.DateTimeFormat(r.locale ?? "fr-FR", {
             timeZone: r.timezone ?? "Europe/Paris",
@@ -635,25 +641,25 @@ function te(e, t, n, r, o) {
         const p = setInterval(u, 1e4);
         return new MutationObserver((b, v) => {
           s.isConnected || (clearInterval(p), v.disconnect());
-        }).observe(i.ownerDocument.body, { childList: !0, subtree: !0 }), i.appendChild(s), i;
+        }).observe(o.ownerDocument.body, { childList: !0, subtree: !0 }), o.appendChild(s), o;
       }
-      return i.appendChild(y(e, "p", "couloir-eyebrow", n.widget)), i;
+      return o.appendChild(y(e, "p", "couloir-eyebrow", n.widget)), o;
     }
     case "data":
-      return oe(e, i, n), n.staleLabel && i.appendChild(y(e, "p", "couloir-stale", n.staleLabel)), i;
+      return ie(e, o, n), n.staleLabel && o.appendChild(y(e, "p", "couloir-stale", n.staleLabel)), o;
   }
 }
 function ne(e, t) {
   const n = e?.days;
   if (Array.isArray(n))
-    return t ? n.find((o) => o.classId === t) ?? null : n[0] ?? null;
+    return t ? n.find((i) => i.classId === t) ?? null : n[0] ?? null;
   const r = e;
   return r && Array.isArray(r.entries) ? r : null;
 }
 function re(e, t, n) {
-  const r = n.payload, o = Array.isArray(r) ? r : r?.articles ?? [];
-  if (o.length === 0) return;
-  const i = Number(n.params.index ?? 0), l = o[(i % o.length + o.length) % o.length];
+  const r = n.payload, i = Array.isArray(r) ? r : r?.articles ?? [];
+  if (i.length === 0) return;
+  const o = Number(n.params.index ?? 0), l = i[(o % i.length + i.length) % i.length];
   if (l?.titre) {
     if (l.image) {
       const a = e.createElement("img");
@@ -662,7 +668,7 @@ function re(e, t, n) {
     l.categorie && t.appendChild(y(e, "p", "couloir-eyebrow", l.categorie)), t.appendChild(y(e, "h1", "couloir-title", l.titre)), l.extrait && t.appendChild(y(e, "p", "couloir-body", l.extrait));
   }
 }
-function oe(e, t, n) {
+function ie(e, t, n) {
   if (n.view.startsWith("timetable")) {
     const r = ne(n.payload, n.params.classId);
     if (!r) return;
@@ -670,24 +676,24 @@ function oe(e, t, n) {
       t.appendChild(y(e, "p", "couloir-body", r.notice));
       return;
     }
-    const o = e.createElement("ul");
-    o.className = "couloir-list";
-    for (const i of r.entries) {
-      const l = i.change && i.change !== "none", a = e.createElement("li");
-      a.className = l ? "couloir-row couloir-row--changed" : "couloir-row", i.change === "cancelled" && a.classList.add("couloir-row--cancelled");
+    const i = e.createElement("ul");
+    i.className = "couloir-list";
+    for (const o of r.entries) {
+      const l = o.change && o.change !== "none", a = e.createElement("li");
+      a.className = l ? "couloir-row couloir-row--changed" : "couloir-row", o.change === "cancelled" && a.classList.add("couloir-row--cancelled");
       const s = e.createElement("time");
-      s.textContent = i.time;
+      s.textContent = o.time;
       const u = e.createElement("span");
-      u.textContent = i.subject, i.note && u.appendChild(y(e, "span", "couloir-badge", i.note)), a.append(s, u, y(e, "span", "room", i.room)), o.appendChild(a);
+      u.appendChild(e.createTextNode(o.subject)), o.note && u.appendChild(y(e, "span", "couloir-badge", o.note)), o.detail && u.appendChild(y(e, "span", "couloir-detail", o.detail)), a.append(s, u, y(e, "span", "room", o.room)), i.appendChild(a);
     }
-    t.appendChild(o);
+    t.appendChild(i);
     return;
   }
   n.view.startsWith("news") && re(e, t, n);
 }
 function le(e, t) {
-  const n = Q(e, t), r = t.pollMs ?? 2e3, o = t.tickMs ?? 500;
-  let i = null, l = /* @__PURE__ */ new Map(), a = /* @__PURE__ */ new Set(), s = !1;
+  const n = Q(e, t), r = t.pollMs ?? 2e3, i = t.tickMs ?? 500;
+  let o = null, l = /* @__PURE__ */ new Map(), a = /* @__PURE__ */ new Set(), s = !1;
   n.onMediaEnded((c) => {
     a.add(c), b();
   });
@@ -702,38 +708,38 @@ function le(e, t) {
         const c = await fetch(t.stateUrl, { cache: "no-store" });
         if (c.ok) {
           const f = await c.json();
-          f.manifest?.version !== i?.manifest?.version && (l = /* @__PURE__ */ new Map()), i = f, u(f);
+          f.manifest?.version !== o?.manifest?.version && (l = /* @__PURE__ */ new Map()), o = f, u(f);
         }
       } catch {
       }
   }
   function b() {
     if (s) return;
-    if (!i?.manifest) {
-      n.update(ie(i));
+    if (!o?.manifest) {
+      n.update(oe(o));
       return;
     }
     const c = G({
-      manifest: i.manifest,
+      manifest: o.manifest,
       nowMs: Date.now(),
-      sources: new Map(Object.entries(i.sources)),
-      availableAssetIds: new Set(i.availableAssetIds),
+      sources: new Map(Object.entries(o.sources)),
+      availableAssetIds: new Set(o.availableAssetIds),
       rotations: l,
-      forceFallback: i.forceFallback,
-      identify: i.identify,
+      forceFallback: o.forceFallback,
+      identify: o.identify,
       mediaEndedZoneIds: a,
-      ...i.screenCode !== null ? { screenCode: i.screenCode } : {}
+      ...o.screenCode !== null ? { screenCode: o.screenCode } : {}
     });
     a = /* @__PURE__ */ new Set(), l = c.rotations, n.update(c.screen), c.transitions.length > 0 && t.transitionsUrl && ae(t.transitionsUrl, c.transitions);
   }
-  const v = setInterval(() => void p(), r), d = setInterval(b, o);
+  const v = setInterval(() => void p(), r), d = setInterval(b, i);
   return p().then(b), {
     stop() {
       s = !0, clearInterval(v), clearInterval(d), n.destroy();
     }
   };
 }
-function ie(e) {
+function oe(e) {
   return e?.pairing ? {
     mode: "identify",
     zones: [],
