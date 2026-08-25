@@ -5,6 +5,7 @@ import type {
   Manifest,
   TelemetryAck,
   TelemetryBatch,
+  VersionDuLecteur,
 } from "@couloir/protocol";
 
 /**
@@ -56,6 +57,16 @@ export interface NetPort {
   ): Promise<void>;
   /** Récupère une source vivante (emploi du temps, actualités, météo). */
   fetchDataSource(url: string): Promise<unknown>;
+  /**
+   * La version du lecteur que le serveur met à disposition, et ses fichiers.
+   *
+   * `null` quand le serveur ne l'annonce pas : un serveur plus ancien que le
+   * boîtier n'est pas un serveur qui annonce la version zéro, et il ne doit
+   * surtout pas déclencher un remplacement.
+   */
+  fetchVersionDuLecteur(): Promise<VersionDuLecteur | null>;
+  /** Télécharge un fichier du lecteur. L'empreinte est vérifiée par l'agent. */
+  fetchFichierDuLecteur(nom: string): Promise<Uint8Array>;
   sendTelemetry(batch: TelemetryBatch): Promise<TelemetryAck>;
   /**
    * Canal temps réel. Le poll du manifeste reste le filet de sécurité s'il
@@ -113,6 +124,38 @@ export interface SystemPort {
   capabilities(): Promise<Capabilities>;
 }
 
+/**
+ * La mise à jour du lecteur lui-même.
+ *
+ * Une plateforme qui ne sait pas se remplacer lève `UnsupportedOperation` —
+ * un navigateur, par exemple, est mis à jour en rechargeant la page. La
+ * console peut alors le dire au lieu de laisser croire à un échec.
+ *
+ * L'ordre des opérations n'est pas négociable : on écrit à côté, on vérifie
+ * l'empreinte, on garde l'ancienne version, et on ne bascule qu'ensuite. Un
+ * lecteur à moitié écrit, c'est un couloir noir qu'on ne rallume qu'à la main.
+ */
+export interface UpdatePort {
+  /** La version installée, telle que le boîtier la connaît. */
+  versionInstallee(): Promise<string | null>;
+  /**
+   * Installe les fichiers déjà téléchargés et vérifiés, en gardant les
+   * précédents. Ne relance rien : c'est l'agent qui décide du moment.
+   */
+  installer(version: string, fichiers: { nom: string; contenu: Uint8Array }[]): Promise<void>;
+  /** Revient à la version précédente. Faux s'il n'y en a pas. */
+  revenirEnArriere(): Promise<boolean>;
+  /**
+   * Combien de démarrages ont échoué depuis la dernière bascule.
+   *
+   * Remis à zéro dès que le boîtier a repris contact avec le serveur : c'est
+   * la seule preuve qu'il tient debout, plus fiable qu'un processus démarré
+   * qui plantera trois secondes plus tard.
+   */
+  demarragesRates(): Promise<number>;
+  marquerDemarrageReussi(): Promise<void>;
+}
+
 export interface ClockPort {
   nowMs(): number;
   /**
@@ -132,4 +175,6 @@ export interface PlatformPorts {
   display: DisplayPort;
   system: SystemPort;
   clock: ClockPort;
+  /** Absente sur les plateformes qui ne savent pas se remplacer. */
+  update?: UpdatePort;
 }

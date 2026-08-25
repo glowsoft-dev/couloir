@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { Server } from "node:http";
 import { networkInterfaces } from "node:os";
-import { AgentRuntime, SourcePoller } from "@couloir/agent";
+import { AgentRuntime, SourcePoller, mettreAJourLeLecteur } from "@couloir/agent";
 import type { Heartbeat } from "@couloir/protocol";
 import { type Identity, IdentityFile, type Pairing, enroll } from "./identity.js";
 import { createLocalServer } from "./local-server.js";
@@ -10,6 +10,7 @@ import { HttpNet } from "./ports/net.js";
 import { FileQueue } from "./ports/queue.js";
 import { FileStore } from "./ports/store.js";
 import { LinuxClock, LinuxDisplay, LinuxSystem, hasHardwareClock } from "./ports/system.js";
+import { LinuxUpdate } from "./ports/update.js";
 
 /**
  * Le player Linux, assemblé.
@@ -26,6 +27,16 @@ export interface PlayerOptions {
   screenLabel?: string;
   allowReboot?: boolean;
   heartbeatIntervalMs?: number;
+  /** Entre deux vérifications de version du lecteur. Une heure par défaut. */
+  intervalleMiseAJourMs?: number;
+  /**
+   * Sur quelle durée les boîtiers se répartissent leurs bascules.
+   *
+   * Dix minutes par défaut : assez pour qu'une mauvaise version se voie sur
+   * un écran avant de se voir sur tous, assez court pour que le parc soit à
+   * jour dans la matinée.
+   */
+  fenetreDeMiseAJourMs?: number;
   log?: (level: "info" | "warn" | "error", message: string, context?: Record<string, unknown>) => void;
 }
 
@@ -43,6 +54,7 @@ export class Player {
   private identifyTimer: ReturnType<typeof setTimeout> | null = null;
   private runtime: AgentRuntime | null = null;
   private poller: SourcePoller | null = null;
+  private horlogeMiseAJour: ReturnType<typeof setInterval> | null = null;
   private store: FileStore | null = null;
   private queue: FileQueue | null = null;
   private server: Server | null = null;
@@ -122,6 +134,7 @@ export class Player {
       store,
     );
     const clock = new LinuxClock(clockReliable);
+    const update = new LinuxUpdate(`${this.options.dataDirectory}/lecteur`);
     const display = new LinuxDisplay(capabilities.features.displayPower);
 
     this.poller = new SourcePoller(net, clock, (level: "info" | "warn", message: string, context?: Record<string, unknown>) =>
@@ -129,7 +142,7 @@ export class Player {
     );
 
     this.runtime = new AgentRuntime(
-      { net, store, queue, display, system, clock },
+      { net, store, queue, display, system, clock, update },
       {
         settings: { offlineGraceDays: 7, pollIntervalSec: 60 },
         persistence: new ManifestFile(`${this.options.dataDirectory}/manifest.json`),
@@ -154,6 +167,44 @@ export class Player {
     this.poller.start();
     await this.runtime.start();
     this.startHeartbeat();
+    this.surveillerLesMisesAJour(net, update, system);
+  }
+
+  /**
+   * Le lecteur se remplace lui-même.
+   *
+   * Sans ça, mettre à jour douze écrans veut dire se brancher sur douze
+   * Raspberry. Ici le boîtier va chercher, vérifie l'empreinte, garde la
+   * version d'avant, et relance.
+   *
+   * Le premier contact réussi vaut quitus : c'est lui qui efface le compteur
+   * de démarrages ratés. Un processus démarré ne prouve rien — il peut
+   * planter trois secondes plus tard, ou tourner sans jamais joindre le
+   * serveur.
+   */
+  private surveillerLesMisesAJour(net: HttpNet, update: LinuxUpdate, system: LinuxSystem): void {
+    void update.marquerDemarrageReussi().catch(() => {});
+
+    const verifier = async () => {
+      const resultat = await mettreAJourLeLecteur(net, update, {
+        deviceId: this.identity?.deviceId ?? "inconnu",
+        fenetreDeBasculeMs: this.options.fenetreDeMiseAJourMs ?? 10 * 60_000,
+        log: (niveau, message, details) => this.log(niveau === "error" ? "warn" : niveau, message, details),
+      });
+      if (resultat.fait !== "installee") return;
+      this.log("info", "relance sur la nouvelle version du lecteur", { version: resultat.version });
+      // La relance est la dernière étape, et elle appartient à la coque : le
+      // service systemd repartira sur les fichiers qu'on vient de poser.
+      await system.restartApp().catch((cause) => {
+        this.log("warn", "relance impossible après mise à jour", { cause: String(cause) });
+      });
+    };
+
+    void verifier();
+    this.horlogeMiseAJour = setInterval(
+      () => void verifier(),
+      this.options.intervalleMiseAJourMs ?? 60 * 60_000,
+    );
   }
 
   /**
@@ -224,6 +275,7 @@ export class Player {
     if (this.heartbeatTimer) clearInterval(this.heartbeatTimer);
     if (this.identifyTimer) clearTimeout(this.identifyTimer);
     this.poller?.stop();
+    if (this.horlogeMiseAJour) clearInterval(this.horlogeMiseAJour);
     await this.runtime?.stop();
     await new Promise<void>((resolve) => {
       if (!this.server) return resolve();

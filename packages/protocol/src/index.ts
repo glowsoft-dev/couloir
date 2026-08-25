@@ -20,3 +20,4 @@ export * from "./signing.js";
 export * from "./demo.js";
 export * from "./timetable.js";
 export * from "./commands.js";
+export * from "./mise-a-jour.js";

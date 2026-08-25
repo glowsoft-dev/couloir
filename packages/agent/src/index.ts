@@ -11,3 +11,4 @@ export * from "./backoff.js";
 export * from "./state.js";
 export * from "./runtime.js";
 export * from "./sources.js";
+export * from "./mise-a-jour.js";

@@ -1835,6 +1835,51 @@ autrement* — et le second ouvre les deux champs. La ligne du cours affiche
 désormais où et avec qui, comme l'écran, au lieu de répéter l'étiquette que la
 pastille porte déjà.
 
+## Les écrans se mettent à jour seuls
+
+Le lecteur était téléchargé une seule fois, à l'installation. `restart-app`
+relance le même fichier : mettre à jour douze écrans voulait donc dire se
+brancher sur douze Raspberry.
+
+Le serveur annonce maintenant ce qu'il sert, sur `/telechargements/version.json`.
+**La version est l'empreinte de l'ensemble, pas un numéro déclaré** — deux
+fichiers changés d'un côté et un numéro oublié de l'autre, et le parc resterait
+sur l'ancien lecteur en croyant être à jour. Ici, changer un octet change la
+version.
+
+### Ce qui empêche un couloir noir
+
+C'est tout l'enjeu : ce n'est pas une image qu'on rate, c'est le programme qui
+affiche les images.
+
+- **L'empreinte décide, pas le code HTTP.** Un portail captif répond 200 avec
+  une page de connexion : bonne apparence, mauvais contenu. Sans ce contrôle,
+  on écraserait le lecteur avec du HTML.
+- **Tout ou rien.** Un seul fichier manquant annule l'installation. Poser la
+  moitié d'un lecteur est pire que ne rien poser.
+- **On écrit à côté, on bascule par un renommage.** Une coupure de courant
+  laisse toujours l'une ou l'autre version, jamais un mélange.
+- **La version précédente est gardée.** Un boîtier qui ne reprend pas contact
+  après deux démarrages y retombe tout seul. Deux et non un : une coupure
+  pendant l'écriture ferait rejeter une version saine.
+- **Les bascules sont étalées** sur dix minutes, de façon déterministe à
+  partir de l'identifiant du boîtier. Douze écrans qui basculent à la même
+  minute, c'est douze couloirs noirs si la version est mauvaise. Déterministe
+  aussi pour que ce soit testable : un délai tiré au sort ne se vérifie pas.
+
+Le quitus, c'est **le contact repris avec le serveur**, pas le processus
+démarré : un lecteur peut démarrer et planter trois secondes plus tard.
+
+### Le chemin d'exécution est celui qu'on bascule
+
+`ExecStart` pointe sur `lecteur/courant/`, et non sur un chemin figé. C'est ce
+dossier que le boîtier renomme. Son voisin `precedent` est ce vers quoi il
+retombe. L'installateur pose la même arborescence dès le premier jour, si bien
+qu'un boîtier neuf et un boîtier mis à jour se ressemblent.
+
+Le rendu (`couloir.js`) voyage avec le lecteur et se lit à côté de lui : les
+deux ne peuvent pas se désynchroniser.
+
 ## Ce qui n'est pas encore fait
 
 Le socle tourne, mais il reste volontairement incomplet :

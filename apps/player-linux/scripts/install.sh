@@ -94,8 +94,25 @@ if [ ! -f dist-bundle/couloir-player.mjs ]; then
   echo "Construisez-le : pnpm --filter @couloir/player-linux build:bundle" >&2
   exit 1
 fi
-install -m 644 dist-bundle/couloir-player.mjs "$PREFIX"/couloir-player.mjs
-install -m 644 dist-bundle/couloir.js "$PREFIX"/couloir.js
+# Le lecteur va dans « courant », que le boîtier saura basculer tout seul.
+#
+# Un chemin figé aurait obligé à se brancher sur chaque Raspberry pour poser
+# une version. Ici, le boîtier va chercher, vérifie l'empreinte, garde la
+# version d'avant dans « precedent », et y retombe si la nouvelle ne tient
+# pas debout.
+LECTEUR=/var/lib/couloir/lecteur/courant
+install -d -o couloir -g couloir /var/lib/couloir/lecteur "$LECTEUR"
+install -m 644 -o couloir -g couloir dist-bundle/couloir-player.mjs "$LECTEUR"/couloir-player.mjs
+install -m 644 -o couloir -g couloir dist-bundle/couloir.js "$LECTEUR"/couloir.js
+# La version posée, pour que le boîtier sache s'il est à jour. Elle est
+# demandée au serveur : la déduire ici, c'est risquer qu'elle diverge de ce
+# que le serveur annonce, et le boîtier retéléchargerait à chaque démarrage.
+if curl -fsSL "${SERVER}/telechargements/version.json" -o /tmp/couloir-version.json 2>/dev/null; then
+  sed -n 's/.*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' /tmp/couloir-version.json \
+    | head -1 > "$LECTEUR"/version
+  chown couloir:couloir "$LECTEUR"/version
+  rm -f /tmp/couloir-version.json
+fi
 install -m 755 scripts/kiosk.sh "$PREFIX"/kiosk.sh
 chown -R couloir:couloir /opt/couloir
 
@@ -106,7 +123,7 @@ sed -i "s|^Environment=COULOIR_SERVER=.*|Environment=COULOIR_SERVER=${SERVER}|" 
   /etc/systemd/system/couloir-player.service
 # Le chemin de Node dépend de l'installation : on ne le fige pas dans l'unité.
 NODE_BIN="$(command -v node)"
-sed -i "s|^ExecStart=.* /opt/couloir/player/couloir-player.mjs|ExecStart=${NODE_BIN} /opt/couloir/player/couloir-player.mjs|" \
+sed -i "s|^ExecStart=.* /var/lib/couloir/lecteur/courant/couloir-player.mjs|ExecStart=${NODE_BIN} /var/lib/couloir/lecteur/courant/couloir-player.mjs|" \
   /etc/systemd/system/couloir-player.service
 systemctl daemon-reload
 systemctl enable --now couloir-player

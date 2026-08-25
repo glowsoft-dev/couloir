@@ -11,6 +11,7 @@ import {
   ROUTES,
   type TelemetryAck,
   type TelemetryBatch,
+  VersionDuLecteur,
 } from "@couloir/protocol";
 import { signRequest } from "./keys.js";
 import type { NetPort } from "@couloir/agent";
@@ -182,6 +183,48 @@ export class HttpNet implements NetPort {
       const response = await fetch(url, { signal: controller.signal });
       if (!response.ok) throw new Error(`source ${url} : HTTP ${response.status}`);
       return await response.json();
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  /**
+   * La version du lecteur servie, s'il y en a une.
+   *
+   * Non signée : c'est la même adresse publique que celle où l'installateur
+   * va chercher le lecteur, avant que le boîtier n'ait la moindre identité.
+   * L'empreinte, elle, est vérifiée sur le contenu — c'est ce qui compte.
+   *
+   * `null` quand la route n'existe pas : un serveur plus ancien que le
+   * boîtier ne doit surtout pas déclencher un remplacement.
+   */
+  async fetchVersionDuLecteur(): Promise<VersionDuLecteur | null> {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), this.timeoutMs);
+    try {
+      const response = await fetch(this.url("/telechargements/version.json"), {
+        signal: controller.signal,
+      });
+      if (response.status === 404 || response.status === 503) return null;
+      if (!response.ok) throw new Error(`version du lecteur : HTTP ${response.status}`);
+      const analyse = VersionDuLecteur.safeParse(await response.json());
+      // Une réponse illisible vaut « pas de version » : on ne remplace pas un
+      // lecteur qui fonctionne sur la foi d'un corps qu'on ne comprend pas.
+      return analyse.success ? analyse.data : null;
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  async fetchFichierDuLecteur(nom: string): Promise<Uint8Array> {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), this.timeoutMs);
+    try {
+      const response = await fetch(this.url(`/telechargements/${nom}`), {
+        signal: controller.signal,
+      });
+      if (!response.ok) throw new Error(`lecteur ${nom} : HTTP ${response.status}`);
+      return new Uint8Array(await response.arrayBuffer());
     } finally {
       clearTimeout(timer);
     }

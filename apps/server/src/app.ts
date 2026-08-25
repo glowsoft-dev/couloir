@@ -566,6 +566,46 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
       .send(script.replace(/^SERVER="\$\{1:-\}"$/m, `SERVER="\${1:-${adresse}}"`));
   });
 
+  /**
+   * La version du lecteur que ce serveur sert.
+   *
+   * Sans elle, mettre à jour douze écrans veut dire se brancher sur douze
+   * Raspberry : le lecteur est téléchargé une seule fois, à l'installation.
+   * Les boîtiers la relisent et vont chercher ce qui a changé.
+   *
+   * L'empreinte est calculée sur le contenu réellement servi, à chaque appel.
+   * La déduire d'un numéro de version écrit à la main laisserait un fichier
+   * remplacé sans que personne ne s'en aperçoive.
+   */
+  app.get("/telechargements/version.json", async (_request, reply) => {
+    const fichiers: { nom: string; sha256: string; octets: number }[] = [];
+    for (const nom of ["couloir-player.mjs", "couloir.js"]) {
+      const contenu = await lireArtefact(nom);
+      if (contenu === null) continue;
+      const octets = Buffer.byteLength(contenu, "utf8");
+      fichiers.push({ nom, sha256: createHash("sha256").update(contenu).digest("hex"), octets });
+    }
+    if (fichiers.length === 0) {
+      return reply.code(503).send({
+        code: "artefact-absent",
+        message: "Le lecteur n'a pas été construit sur ce serveur.",
+        retryable: false,
+      });
+    }
+    /*
+     * La version est l'empreinte de l'ensemble, pas un numéro déclaré.
+     *
+     * Deux fichiers changés d'un côté, un numéro oublié de l'autre, et les
+     * écrans resteraient sur l'ancien lecteur en croyant être à jour. Ici,
+     * changer un octet change la version.
+     */
+    const version = createHash("sha256")
+      .update(fichiers.map((f) => `${f.nom}:${f.sha256}`).join("\n"))
+      .digest("hex")
+      .slice(0, 12);
+    return reply.header("cache-control", "no-store").send({ version, fichiers });
+  });
+
   /** Le lecteur déployable, que l'installateur va chercher. */
   app.get<{ Params: { fichier: string } }>("/telechargements/:fichier", async (request, reply) => {
     const permis = new Set(["couloir-player.mjs", "couloir.js"]);

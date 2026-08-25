@@ -10,7 +10,13 @@ Wants=network-online.target
 Type=simple
 User=couloir
 # Chemin réécrit à l'installation : Node vient de nodejs.org, pas d'apt.
-ExecStart=/usr/local/bin/node /opt/couloir/player/couloir-player.mjs
+#
+# Le lecteur est lu dans « courant », et non à un chemin figé : c'est ce
+# dossier que le boîtier bascule quand il se met à jour tout seul, et son
+# voisin « precedent » est ce vers quoi il retombe si la nouvelle version ne
+# tient pas debout. Un chemin figé aurait obligé à se brancher sur chaque
+# Raspberry pour poser une version.
+ExecStart=/usr/local/bin/node /var/lib/couloir/lecteur/courant/couloir-player.mjs
 Environment=COULOIR_SERVER=https://couloir.exemple.fr
 Environment=COULOIR_DATA=/var/lib/couloir
 Environment=COULOIR_PORT=8080

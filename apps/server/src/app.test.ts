@@ -270,3 +270,42 @@ describe("télémétrie", () => {
     expect(response.json().acceptedEventIds).toEqual([eventId]);
   });
 });
+
+describe("version du lecteur", () => {
+  it("annonce ce qui est réellement servi, empreintes comprises", async () => {
+    /*
+     * L'empreinte est calculée sur le contenu, pas déduite d'un numéro écrit
+     * à la main : un fichier remplacé sans que le numéro bouge laisserait les
+     * écrans sur l'ancien lecteur en croyant être à jour.
+     */
+    const app = buildApp();
+    const reponse = await app.inject({ method: "GET", url: "/telechargements/version.json" });
+
+    // 503 quand le lecteur n'a pas été construit : c'est un cas normal en
+    // développement, et le dire vaut mieux qu'un objet vide.
+    if (reponse.statusCode === 503) {
+      expect(reponse.json().code).toBe("artefact-absent");
+      return;
+    }
+
+    expect(reponse.statusCode).toBe(200);
+    const corps = reponse.json() as {
+      version: string;
+      fichiers: { nom: string; sha256: string; octets: number }[];
+    };
+    expect(corps.version).toMatch(/^[0-9a-f]{12}$/);
+    expect(corps.fichiers.length).toBeGreaterThan(0);
+    for (const fichier of corps.fichiers) {
+      expect(fichier.sha256).toMatch(/^[0-9a-f]{64}$/);
+      expect(fichier.octets).toBeGreaterThan(0);
+    }
+  });
+
+  it("ne se laisse pas mettre en cache", async () => {
+    // Un intermédiaire qui garderait cette réponse figerait le parc sur une
+    // version périmée, sans que rien ne le signale.
+    const app = buildApp();
+    const reponse = await app.inject({ method: "GET", url: "/telechargements/version.json" });
+    expect(reponse.headers["cache-control"]).toBe("no-store");
+  });
+});
