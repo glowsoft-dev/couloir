@@ -78,6 +78,8 @@ function poserCookie(reply: FastifyReply, jeton: string, sécurisé: boolean): v
 export interface OptionsComptes {
   depot: DepotComptes;
   prefixe: string;
+  /** L'identité de l'établissement, montrée avant la connexion. */
+  identite?: { lire: () => Promise<{ nom: string; accent: string | null }> };
   /** La clé de secours. Absente = seuls les comptes existants entrent. */
   clefDeSecours?: string;
   /** Faux en développement : un cookie `Secure` ne survit pas à HTTP. */
@@ -145,7 +147,18 @@ export function enregistrerRoutesComptes(app: FastifyInstance, options: OptionsC
    * Permet à la console de savoir s'il faut demander de se connecter ou de
    * créer le premier compte, sans laisser deviner autre chose.
    */
-  app.get(`${prefixe}/amorce`, async () => ({ comptesExistants: (await depot.compter()) > 0 }));
+  app.get(`${prefixe}/amorce`, async () => ({
+    comptesExistants: (await depot.compter()) > 0,
+    /**
+     * Le nom et la couleur de l'établissement, avant toute connexion.
+     *
+     * Publics, et il n'y a pas à hésiter : ce nom est écrit en grand sur
+     * chaque écran de chaque couloir. Le taire à la page d'entrée
+     * ne protégerait rien et donnerait une console qui ne sait pas chez qui
+     * elle est.
+     */
+    ...(options.identite ? await options.identite.lire() : {}),
+  }));
 
   // --- Le premier compte ------------------------------------------------
 

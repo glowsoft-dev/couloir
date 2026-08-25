@@ -1408,3 +1408,80 @@ button.ghost.danger:hover:not(:disabled) {
   .editeur.avec-biblio .editeur-travail { grid-column: auto; }
   .biblio { position: static; max-height: none; }
 }
+
+/* ---------- la page d'entrée ----------
+   Une dalle à gauche, le formulaire à droite. Ce n'est pas un ornement : la
+   console pilote des écrans qu'on ne voit pas depuis le bureau, et montrer à
+   quoi ils ressemblent dès l'entrée dit de quoi il est question. */
+
+.entree {
+  display: grid; grid-template-columns: minmax(0, 790px) minmax(0, 1fr);
+  min-height: 100vh; width: 100%;
+}
+
+.dalle {
+  position: relative; display: flex; flex-direction: column;
+  padding: 34px 40px;
+  background: #0E1211; color: #F4F6F4;
+  font-family: Archivo, "Fira Sans", Roboto, sans-serif;
+  overflow: hidden;
+  --dalle-accent: #11A6C4;
+}
+/* Le même cercle discret que sur les dalles réelles. */
+.dalle::after {
+  content: ""; position: absolute; right: -8%; top: -14%;
+  width: 46%; aspect-ratio: 1; border-radius: 50%;
+  background: rgba(244, 246, 244, .035);
+}
+
+.dalle-mention {
+  position: relative; z-index: 1;
+  font-family: Roboto, sans-serif; font-size: 12px; color: #6E7772;
+}
+.dalle-contenu {
+  position: relative; z-index: 1;
+  margin: auto 0; display: flex; flex-direction: column; gap: 6px;
+}
+.dalle-eyebrow {
+  font-size: 13px; font-weight: 600; letter-spacing: .16em; text-transform: uppercase;
+  color: var(--dalle-accent);
+}
+.dalle-titre {
+  font-size: 46px; font-weight: 700; line-height: 1.04; letter-spacing: -0.025em;
+  text-wrap: balance; max-width: 14ch;
+}
+.dalle-heure {
+  font-family: "IBM Plex Mono", monospace; font-size: 19px; font-weight: 500;
+  color: var(--dalle-accent); font-variant-numeric: tabular-nums; margin-top: 10px;
+}
+.dalle-code {
+  position: relative; z-index: 1; align-self: flex-end;
+  font-family: "IBM Plex Mono", monospace; font-size: 12px;
+  color: #F4F6F4; opacity: .35;
+}
+
+.promesse-liste {
+  list-style: none; margin: 14px 0 0; padding: 0;
+  display: flex; flex-direction: column; gap: 14px; max-width: 42ch;
+}
+.promesse-liste li {
+  font-family: Roboto, sans-serif; font-size: 15.5px; line-height: 1.5;
+  color: #A8B2AC; padding-left: 18px; position: relative; text-wrap: pretty;
+}
+.promesse-liste li::before {
+  content: ""; position: absolute; left: 0; top: .62em;
+  width: 7px; height: 7px; border-radius: 2px; background: var(--dalle-accent);
+}
+
+.entree-forme { display: grid; place-items: center; padding: 40px 24px; }
+.entree-forme .gate { margin: 0; width: 100%; max-width: 360px; }
+
+@media (max-width: 900px) {
+  .entree { grid-template-columns: 1fr; }
+  /* La dalle passe en bandeau : elle dit de quoi il s'agit, elle n'a pas à
+     occuper un écran de téléphone entier avant le formulaire. */
+  .dalle { min-height: 200px; padding: 20px 22px; }
+  .dalle-titre { font-size: 30px; }
+  .promesse-liste { gap: 9px; }
+  .promesse-liste li { font-size: 14px; }
+}

@@ -1319,6 +1319,35 @@ Un cas à part, qui se lisait mal : un boîtier jamais vu affichait « muet
 depuis jamais vu ». Il dit maintenant « ne s'est jamais annoncé, recevra à sa
 première connexion ».
 
+## La page d'entrée
+
+Une dalle à gauche sur 790 px, le formulaire à droite. Ce n'est pas un
+ornement : la console pilote des écrans qu'on ne voit pas depuis le bureau, et
+montrer à quoi ils ressemblent dès l'entrée dit de quoi il est question — à
+qui ouvre l'outil pour la première fois comme à qui s'y connecte tous les
+matins.
+
+Elle reprend les vraies couleurs et la vraie police du rendu, pas une
+imitation approximative qui apprendrait quelque chose de faux. L'horloge
+tourne : figée, elle se remarquerait tout de suite.
+
+### Le nom de l'établissement avant la connexion
+
+Il fallait le rendre lisible sans être authentifié. La route d'amorçage — déjà
+publique, puisqu'elle dit s'il faut se connecter ou créer le premier compte —
+porte donc aussi le nom et la couleur d'accent.
+
+Il n'y a pas à hésiter : ce nom est écrit en grand sur chaque écran de chaque
+couloir. Le taire à la page d'entrée ne protégerait rien et donnerait une
+console qui ne sait pas chez qui elle est.
+
+### La première installation montre autre chose
+
+À ce moment-là il n'y a pas encore d'écran, et l'établissement n'a pas de nom.
+La dalle cède la place à ce qu'on s'engage à tenir — un écran débranché garde
+son contenu, une urgence prend tous les écrans, la console ne s'ouvre jamais
+par défaut. Trois points, pas dix : ce sont ceux qu'on vérifiera.
+
 ## Ce qui n'est pas encore fait
 
 Le socle tourne, mais il reste volontairement incomplet :

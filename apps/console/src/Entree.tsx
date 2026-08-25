@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { DalleDAccueil } from "./DalleDAccueil.js";
 import { ApiError, type Utilisateur, api, clefDeSecoursPosée, poserClefDeSecours } from "./api.js";
 
 /**
@@ -15,25 +16,71 @@ import { ApiError, type Utilisateur, api, clefDeSecoursPosée, poserClefDeSecour
 
 export function Entree({ onEntré }: { onEntré: (utilisateur: Utilisateur) => void }) {
   const [amorcé, setAmorcé] = useState<boolean | null>(null);
+  const [etablissement, setEtablissement] = useState<{ nom: string; accent: string | null }>({
+    nom: "Couloir",
+    accent: null,
+  });
   const [erreur, setErreur] = useState<string | null>(null);
 
   useEffect(() => {
     void api
       .amorce()
-      .then((r) => setAmorcé(r.comptesExistants))
+      .then((r) => {
+        setAmorcé(r.comptesExistants);
+        if (r.nom) setEtablissement({ nom: r.nom, accent: r.accent ?? null });
+      })
       .catch((cause) => setErreur(cause instanceof Error ? cause.message : String(cause)));
   }, []);
 
   if (amorcé === null) {
     return (
-      <div className="gate">
-        <h1>Couloir</h1>
-        {erreur ? <p className="notice error">{erreur}</p> : <p>Un instant…</p>}
+      <div className="entree">
+        <div className="entree-forme">
+          <div className="gate">
+            <h1>Couloir</h1>
+            {erreur ? <p className="notice error">{erreur}</p> : <p>Un instant…</p>}
+          </div>
+        </div>
       </div>
     );
   }
 
-  return amorcé ? <Connexion onEntré={onEntré} /> : <PremierCompte onEntré={onEntré} />;
+  return (
+    <div className="entree">
+      {amorcé ? (
+        <DalleDAccueil nom={etablissement.nom} accent={etablissement.accent} />
+      ) : (
+        <PromesseDuProduit />
+      )}
+
+      <div className="entree-forme">
+        {amorcé ? <Connexion onEntré={onEntré} /> : <PremierCompte onEntré={onEntré} />}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Ce que le produit promet, à la toute première installation.
+ *
+ * À ce moment-là il n'y a pas encore d'écran à montrer, et l'établissement
+ * n'a pas de nom : on remplace la dalle par ce qu'on s'engage à tenir. Trois
+ * points, pas dix — ce sont ceux qu'on vérifiera.
+ */
+function PromesseDuProduit() {
+  return (
+    <aside className="dalle promesse">
+      <span className="dalle-mention">avant de commencer</span>
+      <div className="dalle-contenu">
+        <span className="dalle-eyebrow">Couloir</span>
+        <ul className="promesse-liste">
+          <li>Un écran débranché du réseau garde son contenu et continue de l'afficher.</li>
+          <li>Une urgence prend tous les écrans, même ceux dont la dalle est éteinte.</li>
+          <li>La console ne s'ouvre jamais par défaut : il faut un compte pour entrer.</li>
+        </ul>
+      </div>
+    </aside>
+  );
 }
 
 function Connexion({ onEntré }: { onEntré: (utilisateur: Utilisateur) => void }) {

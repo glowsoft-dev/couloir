@@ -288,6 +288,7 @@ export function registerConsoleApi(app: FastifyInstance, options: ConsoleApiOpti
     enregistrerRoutesComptes(app, {
       depot: options.comptes,
       prefixe: CONSOLE_PREFIX,
+      ...(options.identite ? { identite: options.identite } : {}),
       ...(options.adminToken ? { clefDeSecours: options.adminToken } : {}),
       cookieSécurisé: options.cookieSécurisé ?? false,
     });

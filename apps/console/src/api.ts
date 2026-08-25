@@ -368,7 +368,8 @@ export function peutAdministrer(role: Role | undefined): boolean {
 
 export const api = {
   /** Faut-il demander de se connecter, ou de créer le premier compte ? */
-  amorce: () => call<{ comptesExistants: boolean }>("/amorce"),
+  amorce: () =>
+    call<{ comptesExistants: boolean; nom?: string; accent?: string | null }>("/amorce"),
 
   connexion: (courriel: string, motDePasse: string) =>
     call<{ utilisateur: Utilisateur }>("/session", json("POST", { courriel, motDePasse })),
