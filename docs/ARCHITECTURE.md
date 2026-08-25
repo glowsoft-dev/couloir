@@ -1704,6 +1704,47 @@ l'éditeur s'ouvrait vide devant lui et proposait d'« ajouter au moins un
 contenu » alors qu'il en diffusait trois. La composition est reportée avec le
 manifeste.
 
+## Le premier jour
+
+Aucun écran posé. La page montrait l'en-tête habituel, ses compteurs à zéro et
+un mur vide : on ne savait pas par où commencer. Elle tient maintenant sa
+propre page — une dalle dessinée, une phrase, un bouton.
+
+La dalle montre ce que le boîtier affichera : un code, et **l'adresse à
+laquelle il s'est annoncé**, lue du serveur et non inventée. C'est la seule
+chose qu'on aura à recopier, et la voir d'avance évite de croire à une panne
+devant un écran qui ne montre « que » ça.
+
+La durée annoncée — une vingtaine de minutes, dont quinze d'attente — évite
+d'interrompre l'installation au bout de cinq en croyant que ça a échoué.
+
+Les boîtiers déjà annoncés passent avant : il y a alors quelque chose à faire
+sur le mur lui-même.
+
+## La lecture seule
+
+Ce que voit la direction : tout, sans un seul bouton qui refuse.
+
+Le rail se réduit à ce qu'on consulte, et la page d'un écran cesse d'être un
+éditeur. On y montrait pourtant l'éditeur complet, dont chaque bouton se
+serait fait refuser par le serveur — un bouton qui refuse est pire qu'un
+bouton absent.
+
+Ce qui reste est ce qui répond à la question posée : le rendu réel, l'état du
+boîtier, l'emplacement, et la dernière publication avec son auteur. Une
+mention en tête de mur dit une fois pourquoi le reste manque : le chercher
+sans le trouver coûte plus cher que de le lire.
+
+### Deux corrections au passage
+
+« Ne répond plus depuis jamais vu » devient « ne s'est pas encore annoncé ».
+Un boîtier fraîchement rattaché n'est pas en panne, et la première tournure
+faisait chercher une panne qui n'existe pas.
+
+Poser ou lever une urgence crée une version que personne ne signait. C'est
+pourtant l'action de quelqu'un : elle lui est maintenant attribuée, comme une
+publication.
+
 ## Ce qui n'est pas encore fait
 
 Le socle tourne, mais il reste volontairement incomplet :

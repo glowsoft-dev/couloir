@@ -796,11 +796,12 @@ export function registerConsoleApi(app: FastifyInstance, options: ConsoleApiOpti
       ...(request.identité?.auteur ? { parQui: request.identité.auteur } : {}),
     };
 
-    const touched = await applyToScreens(store, parsed.data.screenIds, (manifest) => ({
-      ...manifest,
-      version: manifest.version + 1,
-      emergency,
-    }));
+    const touched = await applyToScreens(
+      store,
+      parsed.data.screenIds,
+      (manifest) => ({ ...manifest, version: manifest.version + 1, emergency }),
+      request.identité?.auteur,
+    );
 
     // C'est ce réveil qui fait passer l'urgence de la minute à la seconde.
     options.commands?.broadcast(touched.appliedIds, "sync-now");
@@ -815,10 +816,12 @@ export function registerConsoleApi(app: FastifyInstance, options: ConsoleApiOpti
 
   /** Sortie explicite : un message d'urgence ne s'efface jamais tout seul. */
   app.delete(`${CONSOLE_PREFIX}/emergency`, async (request) => {
-    const touched = await applyToScreens(store, undefined, (manifest) =>
-      manifest.emergency
-        ? { ...manifest, version: manifest.version + 1, emergency: null }
-        : null,
+    const touched = await applyToScreens(
+      store,
+      undefined,
+      (manifest) =>
+        manifest.emergency ? { ...manifest, version: manifest.version + 1, emergency: null } : null,
+      request.identité?.auteur,
     );
     options.commands?.broadcast(touched.appliedIds, "sync-now");
     if (options.comptes) {
@@ -1108,6 +1111,8 @@ async function applyToScreens(
   store: Store,
   screenIds: string[] | undefined,
   transform: (manifest: Manifest) => Manifest | null,
+  /** Qui a posé ou levé le message. La version créée lui est attribuée. */
+  auteur?: string,
 ): Promise<{ applied: string[]; appliedIds: string[]; skipped: string[] }> {
   const screens = await store.listScreens();
   const targets = screenIds?.length ? screens.filter((s) => screenIds.includes(s.id)) : screens;
@@ -1133,7 +1138,7 @@ async function applyToScreens(
      * d'« ajouter au moins un contenu » alors qu'il en diffuse trois.
      */
     const spec = await store.getSpec(screen.id, manifest.version);
-    await store.putManifest(next, spec ?? undefined);
+    await store.putManifest(next, spec ?? undefined, auteur);
     applied.push(screen.code);
     appliedIds.push(screen.id);
   }

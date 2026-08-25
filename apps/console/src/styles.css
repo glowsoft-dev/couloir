@@ -2150,3 +2150,86 @@ button.ghost.danger:hover:not(:disabled) {
   border: 1px solid var(--signal-bord);
   font-size: 12.5px; color: var(--ink); text-wrap: pretty;
 }
+
+/* ---------- le premier jour ----------
+ *
+ * Une seule chose à faire, et elle est écrite. L'en-tête habituel, ses
+ * compteurs à zéro et un mur vide ne disaient pas par où commencer.
+ */
+
+.premier-jour { display: grid; place-items: center; padding: 32px; min-height: 60vh; }
+.premier-jour-bloc {
+  max-width: 560px; text-align: center;
+  display: flex; flex-direction: column; align-items: center; gap: 16px;
+}
+
+/* Ce que le boîtier affichera, montré d'avance : on ne croit pas à une panne
+   devant un écran qui ne montre « que » ça. */
+.premier-jour-dalle {
+  width: 280px; aspect-ratio: 16 / 9; border-radius: var(--r-apercu);
+  background: var(--accent); color: #06120E;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+  font-family: Archivo, "Helvetica Neue", Arial, sans-serif;
+}
+.premier-jour-mention {
+  font-size: 5.2px; letter-spacing: .14em; text-transform: uppercase;
+  font-weight: 600; opacity: .75;
+}
+.premier-jour-code {
+  font-size: 34px; font-weight: 700; letter-spacing: -.02em; font-variant-numeric: tabular-nums;
+}
+.premier-jour-hote { font-size: 7.3px; opacity: .75; margin-top: 3px; }
+
+.premier-jour h1 {
+  margin: 6px 0 0; font-family: "Fira Sans", Roboto, sans-serif;
+  font-size: 24px; font-weight: 700; letter-spacing: -.02em;
+}
+.premier-jour-phrase {
+  margin: 0; font-size: 14.5px; color: var(--ink-soft); max-width: 46ch; text-wrap: pretty;
+}
+.premier-jour-action { margin-top: 4px; font-size: 15px; padding: 13px 22px; }
+.premier-jour-duree { margin: 2px 0 0; font-size: 12.5px; color: var(--ink-faint); }
+
+/* ---------- la lecture seule ----------
+ *
+ * Ce que voit la direction : tout, sans un seul bouton qui refuse.
+ */
+
+.etat-lecture {
+  flex: none; white-space: nowrap; display: inline-block;
+  font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase;
+  padding: 4px 10px; border-radius: var(--r-pastille);
+  background: var(--surface-2); border: 1px solid var(--rule-strong); color: var(--ink-soft);
+}
+.mur-note-lecture {
+  margin: 0 0 16px; padding: 12px 14px;
+  border-radius: var(--r-apercu); background: var(--surface-2);
+  border: 1px solid var(--rule); font-size: 12.5px; color: var(--ink-soft);
+  max-width: 88ch; text-wrap: pretty;
+}
+
+.lecture-ecran { max-width: 900px; }
+.lecture-dalle {
+  position: relative; aspect-ratio: 16 / 9; overflow: hidden;
+  background: #0E1211; border: 1px solid var(--rule-strong); border-radius: var(--r-carte);
+}
+.lecture-faits {
+  margin: 18px 0 0; display: grid; gap: 0;
+  background: var(--surface); border: 1px solid var(--rule); border-radius: var(--r-carte);
+}
+.lecture-faits > div {
+  display: grid; grid-template-columns: 190px minmax(0, 1fr); gap: 14px;
+  padding: 13px 18px; border-top: 1px solid var(--ground);
+}
+.lecture-faits > div:first-child { border-top: 0; }
+.lecture-faits dt {
+  font-family: "Fira Sans", Roboto, sans-serif; font-size: 13px;
+  font-weight: 500; color: var(--ink-soft);
+}
+.lecture-faits dd { margin: 0; font-size: 13.5px; }
+.lecture-muet { color: var(--signal); }
+.lecture-note { margin: 14px 0 0; font-size: 12.5px; color: var(--ink-faint); }
+
+@media (max-width: 720px) {
+  .lecture-faits > div { grid-template-columns: minmax(0, 1fr); gap: 2px; }
+}

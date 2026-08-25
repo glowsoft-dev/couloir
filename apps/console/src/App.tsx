@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import type { Manifest } from "@couloir/protocol";
 import { ScreenActions } from "./Actions.js";
 import { EmergencyBar, UrgenceEnCours } from "./Emergency.js";
 import { GridView } from "./Grid.js";
@@ -6,6 +7,8 @@ import { PageBibliotheque } from "./PageBibliotheque.js";
 import { DiffusionGroupee } from "./DiffusionGroupee.js";
 import { MurDEcrans } from "./MurDEcrans.js";
 import { NouvelEcran } from "./NouvelEcran.js";
+import { AucunEcran } from "./AucunEcran.js";
+import { EcranEnLecture } from "./EcranEnLecture.js";
 import { HistoryPanel } from "./History.js";
 import { PublishPanel } from "./Publish.js";
 import { PendingPanel, ScreenList } from "./Screens.js";
@@ -325,7 +328,15 @@ export function App() {
           />
         )}
 
-        {tab === "screens" && !selected && !poseEnCours && (
+        {/* Le premier jour tient sa propre page : l'en-tête, les compteurs à
+            zéro et le mur vide ne disaient pas par où commencer. Les boîtiers
+            déjà annoncés passent avant — il y a alors quelque chose à faire
+            ici même. */}
+        {tab === "screens" && !selected && !poseEnCours && screens.length === 0 && pending.length === 0 && (
+          <AucunEcran {...(publie ? { onPoser: () => setPoseEnCours(true) } : {})} />
+        )}
+
+        {tab === "screens" && !selected && !poseEnCours && (screens.length > 0 || pending.length > 0) && (
           <>
             <div className="mur-entete">
               <div className="mur-titre">
@@ -352,6 +363,7 @@ export function App() {
                     {offline} ne répond{offline > 1 ? "ent" : ""} pas
                   </span>
                 )}
+                {!publie && <span className="etat-lecture">lecture seule</span>}
               </span>
 
               {publie && !emergency && (
@@ -360,6 +372,17 @@ export function App() {
                 </button>
               )}
             </div>
+
+            {/* Dit une fois, en arrivant : un compte qui consulte ne cherche
+                pas pourquoi les boutons manquent s'il sait qu'ils manquent
+                exprès. */}
+            {!publie && (
+              <p className="mur-note-lecture">
+                Votre compte consulte sans modifier. Les boutons qui publient, programment ou
+                agissent sur un boîtier ne sont pas affichés — un bouton qui refuse est pire qu'un
+                bouton absent.
+              </p>
+            )}
 
             {/* Ce que l'urgence change, dit une fois, là où on le constate.
                 Sans cette phrase, on cherche pourquoi « Publier » est grisé
@@ -462,6 +485,16 @@ export function App() {
               </span>
             </header>
 
+            {/* Un lecteur voit ce qui passe, pas de quoi le composer : chaque
+                bouton de l'éditeur se serait fait refuser par le serveur. */}
+            {!publie && (
+              <EcranEnLecture
+                screen={selected}
+                manifest={(manifestes[selected.id] ?? null) as Manifest | null}
+              />
+            )}
+
+            {publie && (
             <PublishPanel
               key={`${selected.id}:${restored}`}
               screen={selected}
@@ -484,6 +517,7 @@ export function App() {
                 </>
               }
             />
+            )}
           </>
         )}
 
