@@ -1541,6 +1541,37 @@ l'établissement ». On le laisse : cet en-tête porte aussi l'état de la sourc
 (*éteinte*, *active*), et le retirer priverait la carte de son nom pour un
 lecteur d'écran. Une redondance douce coûte moins qu'un titre manquant.
 
+## L'emploi du temps externe
+
+NetYPareo expose des « afficheurs planning », faits pour des écrans de
+couloir. On s'y branche plutôt que de ressaisir : deux saisies finissent
+toujours par diverger, et c'est l'écran qui a tort.
+
+Le branchement à gauche, ce qu'il donnerait à droite. Corriger un numéro
+d'afficheur en gardant sous les yeux la journée qu'il ramène évite le
+va-et-vient — et c'est là qu'on voit ce qui ne devrait pas partir.
+
+### Le contrôle qui compte
+
+NetYPareo mêle aux groupes des rendez-vous individuels — un entretien de
+suivi, un bilan — et l'intitulé de la séance est alors **le nom de l'élève**.
+Diffusé tel quel, il s'affiche en clair dans un couloir passant.
+
+L'aperçu le signale avant qu'on branche : combien de séances, et qui. Il ne
+filtre rien — la décision revient à l'établissement, et NetYPareo sait exclure
+ces séances à la source.
+
+Le repérage penche volontairement vers l'alerte de trop. Un intitulé de
+formation tout en majuscules et sans chiffre serait signalé à tort ; on le
+lit, on hausse les épaules, on passe. L'erreur inverse laisserait le nom d'un
+élève sur un mur.
+
+Il est éprouvé sur les intitulés que l'afficheur du campus a réellement
+servis — les quatre noms qu'il portait ce jour-là, et les trois intitulés de
+formation qu'il ne doit pas confondre avec eux. C'est le seul jeu d'essai qui
+vaille pour une heuristique : elle n'a pas à être élégante, elle a à trier
+CES intitulés-là.
+
 ## Ce qui n'est pas encore fait
 
 Le socle tourne, mais il reste volontairement incomplet :

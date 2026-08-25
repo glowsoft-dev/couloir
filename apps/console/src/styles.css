@@ -1949,3 +1949,32 @@ button.ghost.danger:hover:not(:disabled) {
   .reglages-corps { padding: 20px 0 0; }
   .reglages-paire { grid-template-columns: minmax(0, 1fr); }
 }
+
+/* ---------- l'emploi du temps externe ----------
+ *
+ * Le branchement à gauche, ce qu'il donnerait à droite. Corriger un numéro
+ * d'afficheur en gardant sous les yeux la journée qu'il ramène évite le
+ * va-et-vient — et c'est là qu'on voit ce qui ne devrait pas partir.
+ */
+
+.nety { display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; align-items: start; }
+.nety--avec-apercu { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+
+/* Le contrôle qui compte : un rendez-vous individuel porte le nom de l'élève,
+   et partirait tel quel sur un mur de couloir. On alerte, on ne filtre pas —
+   la décision revient à l'établissement. */
+.alerte-nominative {
+  display: flex; gap: 11px; margin: 0 0 14px;
+  padding: 13px 15px; border-radius: var(--r-apercu);
+  background: var(--signal-doux); border: 1px solid var(--signal-bord);
+  font-size: 12.5px; color: var(--ink); text-wrap: pretty;
+}
+.alerte-nominative strong { font-weight: 600; }
+.alerte-pastille {
+  width: 8px; height: 8px; flex: none; border-radius: 50%;
+  background: var(--signal); margin-top: 6px;
+}
+
+@media (max-width: 1100px) {
+  .nety--avec-apercu { grid-template-columns: minmax(0, 1fr); }
+}

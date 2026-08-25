@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { séancesNominatives } from "./nomsDePersonnes.js";
 import { ApiError, type JourneeAfficheur, api } from "./api.js";
 
 /**
@@ -108,7 +109,9 @@ export function Netypareo() {
   }
 
   return (
-    <>
+    /* Le branchement à gauche, ce qu'il donnerait à droite : on corrige un
+       numéro d'afficheur en gardant sous les yeux la journée qu'il ramène. */
+    <div className={journee ? "nety nety--avec-apercu" : "nety"}>
       <section className="panel">
         <header>
           <h2>Emploi du temps · NetYPareo</h2>
@@ -233,26 +236,19 @@ export function Netypareo() {
       </section>
 
       {journee && <ApercuJournee journee={journee} />}
-    </>
+    </div>
   );
 }
 
-/** Ce qui a l'air d'un nom de personne plutôt que d'un groupe. */
-function ressembleÀUnNom(intitulé: string): boolean {
-  const mots = intitulé.trim().split(/\s+/);
-  if (mots.length < 2 || mots.length > 4) return false;
-  if (/\d/.test(intitulé)) return false;
-  // « Morgane LINOIS », « Ratan Reddy KONDA » : au moins un mot tout en
-  // majuscules, et aucun sigle de formation.
-  if (/\b(BTS|BAC|CAP|MASTER|M1|M2|LICENCE|TITRE|BLOC|PROMO)\b/i.test(intitulé)) return false;
-  return mots.some((m) => m.length > 2 && m === m.toUpperCase());
-}
-
 function ApercuJournee({ journee }: { journee: JourneeAfficheur }) {
-  const nominatives = journee.seances.filter((s) => ressembleÀUnNom(s.subject));
+  const nominatives = séancesNominatives(journee.seances);
+  // La même personne revient souvent deux fois dans une journée. Répéter son
+  // nom allongerait l'alerte sans rien apprendre : on compte les séances,
+  // on nomme les personnes.
+  const personnes = [...new Set(nominatives.map((s) => s.subject))];
 
   return (
-    <section className="panel" style={{ marginTop: 20 }}>
+    <section className="panel">
       <header>
         <h2>Ce que l'écran afficherait</h2>
         <span className="spacer" />
@@ -270,11 +266,19 @@ function ApercuJournee({ journee }: { journee: JourneeAfficheur }) {
         )}
 
         {nominatives.length > 0 && (
-          <p className="notice error">
-            {nominatives.length === 1 ? "Une séance porte" : `${nominatives.length} séances portent`}{" "}
-            un nom de personne plutôt qu'un groupe — {nominatives.map((s) => s.subject).join(", ")}.
-            Ces rendez-vous individuels s'afficheraient en clair dans un couloir. À trancher avec la
-            direction : NetYPareo permet de les exclure de l'afficheur.
+          <p className="alerte-nominative">
+            <span className="alerte-pastille" />
+            <span>
+              <strong>
+                {nominatives.length === 1
+                  ? "Une séance porte"
+                  : `${nominatives.length} séances portent`}{" "}
+                un nom de personne
+              </strong>{" "}
+              plutôt qu'un groupe — {personnes.join(", ")}. Ces
+              rendez-vous individuels s'afficheraient en clair dans un couloir. À trancher avec la
+              direction : NetYPareo permet de les exclure de l'afficheur.
+            </span>
           </p>
         )}
 
