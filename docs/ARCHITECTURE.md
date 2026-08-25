@@ -1772,6 +1772,29 @@ grilles des mêmes fichiers, deux boutons « Importer », et la rotation réduit
 pour loger la copie. Elle reste où elle sert — à côté, en permanence, quel que
 soit le volet ouvert.
 
+## Le mois d'un écran
+
+La vue jour répond à « à quelle heure ». Celle-ci répond à « quels jours » —
+la question qu'on se pose en programmant à l'avance : les portes ouvertes du
+14, le menu de la semaine, l'affiche mise « jusqu'au 15 ».
+
+Et surtout **les jours où plus rien n'est prévu**, qui prennent le ton
+d'avertissement. Ce n'est pas une erreur : le contenu par défaut y prend la
+main. Mais c'est une décision, et on ne la prend pas sans la voir.
+
+### Les heures sont délibérément ignorées
+
+Une affiche programmée de 19:00 à 07:30 paraît bel et bien ce jour-là. La
+faire disparaître du calendrier parce qu'on regarde à midi serait un
+mensonge — c'est pourquoi la vue n'appelle pas `isVisible` du noyau de rendu :
+il répond à « maintenant, précisément », ce qui n'est pas la question ici.
+
+### Six semaines, toujours
+
+Et non cinq ou six selon le mois. Une grille qui change de hauteur en
+changeant de mois fait sauter tout ce qui est en dessous, et on perd le fil en
+feuilletant.
+
 ## Ce qui n'est pas encore fait
 
 Le socle tourne, mais il reste volontairement incomplet :

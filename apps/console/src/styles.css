@@ -2279,3 +2279,58 @@ button.ghost.danger:hover:not(:disabled) {
 }
 .rotation-ordre button:hover:not(:disabled) { color: var(--ink); border-color: var(--rule-strong); }
 .rotation-pied .periode-resume { max-width: 100%; }
+
+/* ---------- le mois d'un écran ----------
+ *
+ * La vue jour répond à « à quelle heure », celle-ci à « quels jours ». C'est
+ * la question qu'on se pose en programmant à l'avance — et surtout celle des
+ * jours où plus rien n'est prévu.
+ */
+
+.mois-tete { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+.mois-tete button {
+  font-size: 13px; padding: 7px 11px; border-radius: var(--r-bouton);
+  background: var(--surface); color: var(--ink-soft); border: 1px solid var(--rule-strong);
+}
+.mois-nom {
+  font-family: "Fira Sans", Roboto, sans-serif; font-size: 15px; font-weight: 600;
+  min-width: 11ch;
+}
+.mois-aujourdhui { margin-left: auto; color: var(--accent-texte) !important; }
+
+.mois-grille { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+.mois-entete {
+  font-family: "Fira Sans", Roboto, sans-serif;
+  font-size: 10.5px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--ink-faint); text-align: center; padding-bottom: 4px;
+}
+
+.mois-case {
+  min-height: 78px; padding: 5px 6px 6px;
+  display: flex; flex-direction: column; gap: 3px;
+  background: var(--surface); border: 1px solid var(--rule); border-radius: var(--r-petit);
+  overflow: hidden;
+}
+/* Les jours des mois voisins restent lisibles mais reculent : ils complètent
+   la semaine, ils ne sont pas ce qu'on regarde. */
+.mois-case--voisin { background: var(--ground); border-color: transparent; opacity: .55; }
+.mois-case--aujourdhui { border-color: var(--accent); border-width: 2px; padding: 4px 5px 5px; }
+/* Un jour vide se voit : c'est une décision, on ne la prend pas sans la voir. */
+.mois-case--vide { background: var(--warn-doux); border-color: var(--warn-doux); }
+
+.mois-numero {
+  font-family: "IBM Plex Mono", monospace; font-size: 11px; color: var(--ink-faint);
+  font-variant-numeric: tabular-nums;
+}
+.mois-case--aujourdhui .mois-numero { color: var(--accent-texte); font-weight: 600; }
+
+.mois-puce {
+  font-size: 10.5px; line-height: 1.25; padding: 2px 5px; border-radius: 4px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  background: var(--accent-doux); color: var(--accent-texte);
+}
+.mois-puce--video { background: var(--surface-2); color: var(--ink-soft); }
+.mois-rien { font-size: 10.5px; color: var(--warn); }
+.mois-reste { font-size: 10px; color: var(--ink-faint); }
+
+.mois-note { margin: 14px 0 0; font-size: 12.5px; color: var(--ink-faint); text-wrap: pretty; }

@@ -5,6 +5,7 @@ import { Bibliotheque } from "./Bibliotheque.js";
 import { OuCaPart } from "./OuCaPart.js";
 import { Periode } from "./Periode.js";
 import { VueJour } from "./VueJour.js";
+import { VueMois } from "./VueMois.js";
 import { MiseEnPage } from "./MiseEnPage.js";
 import { Schedule } from "./Schedule.js";
 import {
@@ -106,7 +107,7 @@ export function PublishPanel({
   /** Ce que l'écran montre quand rien n'est programmé pour maintenant. */
   const [parDefaut, setParDefaut] = useState<{ assetId?: string; emploiDuTemps?: boolean }>({});
   /** L'onglet ouvert dans l'éditeur. */
-  const [volet, setVolet] = useState<"contenu" | "journee" | "reglages">("contenu");
+  const [volet, setVolet] = useState<"contenu" | "journee" | "mois" | "reglages">("contenu");
   /** Les autres écrans qui recevront aussi cette composition. */
   const [aussi, setAussi] = useState<string[]>([]);
   /**
@@ -530,6 +531,7 @@ export function PublishPanel({
               [
                 ["contenu", "Contenu"],
                 ["journee", "Journée"],
+                ["mois", "Mois"],
                 ["reglages", "Réglages de l'écran"],
               ] as const
             ).map(([id, libelle]) => (
@@ -957,6 +959,12 @@ export function PublishPanel({
             )}
           </div>
 
+          </div>
+
+          {/* Le mois répond à « quels jours », la journée à « à quelle
+              heure ». Deux questions, deux vues. */}
+          <div className="volet-corps" hidden={volet !== "mois"}>
+            <VueMois items={items} media={media} />
           </div>
 
           <div className="volet-corps" hidden={volet !== "journee"}>
