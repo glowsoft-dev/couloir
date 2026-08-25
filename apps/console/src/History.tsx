@@ -23,14 +23,35 @@ function whenLabel(iso: string): string {
   return `${at.toLocaleDateString("fr-FR", { day: "numeric", month: "short" })} à ${heure}`;
 }
 
+/**
+ * Qui a posé cette version, et ce qu'elle contenait.
+ *
+ * C'est ce qui permet de choisir entre trois versions d'une même journée.
+ * Une version d'avant qu'on retienne l'auteur ne prétend pas en avoir un :
+ * elle dit seulement ce qu'elle montrait.
+ */
+function détail(entry: ManifestVersion): string {
+  return [entry.auteur, entry.contenu].filter(Boolean).join(" · ") || "contenu inconnu";
+}
+
 export function HistoryPanel({
   screen,
+  ouvertParDefaut = false,
   onRestored,
 }: {
   screen: ScreenStatus;
+  /**
+   * Ouvert d'emblée après un retour en arrière.
+   *
+   * Republier remonte l'éditeur tout entier, et l'historique s'y refermait
+   * avec lui : on cliquait « Remettre en ligne » et le panneau disparaissait
+   * sans rien confirmer. Il se rouvre donc sur la version qui vient d'être
+   * créée — c'est exactement ce qu'on voulait vérifier.
+   */
+  ouvertParDefaut?: boolean;
   onRestored: () => void;
 }) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(ouvertParDefaut);
   const [versions, setVersions] = useState<ManifestVersion[]>([]);
   const [busy, setBusy] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -42,11 +63,6 @@ export function HistoryPanel({
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : String(cause));
     }
-  }, [screen.id]);
-
-  useEffect(() => {
-    setOpen(false);
-    setVersions([]);
   }, [screen.id]);
 
   useEffect(() => {
@@ -81,6 +97,8 @@ export function HistoryPanel({
           <span aria-hidden="true">{open ? "▾" : "▸"}</span>
           Historique des publications
         </button>
+        <span className="spacer" />
+        <span className="pill">{screen.label}</span>
       </header>
 
       {open && (
@@ -91,17 +109,32 @@ export function HistoryPanel({
             <p className="hint">Rien n'a encore été publié sur cet écran.</p>
           )}
 
+          {/* L'avertissement AVANT la liste : il lève l'hésitation au moment
+              où on hésite, et non après avoir cliqué. */}
+          {past.length > 0 && (
+            <p className="hint histo-avant">
+              Remettre une version en ligne en crée une nouvelle. Rien n'est effacé, et
+              l'opération s'annule elle-même.
+            </p>
+          )}
+
           {current && (
             <ul className="history">
               <li className="history-row current">
                 <span className="index">v{current.version}</span>
-                <span className="title">{whenLabel(current.issuedAt)}</span>
+                <span className="title">
+                  {whenLabel(current.issuedAt)}
+                  <span className="histo-detail">{détail(current)}</span>
+                </span>
                 <span className="pill accent">en ligne</span>
               </li>
               {past.map((entry) => (
                 <li className="history-row" key={entry.version}>
                   <span className="index">v{entry.version}</span>
-                  <span className="title">{whenLabel(entry.issuedAt)}</span>
+                  <span className="title">
+                    {whenLabel(entry.issuedAt)}
+                    <span className="histo-detail">{détail(entry)}</span>
+                  </span>
                   <button
                     type="button"
                     disabled={busy !== null}
@@ -114,12 +147,6 @@ export function HistoryPanel({
             </ul>
           )}
 
-          {past.length > 0 && (
-            <p className="hint">
-              Remettre une version en ligne en crée une nouvelle. Rien n'est effacé, et l'opération
-              s'annule elle-même.
-            </p>
-          )}
         </div>
       )}
     </section>

@@ -81,7 +81,19 @@ export function App() {
    * annonçant l'ancienne version — elle mentirait sur l'état de l'écran, ce
    * qui est pire que de ne rien afficher.
    */
+  /**
+   * Compte les retours en arrière sur l'écran ouvert.
+   *
+   * Il sert deux fois : à remonter l'éditeur pour qu'il relise la
+   * composition, et à rouvrir l'historique sur la version qui vient d'être
+   * créée. Remis à zéro en changeant d'écran — un retour fait sur le hall ne
+   * doit pas déplier l'historique du CDI.
+   */
   const [restored, setRestored] = useState(0);
+  const choisirEcran = (id: string | null) => {
+    setSelectedId(id);
+    setRestored(0);
+  };
   /** L'assistant de pose d'un nouveau boîtier. */
   const [poseEnCours, setPoseEnCours] = useState(false);
   /** Les écrans cochés sur le mur, pour agir sur plusieurs d'un geste. */
@@ -218,7 +230,7 @@ export function App() {
                 aria-current={tab === entry.id}
                 onClick={() => {
                   setTab(entry.id);
-                  setSelectedId(null);
+                  choisirEcran(null);
                   setPoseEnCours(false);
                 }}
               >
@@ -332,7 +344,7 @@ export function App() {
                     ? "Il affiche encore son dernier contenu."
                     : "Il n'avait rien reçu."}
                 </p>
-                <button type="button" onClick={() => setSelectedId(ecran.id)}>
+                <button type="button" onClick={() => choisirEcran(ecran.id)}>
                   Diagnostiquer
                 </button>
               </div>
@@ -342,7 +354,7 @@ export function App() {
             <MurDEcrans
               screens={screens}
               manifestes={manifestes}
-              onChoisir={(s) => setSelectedId(s.id)}
+              onChoisir={(s) => choisirEcran(s.id)}
               {...(publie
                 ? {
                     selection,
@@ -393,7 +405,7 @@ export function App() {
 
         {tab === "screens" && selected && !poseEnCours && (
           <>
-            <button type="button" className="retour" onClick={() => setSelectedId(null)}>
+            <button type="button" className="retour" onClick={() => choisirEcran(null)}>
               ← Tous les écrans
             </button>
 
@@ -420,6 +432,7 @@ export function App() {
                 <>
                   <HistoryPanel
                     screen={selected}
+                    ouvertParDefaut={restored > 0}
                     onRestored={() => {
                       setRestored((n) => n + 1);
                       void refreshScreens();

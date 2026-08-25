@@ -2106,3 +2106,8 @@ button.ghost.danger:hover:not(:disabled) {
   .mediatheque-tete { flex-wrap: wrap; }
   .mediatheque-outils { margin-left: 0; }
 }
+
+/* L'historique : qui a posé quoi. Sans cette ligne, trois versions d'une même
+   journée se ressemblent toutes, et on ne sait pas laquelle remettre. */
+.histo-detail { display: block; font-size: 12px; color: var(--ink-faint); }
+.histo-avant { margin-top: 0; margin-bottom: 14px; }

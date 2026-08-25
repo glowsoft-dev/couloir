@@ -1,4 +1,5 @@
 import { randomUUID, timingSafeEqual } from "node:crypto";
+import { resumeDePublication } from "./resume-de-publication.js";
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { API_PREFIX, CommandKind } from "@couloir/protocol";
@@ -632,9 +633,27 @@ export function registerConsoleApi(app: FastifyInstance, options: ConsoleApiOpti
 
   // --- Historique des publications --------------------------------------
 
+  /**
+   * L'historique, avec de quoi choisir.
+   *
+   * « v4, hier à 16:41 » ne dit pas laquelle des trois versions du jour
+   * remettre en ligne. On y joint qui l'a posée et ce qu'elle contenait —
+   * le second se relit dans le document déjà enregistré, sans rien stocker
+   * de plus.
+   */
   app.get<{ Params: { screenId: string } }>(
     `${CONSOLE_PREFIX}/screens/:screenId/history`,
-    async (request) => ({ versions: await store.listManifests(request.params.screenId) }),
+    async (request) => {
+      const versions = await store.listManifests(request.params.screenId);
+      return {
+        versions: await Promise.all(
+          versions.map(async (v) => {
+            const document = await store.getManifestVersion(request.params.screenId, v.version);
+            return { ...v, contenu: document ? resumeDePublication(document) : null };
+          }),
+        ),
+      };
+    },
   );
 
   /**
@@ -665,7 +684,7 @@ export function registerConsoleApi(app: FastifyInstance, options: ConsoleApiOpti
         issuedAt: iso(new Date()),
       };
       const pastSpec = await store.getSpec(request.params.screenId, target);
-      await store.putManifest(manifest, pastSpec ?? undefined);
+      await store.putManifest(manifest, pastSpec ?? undefined, request.identité?.auteur);
       options.commands?.issue(request.params.screenId, "sync-now");
 
       if (options.comptes) {
@@ -946,7 +965,7 @@ export function registerConsoleApi(app: FastifyInstance, options: ConsoleApiOpti
           media: media.index(),
           baseUrl,
         });
-        await store.putManifest(manifest, relu.data);
+        await store.putManifest(manifest, relu.data, request.identité?.auteur);
         options.commands?.issue(screenId, "sync-now");
         resultats.push({ screenId, code: screen.code, version: manifest.version });
       } catch (error) {
@@ -1016,7 +1035,7 @@ export function registerConsoleApi(app: FastifyInstance, options: ConsoleApiOpti
         // On enregistre la composition SAISIE, pas la composition résolue :
         // rouvrir doit rendre « toutes les classes » et non la liste figée
         // des classes qui existaient ce jour-là.
-        await store.putManifest(manifest, parsed.data);
+        await store.putManifest(manifest, parsed.data, request.identité?.auteur);
         // On réveille l'écran plutôt que d'attendre son prochain cycle :
         // publier doit se voir dans la seconde, pas dans la minute.
         options.commands?.issue(screen.id, "sync-now");

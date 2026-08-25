@@ -1,0 +1,15 @@
+-- Qui a publié quoi.
+--
+-- L'historique disait « v4, hier à 16:41 » et rien d'autre. Devant trois
+-- versions d'une même journée, on ne sait pas laquelle remettre en ligne :
+-- il manque qui l'a posée et ce qu'elle contenait. Le second se relit dans le
+-- document ; le premier n'était nulle part.
+--
+-- Le journal le sait, mais il est réservé aux administrateurs — aller l'y
+-- chercher ferait fuir une donnée hors de sa frontière. La ligne du manifeste
+-- est le bon endroit : « ce contenu a été publié » et « par qui » sont le même
+-- fait.
+--
+-- Nul pour les publications antérieures, et pour celles qu'aucune personne
+-- n'a signées — l'amorçage par clé de secours, ou un futur automate.
+ALTER TABLE manifests ADD COLUMN auteur TEXT;

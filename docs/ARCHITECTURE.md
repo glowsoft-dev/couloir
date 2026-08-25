@@ -1630,6 +1630,46 @@ ici : supprimer un fichier référencé par un manifeste en ligne laisserait un
 écran devant une adresse morte. La page dit ce qui ne passe nulle part ; la
 suite est une décision, pas un bouton.
 
+## L'historique des publications
+
+Revenir en arrière ne réécrit rien : on republie l'ancien contenu sous une
+nouvelle version. L'historique reste une suite de faits — « on est revenu à ce
+contenu tel jour » — plutôt qu'un état qu'on remonterait en effaçant ce qui
+s'est passé. C'est ce qui permet d'annuler une annulation.
+
+### De quoi choisir
+
+Il disait « v4, hier à 16:41 ». Devant trois versions d'une même journée, ça
+ne dit pas laquelle remettre en ligne. Chaque ligne porte maintenant qui l'a
+posée et ce qu'elle contenait.
+
+Le contenu se relit dans le document déjà enregistré — rien à stocker de plus.
+On compte les diapositives de la rotation, en retirant les colonnes de cours
+et le bandeau : sinon « 5 contenus » désignerait deux affiches et trois
+classes. Et en retirant le repli, que le composeur remplit lui-même de la
+carte d'identité de l'écran : la compter faisait dire « 2 contenus » à une
+publication qui en portait un.
+
+L'auteur, lui, n'était nulle part. Le journal le sait, mais il est réservé aux
+administrateurs — aller l'y chercher aurait fait sortir une donnée de sa
+frontière. Une colonne sur la ligne du manifeste : « ce contenu a été publié »
+et « par qui » sont le même fait. Elle est nulle pour les versions
+antérieures, qui ne prétendent donc pas avoir d'auteur.
+
+### L'avertissement avant, pas après
+
+« Remettre une version en ligne en crée une nouvelle » était écrit sous la
+liste. Il lève une hésitation : il doit être lu au moment où on hésite.
+
+### Un retour en arrière refermait l'historique
+
+Republier remonte l'éditeur tout entier, et l'historique s'y refermait avec
+lui : on cliquait « Remettre en ligne » et le panneau disparaissait sans rien
+confirmer. Il se rouvre sur la version qui vient d'être créée — c'est
+exactement ce qu'on voulait vérifier. Le compteur qui le déclenche est remis à
+zéro en changeant d'écran : un retour fait sur le hall ne déplie pas
+l'historique du CDI.
+
 ## Ce qui n'est pas encore fait
 
 Le socle tourne, mais il reste volontairement incomplet :

@@ -173,6 +173,10 @@ export interface ReglagesNetypareo {
 export interface ManifestVersion {
   version: number;
   issuedAt: string;
+  /** Qui a publié. Nul pour les versions posées avant qu'on le retienne. */
+  auteur: string | null;
+  /** « 3 contenus, emploi du temps, bandeau ». Nul si le document a disparu. */
+  contenu: string | null;
 }
 
 // --- Emploi du temps -------------------------------------------------

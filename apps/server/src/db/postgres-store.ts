@@ -200,7 +200,7 @@ export class PostgresStore implements Store {
     }));
   }
 
-  async putManifest(manifest: Manifest, spec?: unknown): Promise<void> {
+  async putManifest(manifest: Manifest, spec?: unknown, auteur?: string): Promise<void> {
     const problems = findBrokenReferences(manifest);
     if (problems.length > 0) {
       throw new Error(`manifeste incohérent :\n  - ${problems.join("\n  - ")}`);
@@ -209,15 +209,19 @@ export class PostgresStore implements Store {
     await this.sql.begin(async (tx) => {
       // Historisé, pour permettre le retour à la version précédente.
       await tx`
-        INSERT INTO manifests (screen_id, version, document, spec)
+        INSERT INTO manifests (screen_id, version, document, spec, auteur)
         VALUES (
           ${manifest.screenId},
           ${manifest.version},
           ${tx.json(manifest as never)},
-          ${spec === undefined ? null : tx.json(spec as never)}
+          ${spec === undefined ? null : tx.json(spec as never)},
+          ${auteur ?? null}
         )
         ON CONFLICT (screen_id, version)
-        DO UPDATE SET document = EXCLUDED.document, spec = COALESCE(EXCLUDED.spec, manifests.spec)
+        DO UPDATE SET
+          document = EXCLUDED.document,
+          spec = COALESCE(EXCLUDED.spec, manifests.spec),
+          auteur = COALESCE(EXCLUDED.auteur, manifests.auteur)
       `;
       await tx`
         UPDATE screens
@@ -238,8 +242,8 @@ export class PostgresStore implements Store {
   }
 
   async listManifests(screenId: ScreenId, limit = 20) {
-    const rows = await this.sql<{ version: number; created_at: Date }[]>`
-      SELECT version, created_at FROM manifests
+    const rows = await this.sql<{ version: number; created_at: Date; auteur: string | null }[]>`
+      SELECT version, created_at, auteur FROM manifests
       WHERE screen_id = ${screenId}
       ORDER BY version DESC
       LIMIT ${limit}
@@ -247,6 +251,7 @@ export class PostgresStore implements Store {
     return rows.map((row) => ({
       version: row.version,
       issuedAt: row.created_at.toISOString().replace(/\.\d+Z$/, "Z"),
+      auteur: row.auteur,
     }));
   }
 

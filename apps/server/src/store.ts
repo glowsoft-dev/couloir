@@ -120,7 +120,7 @@ export interface Store {
    * cette affiche, ce bandeau ». La conserver permet de rouvrir une
    * publication pour en changer un détail, au lieu de tout resaisir.
    */
-  putManifest(manifest: Manifest, spec?: unknown): Promise<void>;
+  putManifest(manifest: Manifest, spec?: unknown, auteur?: string): Promise<void>;
   getManifest(screenId: ScreenId): Promise<Manifest | null>;
   /**
    * L'historique des publications, de la plus récente à la plus ancienne.
@@ -128,7 +128,10 @@ export interface Store {
    * Sans lui, publier serait irréversible : on ne pourrait revenir en
    * arrière qu'en refaisant la composition de mémoire.
    */
-  listManifests(screenId: ScreenId, limit?: number): Promise<{ version: number; issuedAt: string }[]>;
+  listManifests(
+    screenId: ScreenId,
+    limit?: number,
+  ): Promise<{ version: number; issuedAt: string; auteur: string | null }[]>;
   getManifestVersion(screenId: ScreenId, version: number): Promise<Manifest | null>;
   /** La composition d'une version, si elle a été enregistrée. */
   getSpec(screenId: ScreenId, version?: number): Promise<unknown | null>;
@@ -182,6 +185,7 @@ export class MemoryStore implements Store {
   private readonly manifests = new Map<ScreenId, Manifest>();
   private readonly history = new Map<ScreenId, Manifest[]>();
   private readonly specs = new Map<string, unknown>();
+  private readonly auteurs = new Map<string, string>();
   private readonly seenEventIds = new Set<string>();
   private readonly lastBeat = new Map<ScreenId, { atMs: number; state: string }>();
 
@@ -285,8 +289,9 @@ export class MemoryStore implements Store {
       }));
   }
 
-  async putManifest(manifest: Manifest, spec?: unknown): Promise<void> {
+  async putManifest(manifest: Manifest, spec?: unknown, auteur?: string): Promise<void> {
     if (spec !== undefined) this.specs.set(`${manifest.screenId}:${manifest.version}`, spec);
+    if (auteur !== undefined) this.auteurs.set(`${manifest.screenId}:${manifest.version}`, auteur);
     const problems = findBrokenReferences(manifest);
     if (problems.length > 0) {
       throw new Error(`manifeste incohérent :\n  - ${problems.join("\n  - ")}`);
@@ -307,7 +312,11 @@ export class MemoryStore implements Store {
       .slice()
       .sort((a, b) => b.version - a.version)
       .slice(0, limit)
-      .map((m) => ({ version: m.version, issuedAt: m.issuedAt }));
+      .map((m) => ({
+        version: m.version,
+        issuedAt: m.issuedAt,
+        auteur: this.auteurs.get(`${screenId}:${m.version}`) ?? null,
+      }));
   }
 
   async getManifestVersion(screenId: ScreenId, version: number): Promise<Manifest | null> {
