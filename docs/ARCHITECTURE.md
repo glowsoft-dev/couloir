@@ -1816,6 +1816,25 @@ volets, un changement de mise en page qui révèle les cartes qui en dépendent,
 un contenu ajouté, un bandeau saisi, une publication, et la composition
 relue entière après rechargement.
 
+## Salle ET enseignant, pas l'un ou l'autre
+
+Le genre de l'exception décidait seul du champ retenu : « salle changée »
+écrasait la salle et jetait l'enseignant, « remplacé » faisait l'inverse. Or
+la base n'accepte qu'une exception par cours et par jour — le cas le plus
+courant d'une absence, *quelqu'un remplace et pas dans la même salle*, était
+donc **inexprimable**. Le second changement partait en silence, et l'élève
+allait à l'ancienne porte.
+
+Le moteur applique maintenant tout ce qui est renseigné. Le genre ne dit plus
+que la mention à afficher — et cette mention se déduit elle aussi de ce qui a
+changé : « salle et enseignant changés » quand les deux bougent, sans quoi
+« remplacé » tairait la moitié de l'information.
+
+Côté console, deux choix au lieu de trois — *annulé*, ou *le cours a lieu
+autrement* — et le second ouvre les deux champs. La ligne du cours affiche
+désormais où et avec qui, comme l'écran, au lieu de répéter l'étiquette que la
+pastille porte déjà.
+
 ## Ce qui n'est pas encore fait
 
 Le socle tourne, mais il reste volontairement incomplet :

@@ -120,30 +120,46 @@ function applyException(
   if (!exception) return entry;
 
   const change: TimetableChange = exception.kind === "added" ? "added" : exception.kind;
-  const note = exception.note ?? changeLabel(change) ?? undefined;
+  /*
+   * La mention par défaut dit ce qui change vraiment.
+   *
+   * `changeLabel` la tire du genre, qui n'en désigne qu'un : « remplacé »
+   * seul tairait le changement de salle posé en même temps, et l'élève
+   * irait à l'ancienne porte.
+   */
+  const deuxChangements = Boolean(exception.roomCode) && Boolean(exception.teacherName);
+  const note =
+    exception.note ??
+    (deuxChangements && exception.kind !== "added" && exception.kind !== "cancelled"
+      ? "salle et enseignant changés"
+      : (changeLabel(change) ?? undefined));
 
-  switch (exception.kind) {
-    case "cancelled":
-      // Gardé à l'écran, signalé : c'est l'information la plus utile de la
-      // journée pour l'élève qui allait s'y rendre.
-      return { ...entry, change: "cancelled", ...(note ? { note } : {}) };
-    case "room":
-      return {
-        ...entry,
-        room: exception.roomCode ?? entry.room,
-        change: "room",
-        ...(note ? { note } : {}),
-      };
-    case "teacher":
-      return {
-        ...entry,
-        ...(exception.teacherName ? { teacher: exception.teacherName } : {}),
-        change: "teacher",
-        ...(note ? { note } : {}),
-      };
-    default:
-      return entry;
+  if (exception.kind === "cancelled") {
+    // Gardé à l'écran, signalé : c'est l'information la plus utile de la
+    // journée pour l'élève qui allait s'y rendre.
+    return { ...entry, change: "cancelled", ...(note ? { note } : {}) };
   }
+  if (exception.kind === "added") return entry;
+
+  /*
+   * Ce qui est renseigné s'applique, quel que soit le genre.
+   *
+   * Le genre décidait seul du champ retenu : « salle changée » écrasait la
+   * salle et jetait l'enseignant, « remplacé » faisait l'inverse. Une
+   * absence se règle pourtant souvent des deux côtés — quelqu'un remplace,
+   * et pas dans la même salle — et la base n'accepte qu'une exception par
+   * cours et par jour. Le cas était donc inexprimable, et le second
+   * changement partait en silence.
+   *
+   * Le genre ne dit plus que la mention à afficher.
+   */
+  return {
+    ...entry,
+    ...(exception.roomCode ? { room: exception.roomCode } : {}),
+    ...(exception.teacherName ? { teacher: exception.teacherName } : {}),
+    change,
+    ...(note ? { note } : {}),
+  };
 }
 
 /** Jour ISO à partir d'une date civile, sans passer par un fuseau. */

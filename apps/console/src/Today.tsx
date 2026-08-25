@@ -39,11 +39,19 @@ const KIND_LABELS: Record<ExceptionKind, string> = {
   added: "Ajouté",
 };
 
-/** Les trois cas qu'on saisit le matin. « Ajouté » se pose ailleurs. */
-const KINDS: { value: ExceptionKind; label: string }[] = [
+/**
+ * Deux cas, pas trois.
+ *
+ * « La salle change » et « L'enseignant est remplacé » s'excluaient, alors
+ * qu'une absence se règle souvent des deux côtés — quelqu'un remplace, et pas
+ * dans la même salle. La base n'accepte qu'une exception par cours et par
+ * jour : il fallait choisir lequel des deux changements on renonçait à dire.
+ *
+ * Le second choix ouvre donc les deux champs. On remplit ce qui change.
+ */
+const KINDS: { value: "cancelled" | "modifie"; label: string }[] = [
   { value: "cancelled", label: "Le cours est annulé" },
-  { value: "room", label: "La salle change" },
-  { value: "teacher", label: "L'enseignant est remplacé" },
+  { value: "modifie", label: "Le cours a lieu autrement" },
 ];
 
 /** Le jour d'à côté, sans passer par un sélecteur de date. */
@@ -242,9 +250,19 @@ export function TodayView({ setup, onChanged }: { setup: TimetableSetup; onChang
                     <span className="ligne-intitule">
                       <span className="ligne-matiere">{lesson.subjectLabel}</span>
                       <span className="ligne-lieu">
-                        {exception
-                          ? (exception.note ?? KIND_LABELS[exception.kind])
-                          : [lesson.roomCode, lesson.teacherName].filter(Boolean).join(" · ")}
+                        {/* Ce qui aura lieu, pas l'étiquette du changement :
+                            la pastille dit déjà « remplacé », et la ligne
+                            doit dire OÙ et AVEC QUI, comme sur l'écran. */}
+                        {annule
+                          ? (exception!.note ?? KIND_LABELS.cancelled)
+                          : exception
+                            ? [
+                                exception.roomCode || lesson.roomCode,
+                                exception.teacherName || lesson.teacherName,
+                              ]
+                                .filter(Boolean)
+                                .join(" · ")
+                            : [lesson.roomCode, lesson.teacherName].filter(Boolean).join(" · ")}
                       </span>
                     </span>
                   )}
@@ -345,7 +363,7 @@ function FormulaireChangement({
   onCancel: () => void;
   onSaved: () => void;
 }) {
-  const [kind, setKind] = useState<ExceptionKind>("cancelled");
+  const [kind, setKind] = useState<"cancelled" | "modifie">("cancelled");
   const [room, setRoom] = useState("");
   const [teacher, setTeacher] = useState("");
   const [note, setNote] = useState("");
@@ -359,11 +377,13 @@ function FormulaireChangement({
     try {
       await api.timetable.saveException({
         date,
-        kind,
+        kind: genreEnvoyé,
         classId,
         lessonId: lesson.id,
-        roomCode: kind === "room" ? room.trim() : null,
-        teacherName: kind === "teacher" ? teacher.trim() : null,
+        // Les deux champs partent tels quels. Le genre ne sert plus qu'à
+        // choisir la mention par défaut affichée sur les écrans.
+        roomCode: kind === "cancelled" ? null : room.trim() || null,
+        teacherName: kind === "cancelled" ? null : teacher.trim() || null,
         note: note.trim() || null,
       });
       onSaved();
@@ -374,11 +394,17 @@ function FormulaireChangement({
     }
   }
 
-  const ready =
-    kind === "cancelled" ||
-    kind === "added" ||
-    (kind === "room" && room.trim()) ||
-    (kind === "teacher" && teacher.trim());
+  /**
+   * Le genre transmis, déduit de ce qui a été rempli.
+   *
+   * Il ne commande plus rien du rendu — le serveur applique tout ce qui est
+   * renseigné — mais il choisit la mention par défaut, et l'enseignant
+   * remplacé est ce qu'un élève cherche en premier quand les deux changent.
+   */
+  const genreEnvoyé: ExceptionKind =
+    kind === "cancelled" ? "cancelled" : teacher.trim() ? "teacher" : "room";
+
+  const ready = kind === "cancelled" || Boolean(room.trim() || teacher.trim());
 
   return (
     <form className="ligne-forme" onSubmit={submit}>
@@ -406,28 +432,40 @@ function FormulaireChangement({
       {error && <p className="notice error">{error}</p>}
 
       <div className="ligne-champs">
-        {kind === "room" && (
-          <label className="champ-court">
-            <span>Nouvelle salle</span>
-            <input value={room} placeholder="C 018" onChange={(e) => setRoom(e.target.value)} autoFocus />
-          </label>
-        )}
-        {kind === "teacher" && (
-          <label className="champ-court">
-            <span>Qui remplace</span>
-            <input
-              value={teacher}
-              placeholder="Mme Martin"
-              onChange={(e) => setTeacher(e.target.value)}
-              autoFocus
-            />
-          </label>
+        {kind === "modifie" && (
+          <>
+            <label className="champ-court">
+              <span>Nouvelle salle</span>
+              <input
+                value={room}
+                placeholder="C 018"
+                onChange={(e) => setRoom(e.target.value)}
+                autoFocus
+              />
+            </label>
+            <label className="champ-court">
+              <span>Qui remplace</span>
+              <input
+                value={teacher}
+                placeholder="Mme Martin"
+                onChange={(e) => setTeacher(e.target.value)}
+              />
+            </label>
+          </>
         )}
         <label className="champ-long">
           <span>Mention affichée à l'écran</span>
           <input
             value={note}
-            placeholder={KIND_LABELS[kind].toLowerCase()}
+            // La mention proposée dit ce qui change réellement : « remplacé »
+            // seul tairait un changement de salle posé en même temps.
+            placeholder={
+              kind === "cancelled"
+                ? "annulé"
+                : room.trim() && teacher.trim()
+                  ? "salle et enseignant changés"
+                  : KIND_LABELS[genreEnvoyé].toLowerCase()
+            }
             onChange={(e) => setNote(e.target.value)}
           />
         </label>

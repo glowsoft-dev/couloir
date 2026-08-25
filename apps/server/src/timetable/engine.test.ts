@@ -176,6 +176,56 @@ describe("changements du jour", () => {
     expect(day.entries[0]).toMatchObject({ teacher: "Mme Martin", change: "teacher", note: "remplacé" });
   });
 
+  it("applique la salle ET l'enseignant quand les deux changent", () => {
+    /*
+     * Une absence se règle souvent des deux côtés : quelqu'un remplace, et
+     * pas dans la même salle. La base n'accepte qu'une exception par cours et
+     * par jour ; si le genre décidait seul du champ retenu, le second
+     * changement partirait en silence.
+     */
+    const day = resolve({
+      lessons: [base],
+      exceptions: [
+        exception({ kind: "teacher", teacherName: "Mme Martin", roomCode: "C 007" }),
+      ],
+    });
+
+    expect(day.entries[0]).toMatchObject({
+      room: "C 007",
+      teacher: "Mme Martin",
+      change: "teacher",
+      // « Remplacé » seul tairait le changement de salle, et l'élève irait à
+      // l'ancienne porte.
+      note: "salle et enseignant changés",
+    });
+  });
+
+  it("laisse la mention saisie l'emporter sur celle qu'on déduit", () => {
+    const day = resolve({
+      lessons: [base],
+      exceptions: [
+        exception({
+          kind: "teacher",
+          teacherName: "Mme Martin",
+          roomCode: "C 007",
+          note: "Cours déplacé au CDI",
+        }),
+      ],
+    });
+
+    expect(day.entries[0]!.note).toBe("Cours déplacé au CDI");
+  });
+
+  it("garde la salle d'origine quand seule l'exception d'enseignant est posée", () => {
+    // Un champ vide ne remplace rien : il n'exprime pas un changement.
+    const day = resolve({
+      lessons: [base],
+      exceptions: [exception({ kind: "teacher", teacherName: "Mme Martin" })],
+    });
+
+    expect(day.entries[0]).toMatchObject({ room: base.roomCode, teacher: "Mme Martin" });
+  });
+
   it("insère un cours ajouté au bon horaire", () => {
     const day = resolve({
       lessons: [lesson({ id: "cours-1", periodId: "m3" })],
