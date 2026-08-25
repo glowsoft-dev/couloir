@@ -402,11 +402,23 @@ export function App() {
               <div className="bandeau-panne" key={ecran.id}>
                 <span className="dot offline" />
                 <p>
-                  <b>{ecran.label}</b> ne répond plus depuis{" "}
-                  {relativeTime(ecran.lastHeartbeatAtMs)}.{" "}
-                  {ecran.manifestVersion > 0
-                    ? "Il affiche encore son dernier contenu."
-                    : "Il n'avait rien reçu."}
+                  {/* Un boîtier rattaché à l'instant n'est pas en panne : il
+                      n'a pas encore appelé. « Ne répond plus depuis jamais
+                      vu » faisait chercher une panne qui n'existe pas. */}
+                  {ecran.lastHeartbeatAtMs === null ? (
+                    <>
+                      <b>{ecran.label}</b> ne s'est pas encore annoncé. Il appellera à son
+                      premier démarrage.
+                    </>
+                  ) : (
+                    <>
+                      <b>{ecran.label}</b> ne répond plus depuis{" "}
+                      {relativeTime(ecran.lastHeartbeatAtMs)}.{" "}
+                      {ecran.manifestVersion > 0
+                        ? "Il affiche encore son dernier contenu."
+                        : "Il n'avait rien reçu."}
+                    </>
+                  )}
                 </p>
                 <button type="button" onClick={() => choisirEcran(ecran.id)}>
                   Diagnostiquer

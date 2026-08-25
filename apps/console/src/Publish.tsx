@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { Manifest } from "@couloir/protocol";
 import { ScreenPreview } from "./Preview.js";
 import { Bibliotheque } from "./Bibliotheque.js";
@@ -127,7 +127,6 @@ export function PublishPanel({
   const [preview, setPreview] = useState<Manifest | null>(null);
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const fileInput = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     void api.media().then((r) => setMedia(r.media)).catch(() => {});
@@ -264,7 +263,6 @@ export function PublishPanel({
       setMessage({ text: cause instanceof Error ? cause.message : String(cause), error: true });
     } finally {
       setBusy(false);
-      if (fileInput.current) fileInput.current.value = "";
     }
   }
 
@@ -737,194 +735,187 @@ export function PublishPanel({
           </div>
 
           <div className="volet-corps" hidden={volet !== "contenu"}>
-          <div className="field">
-            <label>Bibliothèque</label>
-            {media.length === 0 ? (
-              <p className="hint">
-                Aucun média pour l'instant. Importez une affiche ou une vidéo pour commencer.
-              </p>
-            ) : (
-              <div className="media-grid">
-                {media.map((item) => (
-                  <button
-                    key={item.id}
-                    type="button"
-                    className="media-tile"
-                    title={`${item.filename ?? item.id} — ${humanSize(item.bytes)}. Cliquez pour l'ajouter.`}
-                    onClick={() => addMedia(item)}
-                  >
-                    {item.mime.startsWith("image/") ? (
-                      <img src={`/v1/assets/${item.id}`} alt="" />
-                    ) : (
-                      <span className="kind">{item.mime.split("/")[1] ?? "fichier"}</span>
-                    )}
-                    <span className="name">{item.filename ?? item.id}</span>
-                  </button>
-                ))}
-              </div>
-            )}
-
-            <div className="row-actions">
-              <input
-                ref={fileInput}
-                type="file"
-                accept="image/*,video/*"
-                style={{ display: "none" }}
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) void upload(file);
-                }}
-              />
-              <button type="button" onClick={() => fileInput.current?.click()} disabled={busy}>
-                Importer un fichier
-              </button>
-              <button type="button" onClick={addText} disabled={busy}>
-                Ajouter un texte
-              </button>
-            </div>
-          </div>
-
+          {/*
+            La bibliothèque était ici ET dans la colonne de gauche — deux
+            grilles des mêmes fichiers, deux boutons « Importer », et la
+            rotation réduite à deux vignettes par rangée pour loger la copie.
+            Elle reste où elle sert : à côté, en permanence, quel que soit le
+            volet ouvert.
+          */}
           <div className="field">
             <label>Contenus à diffuser</label>
             {items.length === 0 ? (
               <p className="hint">Cliquez sur un média ci-dessus, ou ajoutez un texte.</p>
             ) : (
-              items.map((item, index) => (
-                <div className="slide-row" key={item.key}>
-                  <span className="index">{String(index + 1).padStart(2, "0")}</span>
+              /*
+               * Des vignettes, et non des lignes.
+               *
+               * La rotation est une suite d'images : en lignes, on relisait
+               * douze noms de fichiers pour retrouver l'affiche à retirer, et
+               * « affiche-po-2026 » ne dit pas de quoi elle a l'air. La
+               * vignette montre ce qui passera, et le rang se lit dessus.
+               */
+              <div className="rotation">
+                {items.map((item, index) => {
+                  // Le type du fichier vient de la bibliothèque : le brouillon
+                  // ne porte que son identifiant.
+                  const mime = media.find((m) => m.id === item.assetId)?.mime;
+                  return (
+                  <div className="rotation-carte" key={item.key}>
+                    <div className="rotation-vignette">
+                      {item.text ? (
+                        <span className="rotation-texte">{item.text.titre || "Sans titre"}</span>
+                      ) : mime?.startsWith("image/") ? (
+                        <img src={`/v1/assets/${item.assetId}`} alt="" />
+                      ) : (
+                        <span className="rotation-type">{mime?.split("/")[1] ?? "fichier"}</span>
+                      )}
+                      <span className="rotation-rang">{String(index + 1).padStart(2, "0")}</span>
+                      <button
+                        type="button"
+                        className="rotation-retirer"
+                        aria-label={`Retirer le contenu ${index + 1}`}
+                        title="Retirer"
+                        onClick={() =>
+                          touch(() =>
+                            setItems((current) => current.filter((it) => it.key !== item.key)),
+                          )
+                        }
+                      >
+                        ✕
+                      </button>
+                    </div>
 
-                  {item.text ? (
-                    <input
-                      value={item.text.titre}
-                      placeholder="Titre affiché à l'écran"
-                      aria-label={`Titre du contenu ${index + 1}`}
-                      aria-invalid={!item.text.titre.trim()}
-                      onChange={(e) =>
-                        touch(() =>
-                          setItems((current) =>
-                            current.map((it) =>
-                              it.key === item.key ? { ...it, text: { titre: e.target.value } } : it,
-                            ),
-                          ),
-                        )
-                      }
-                    />
-                  ) : (
-                    <span className="title">{item.title}</span>
-                  )}
+                    <div className="rotation-corps">
+                      {item.text ? (
+                        <input
+                          className="rotation-titre"
+                          value={item.text.titre}
+                          placeholder="Titre affiché à l'écran"
+                          aria-label={`Titre du contenu ${index + 1}`}
+                          aria-invalid={!item.text.titre.trim()}
+                          onChange={(e) =>
+                            touch(() =>
+                              setItems((current) =>
+                                current.map((it) =>
+                                  it.key === item.key
+                                    ? { ...it, text: { titre: e.target.value } }
+                                    : it,
+                                ),
+                              ),
+                            )
+                          }
+                        />
+                      ) : (
+                        <span className="rotation-nom" title={item.title}>
+                          {item.title}
+                        </span>
+                      )}
 
-                  {item.durationMs === undefined ? (
-                    <span className="hint" title="Une vidéo dure le temps qu'elle dure">
-                      durée vidéo
-                    </span>
-                  ) : (
-                    <input
-                      type="number"
-                      min={1}
-                      max={60}
-                      value={Math.round(item.durationMs / 1000)}
-                      aria-label={`Durée du contenu ${index + 1}, en secondes`}
-                      onChange={(e) =>
-                        touch(() =>
-                          setItems((current) =>
-                            current.map((it) =>
-                              it.key === item.key
-                                ? { ...it, durationMs: Math.max(1, Number(e.target.value)) * 1000 }
-                                : it,
-                            ),
-                          ),
-                        )
-                      }
-                    />
-                  )}
+                      <div className="rotation-reglages">
+                        {item.durationMs === undefined ? (
+                          <span className="hint" title="Une vidéo dure le temps qu'elle dure">
+                            durée vidéo
+                          </span>
+                        ) : (
+                          <label className="rotation-duree">
+                            <input
+                              type="number"
+                              min={1}
+                              max={60}
+                              value={Math.round(item.durationMs / 1000)}
+                              aria-label={`Durée du contenu ${index + 1}, en secondes`}
+                              onChange={(e) =>
+                                touch(() =>
+                                  setItems((current) =>
+                                    current.map((it) =>
+                                      it.key === item.key
+                                        ? {
+                                            ...it,
+                                            durationMs: Math.max(1, Number(e.target.value)) * 1000,
+                                          }
+                                        : it,
+                                    ),
+                                  ),
+                                )
+                              }
+                            />
+                            <span>s</span>
+                          </label>
+                        )}
 
-                  {/* Groupés : la grille de la rangée compte quatre colonnes,
-                      pas six, et trois boutons à la suite la feraient passer
-                      sur deux lignes. */}
-                  {!item.text && (
-                    <button
-                      type="button"
-                      className="ajustement"
-                      aria-pressed={item.fit === "remplir"}
-                      title={
-                        item.fit === "remplir"
-                          ? "L'image couvre toute la zone, quitte à rogner les bords."
-                          : "L'image tient en entier, quitte à laisser des bandes."
-                      }
-                      onClick={() =>
-                        touch(() =>
-                          setItems((current) =>
-                            current.map((it) =>
-                              it.key === item.key
-                                ? ({
-                                    ...it,
-                                    ...(it.fit === "remplir"
-                                      ? { fit: undefined }
-                                      : { fit: "remplir" as const }),
-                                  } as Draft)
-                                : it,
-                            ),
-                          ),
-                        )
-                      }
-                    >
-                      {item.fit === "remplir" ? "Remplit" : "Entière"}
-                    </button>
-                  )}
+                        {!item.text && (
+                          <button
+                            type="button"
+                            className="ajustement"
+                            aria-pressed={item.fit === "remplir"}
+                            title={
+                              item.fit === "remplir"
+                                ? "L'image couvre toute la zone, quitte à rogner les bords."
+                                : "L'image tient en entier, quitte à laisser des bandes."
+                            }
+                            onClick={() =>
+                              touch(() =>
+                                setItems((current) =>
+                                  current.map((it) =>
+                                    it.key === item.key
+                                      ? ({
+                                          ...it,
+                                          ...(it.fit === "remplir"
+                                            ? { fit: undefined }
+                                            : { fit: "remplir" as const }),
+                                        } as Draft)
+                                      : it,
+                                  ),
+                                ),
+                              )
+                            }
+                          >
+                            {item.fit === "remplir" ? "Remplit" : "Entière"}
+                          </button>
+                        )}
+                      </div>
 
-                  <Periode
-                    valeur={item.visibility}
-                    libellé={`Contenu ${index + 1}`}
-                    onChange={(v) =>
-                      touch(() =>
-                        setItems((current) =>
-                          current.map((it) =>
-                            it.key === item.key
-                              ? ({ ...it, visibility: v } as Draft)
-                              : it,
-                          ),
-                        ),
-                      )
-                    }
-                  />
-
-                  <span className="slide-controls">
-                    <button
-                      type="button"
-                      className="ghost"
-                      aria-label={`Monter le contenu ${index + 1}`}
-                      title="Monter"
-                      disabled={index === 0}
-                      onClick={() => move(item.key, -1)}
-                    >
-                      ↑
-                    </button>
-                    <button
-                      type="button"
-                      className="ghost"
-                      aria-label={`Descendre le contenu ${index + 1}`}
-                      title="Descendre"
-                      disabled={index === items.length - 1}
-                      onClick={() => move(item.key, 1)}
-                    >
-                      ↓
-                    </button>
-                    <button
-                      type="button"
-                      className="ghost"
-                      aria-label={`Retirer le contenu ${index + 1}`}
-                      title="Retirer"
-                      onClick={() =>
-                        touch(() =>
-                          setItems((current) => current.filter((it) => it.key !== item.key)),
-                        )
-                      }
-                    >
-                      ✕
-                    </button>
-                  </span>
-                </div>
-              ))
+                      <div className="rotation-pied">
+                        <Periode
+                          valeur={item.visibility}
+                          libellé={`Contenu ${index + 1}`}
+                          onChange={(v) =>
+                            touch(() =>
+                              setItems((current) =>
+                                current.map((it) =>
+                                  it.key === item.key ? ({ ...it, visibility: v } as Draft) : it,
+                                ),
+                              ),
+                            )
+                          }
+                        />
+                        <span className="rotation-ordre">
+                          <button
+                            type="button"
+                            aria-label={`Avancer le contenu ${index + 1}`}
+                            title="Avancer dans la rotation"
+                            disabled={index === 0}
+                            onClick={() => move(item.key, -1)}
+                          >
+                            ←
+                          </button>
+                          <button
+                            type="button"
+                            aria-label={`Reculer le contenu ${index + 1}`}
+                            title="Reculer dans la rotation"
+                            disabled={index === items.length - 1}
+                            onClick={() => move(item.key, 1)}
+                          >
+                            →
+                          </button>
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  );
+                })}
+              </div>
             )}
           </div>
 

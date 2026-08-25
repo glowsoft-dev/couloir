@@ -1745,6 +1745,33 @@ Poser ou lever une urgence crée une version que personne ne signait. C'est
 pourtant l'action de quelqu'un : elle lui est maintenant attribuée, comme une
 publication.
 
+## La rotation en vignettes
+
+La rotation est une suite d'images. En rangées, on relisait douze noms de
+fichiers pour retrouver l'affiche à retirer — et « affiche-po-2026 » ne dit
+pas de quoi elle a l'air. Chaque contenu est maintenant une vignette qui
+montre ce qui passera, avec son rang lu par-dessus : c'est l'ordre de passage
+qu'on vérifie du regard, et une colonne à part le repoussait hors du champ.
+
+Un texte se prévisualise comme il paraîtra — sur le fond des dalles, dans leur
+police. Il n'avait qu'un champ de saisie, et rien ne disait à quoi il
+ressemblerait en grand dans un couloir.
+
+### Deux par rangée dans l'éditeur, davantage ailleurs
+
+La grille suit la place disponible. Dans l'éditeur, la bibliothèque et
+l'aperçu occupent deux colonnes : il en reste pour deux vignettes de 190 px.
+Les rétrécir en donnerait trois, trop petites pour reconnaître une affiche et
+trop étroites pour la durée, l'ajustement et la période. C'est la largeur qui
+décide, et elle décide bien.
+
+### La bibliothèque était affichée deux fois
+
+Une fois dans la colonne de gauche, une fois dans le volet « Contenu » : deux
+grilles des mêmes fichiers, deux boutons « Importer », et la rotation réduite
+pour loger la copie. Elle reste où elle sert — à côté, en permanence, quel que
+soit le volet ouvert.
+
 ## Ce qui n'est pas encore fait
 
 Le socle tourne, mais il reste volontairement incomplet :

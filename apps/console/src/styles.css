@@ -234,19 +234,9 @@ button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .media-tile[aria-pressed="true"] { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
 
 /* ---------- diapositives choisies ---------- */
-.slide-row {
-  display: grid; grid-template-columns: 22px minmax(0, 1fr) auto auto;
-  gap: 8px; align-items: center;
-  padding: 8px 0; border-top: 1px solid var(--rule);
-}
-.slide-row:first-child { border-top: 0; }
-.slide-row .index { color: var(--ink-faint); font-family: "IBM Plex Mono", monospace; font-size: 11px; }
-.slide-row .title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.slide-row input[type="number"] { width: 74px; padding: 4px 6px; }
-/* La rangée d'un contenu passe à cinq colonnes : la période s'y glisse entre
-   la durée et les boutons. En dessous de 900 px elle passe à la ligne, avec
-   le résumé en toutes lettres — c'est lui qu'on relit pour vérifier. */
-.slide-row { grid-template-columns: 22px minmax(0, 1fr) auto auto auto; }
+
+/* La rotation était une liste de rangées ; elle est faite de vignettes, plus
+   bas. Voir « la rotation en vignettes ». */
 
 .periode-vide { margin-left: 0; font-size: 11.5px; color: var(--ink-faint); }
 .periode-vide:hover { color: var(--accent-texte); }
@@ -286,13 +276,6 @@ button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .voyage input { width: auto; padding: 5px 8px; font-size: 12.5px; font-variant-numeric: tabular-nums; }
 .voyage-mark { font-size: 14px; line-height: 1; }
 .voyage .hint { margin-top: 0; }
-
-.slide-controls { display: flex; gap: 2px; }
-.slide-controls button {
-  padding: 4px 7px; font-size: 12px; line-height: 1;
-  color: var(--ink-faint);
-}
-.slide-controls button:hover:not(:disabled) { color: var(--ink); }
 
 /* ---------- messages ---------- */
 .notice {
@@ -496,12 +479,6 @@ button.ghost.danger:hover:not(:disabled) {
 /* ---------- téléphone ----------
    La console se consulte debout dans un couloir, un boîtier dans une main :
    appairer un écran et l'identifier doivent tenir sur un écran de poche. */
-
-@media (max-width: 900px) {
-  /* La période prend toute la largeur : un résumé tronqué ne se vérifie pas. */
-  .slide-row { grid-template-columns: 22px minmax(0, 1fr) auto auto; }
-  .slide-row .periode-vide, .slide-row .periode-resume { grid-column: 2 / -1; justify-self: start; }
-}
 
 @media (max-width: 640px) {
   .topbar {
@@ -788,13 +765,6 @@ button.ghost.danger:hover:not(:disabled) {
 }
 .ajustement[aria-pressed="true"] {
   background: var(--accent-doux); border-color: var(--accent); color: var(--accent-texte);
-}
-
-/* Six colonnes désormais dans une rangée de contenu. */
-.slide-row { grid-template-columns: 22px minmax(0, 1fr) auto auto auto auto; }
-@media (max-width: 900px) {
-  .slide-row { grid-template-columns: 22px minmax(0, 1fr) auto auto; }
-  .slide-row .ajustement { grid-column: 2 / -1; justify-self: start; }
 }
 
 /* ---------- l'assistant de pose ---------- */
@@ -2233,3 +2203,79 @@ button.ghost.danger:hover:not(:disabled) {
 @media (max-width: 720px) {
   .lecture-faits > div { grid-template-columns: minmax(0, 1fr); gap: 2px; }
 }
+
+/* ---------- la rotation en vignettes ----------
+ *
+ * La rotation est une suite d'images. En rangées, on relisait douze noms de
+ * fichiers pour retrouver l'affiche à retirer — et « affiche-po-2026 » ne dit
+ * pas de quoi elle a l'air. La vignette montre ce qui passera, et le rang se
+ * lit dessus.
+ */
+
+.rotation {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 12px; margin-top: 4px;
+}
+.rotation-carte {
+  background: var(--surface); border: 1px solid var(--rule);
+  border-radius: var(--r-apercu); overflow: hidden;
+  display: flex; flex-direction: column;
+}
+
+.rotation-vignette {
+  position: relative; aspect-ratio: 16 / 9; background: #0E1211;
+  display: grid; place-items: center; overflow: hidden;
+}
+.rotation-vignette img { width: 100%; height: 100%; object-fit: cover; display: block; }
+/* Un texte se prévisualise comme il paraîtra : sur le fond des dalles. */
+.rotation-texte {
+  padding: 10px 12px; color: #F4F6F4; text-align: center;
+  font-family: Archivo, "Helvetica Neue", Arial, sans-serif;
+  font-size: 13px; font-weight: 700; line-height: 1.2; letter-spacing: -.01em;
+  overflow: hidden; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;
+}
+.rotation-type {
+  font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-faint);
+}
+/* Le rang par-dessus la vignette : c'est l'ordre de passage qu'on vérifie du
+   regard, et une colonne à part le repousserait hors du champ. */
+.rotation-rang {
+  position: absolute; top: 6px; left: 6px;
+  padding: 2px 7px; border-radius: var(--r-pastille);
+  background: rgba(14, 18, 17, .72); color: #F4F6F4;
+  font-family: "IBM Plex Mono", monospace; font-size: 11px; font-variant-numeric: tabular-nums;
+}
+.rotation-retirer {
+  position: absolute; top: 4px; right: 4px;
+  padding: 3px 7px; font-size: 12px; line-height: 1;
+  background: rgba(14, 18, 17, .72); border: 0; border-radius: var(--r-petit); color: #F4F6F4;
+}
+.rotation-retirer:hover { background: var(--signal); color: #fff; }
+
+.rotation-corps {
+  padding: 9px 11px 11px; display: flex; flex-direction: column; gap: 8px; min-width: 0;
+}
+.rotation-nom {
+  font-size: 12.5px; font-weight: 500;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.rotation-titre { width: 100%; font-size: 12.5px; padding: 5px 8px; }
+
+.rotation-reglages { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.rotation-duree { display: flex; align-items: center; gap: 4px; font-size: 11.5px; color: var(--ink-faint); }
+.rotation-duree input {
+  width: 52px; padding: 4px 6px; font-size: 12px; font-variant-numeric: tabular-nums;
+}
+.rotation-reglages .hint { margin: 0; }
+
+.rotation-pied {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  padding-top: 8px; border-top: 1px solid var(--ground);
+}
+.rotation-ordre { display: flex; gap: 2px; margin-left: auto; }
+.rotation-ordre button {
+  padding: 4px 8px; font-size: 12px; line-height: 1; color: var(--ink-faint);
+  background: none; border: 1px solid var(--rule); border-radius: var(--r-petit);
+}
+.rotation-ordre button:hover:not(:disabled) { color: var(--ink); border-color: var(--rule-strong); }
+.rotation-pied .periode-resume { max-width: 100%; }
