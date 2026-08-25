@@ -437,7 +437,13 @@ export function App() {
           (setup ? (
             <>
               {tab === "today" && <TodayView setup={setup} onChanged={() => void refreshSetup()} />}
-              {tab === "grid" && <GridView setup={setup} onChanged={() => void refreshSetup()} />}
+              {tab === "grid" && (
+                <GridView
+                  setup={setup}
+                  externe={emploiDuTempsExterne}
+                  onChanged={() => void refreshSetup()}
+                />
+              )}
               {tab === "settings" && <SettingsView setup={setup} onChanged={() => void refreshSetup()} />}
             </>
           ) : (

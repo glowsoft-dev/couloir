@@ -325,31 +325,8 @@ button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
 .chips { display: flex; flex-wrap: wrap; gap: 6px; }
 
-/* ---------- grille hebdomadaire ---------- */
-.grid-scroll { overflow-x: auto; }
-.grid { border-collapse: separate; border-spacing: 3px; width: 100%; }
-.grid th {
-  font-size: 10px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase;
-  color: var(--ink-faint); padding: 4px; text-align: center; font-weight: 600;
-}
-.grid-period { text-align: right !important; white-space: nowrap; padding-right: 8px !important; }
-.grid-period .mono { font-size: 10px; color: var(--ink-faint); font-weight: 400 }
-
-.cell {
-  width: 100%; min-height: 52px; padding: 6px 8px;
-  display: flex; flex-direction: column; justify-content: center; gap: 2px;
-  background: var(--ground); border: 1px dashed var(--rule); border-radius: 5px;
-  text-align: left; position: relative;
-}
-.cell:hover { border-color: var(--accent); border-style: solid }
-.cell.filled { background: var(--surface-2); border-style: solid; border-color: var(--rule-strong) }
-.cell-subject { font-size: 12.5px; line-height: 1.25; }
-.cell-room { font-size: 10.5px; color: var(--ink-faint); }
-.cell-empty { color: var(--ink-faint); font-size: 16px; text-align: center; opacity: .35 }
-.cell-parity {
-  position: absolute; top: 3px; right: 4px;
-  font-size: 9px; font-weight: 700; color: var(--accent-texte);
-}
+/* La grille hebdomadaire a sa propre famille, plus bas : voir « l'emploi du
+   temps ». Ce qui la servait ici a été retiré. */
 
 .day-picker { display: flex; flex-wrap: wrap; gap: 6px; }
 .day-chip { padding: 5px 11px; font-size: 12px; }
@@ -1624,4 +1601,155 @@ button.ghost.danger:hover:not(:disabled) {
 @media (max-width: 1180px) {
   .changements-grille { grid-template-columns: minmax(0, 1fr); }
   .changements-apercu { max-width: 520px; }
+}
+
+/* ---------- l'emploi du temps ----------
+ *
+ * Plusieurs centaines de cours à saisir dans une année. Tout est réglé pour
+ * que ça reste supportable : on clique une case, on tape trois champs, on
+ * valide, et la case suivante est déjà prête.
+ *
+ * La table reste une table. Une grille de <div> aurait le même dessin, mais
+ * un lecteur d'écran ne dirait plus « mardi, M3 » en arrivant sur une case,
+ * et la grille deviendrait illisible autrement qu'à l'œil.
+ */
+
+.grille { display: flex; flex-direction: column; }
+
+.grille-tete { display: flex; align-items: flex-end; gap: 16px; margin-bottom: 22px; }
+.grille-tete h1 {
+  margin: 0; font-family: "Fira Sans", Roboto, sans-serif;
+  font-size: 27px; font-weight: 700; letter-spacing: -.025em;
+}
+.grille-tete p { margin: 4px 0 0; font-size: 14px; color: var(--ink-soft); }
+
+.grille-source { margin-left: auto; flex: none; display: flex; align-items: center; gap: 10px; }
+.grille-source select {
+  flex: none; width: auto; font-size: 14px; padding: 9px 12px;
+  border: 1px solid var(--rule-strong); border-radius: var(--r-bouton);
+  background: var(--surface); color: var(--ink);
+}
+.grille-origine {
+  flex: none; white-space: nowrap; display: inline-block;
+  font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase;
+  padding: 5px 11px; border-radius: var(--r-pastille);
+  background: var(--accent-doux); color: var(--accent-texte);
+}
+/* Alimentée par un logiciel externe, cette grille n'atteint plus les
+   couloirs. Le ton d'avertissement évite d'y saisir une année pour rien. */
+.grille-origine--externe { background: var(--warn-doux); color: var(--warn); }
+
+.grille-corps { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 22px; align-items: start; }
+
+.grille-cadre {
+  background: var(--surface); border: 1px solid var(--rule);
+  border-radius: var(--r-carte); padding: 16px 18px 18px; overflow-x: auto;
+}
+.grille-semaine { border-collapse: separate; border-spacing: 6px; width: 100%; }
+.grille-jour {
+  font-family: "Fira Sans", Roboto, sans-serif;
+  font-size: 11px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--ink-faint); text-align: center; padding-bottom: 4px;
+}
+/* Le jour où l'on est. C'est le repère qu'on cherche pour se situer dans une
+   semaine de cases qui se ressemblent toutes. */
+.grille-jour--aujourdhui { color: var(--accent-texte); }
+
+.grille-creneau {
+  width: 82px; text-align: right; padding-right: 9px; white-space: nowrap;
+  font-family: "Fira Sans", Roboto, sans-serif; font-size: 12px; font-weight: 500;
+  color: var(--ink-soft); vertical-align: middle;
+}
+.grille-creneau span {
+  display: block; font-family: "IBM Plex Mono", monospace;
+  font-size: 10.5px; color: var(--ink-faint); font-weight: 400;
+}
+
+.case {
+  width: 100%; min-height: 56px; padding: 7px 9px;
+  display: flex; flex-direction: column; justify-content: center; gap: 2px;
+  border-radius: var(--r-petit); text-align: left; position: relative;
+}
+.case--pleine { background: var(--surface-2); border: 1px solid var(--rule-strong); }
+.case--libre { background: var(--ground); border: 1px dashed var(--rule); }
+.case:hover { border-color: var(--accent); border-style: solid; }
+/* La case ouverte dans le panneau de droite : sans repère, on corrige un
+   cours en croyant en corriger un autre. */
+.case--ouverte { border: 2px solid var(--accent-texte); }
+.case-matiere { font-size: 12.5px; line-height: 1.25; }
+.case-salle { font-size: 10.5px; color: var(--ink-faint); }
+.case-plus { color: var(--rule-strong); font-size: 16px; text-align: center; }
+.case-quinzaine {
+  position: absolute; top: 3px; right: 5px;
+  font-size: 9px; font-weight: 700; color: var(--accent-texte);
+}
+
+.saisie {
+  background: var(--surface); border: 1px solid var(--rule);
+  border-radius: var(--r-carte); overflow: hidden;
+}
+.saisie-tete {
+  display: flex; align-items: baseline; gap: 10px;
+  padding: 14px 18px; border-bottom: 1px solid var(--rule);
+}
+.saisie-quand { font-family: "Fira Sans", Roboto, sans-serif; font-size: 15px; font-weight: 600; }
+.saisie-heures {
+  margin-left: auto; font-family: "IBM Plex Mono", monospace;
+  font-size: 12px; color: var(--ink-faint); font-variant-numeric: tabular-nums;
+}
+
+.saisie-forme { padding: 16px 18px 18px; display: flex; flex-direction: column; gap: 14px; }
+.saisie-forme label {
+  display: block; font-family: "Fira Sans", Roboto, sans-serif;
+  font-size: 13.5px; font-weight: 500; margin-bottom: 6px;
+}
+.saisie-forme input {
+  width: 100%; font-size: 13.5px; background: var(--surface); color: var(--ink);
+  border: 1px solid var(--rule-strong); border-radius: var(--r-bouton); padding: 10px 12px;
+}
+/* Le champ par lequel on commence, et le seul qui soit obligatoire. */
+.saisie-vedette { border-color: var(--accent) !important; font-size: 15px !important; }
+.saisie-paire { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+.saisie-frequence { display: flex; gap: 6px; }
+.frequence {
+  flex: none; font-size: 13px; padding: 9px 14px; border-radius: var(--r-bouton);
+  background: var(--surface); color: var(--ink); border: 1px solid var(--rule-strong);
+}
+.frequence--large { flex: 1; white-space: nowrap; padding: 9px 6px; }
+.frequence--active {
+  background: var(--accent-texte); color: var(--accent-ink);
+  border-color: var(--accent-texte); font-weight: 500;
+}
+
+.saisie-jours { display: flex; flex-wrap: wrap; gap: 5px; }
+.jour-chip {
+  flex: none; font-size: 12.5px; padding: 8px 13px; border-radius: var(--r-bouton);
+  background: var(--surface); color: var(--ink); border: 1px solid var(--rule-strong);
+}
+.jour-chip--actif {
+  background: var(--accent); color: var(--accent-ink);
+  border-color: var(--accent); font-weight: 500;
+}
+.saisie-note { margin: 8px 0 0; font-size: 12px; color: var(--ink-faint); text-wrap: pretty; }
+
+.saisie-pied { display: flex; align-items: center; gap: 8px; padding-top: 4px; }
+.saisie-supprimer {
+  margin-left: auto; font-size: 13px; padding: 10px 12px;
+  background: none; color: var(--ink-soft); border: 0;
+}
+
+.saisie--vide { padding: 22px 18px; }
+.saisie--vide p { margin: 0; font-size: 13.5px; color: var(--ink-soft); }
+.saisie-astuce { margin-top: 8px !important; font-size: 12px !important; color: var(--ink-faint) !important; }
+
+.grille-amorce {
+  background: var(--surface); border: 1px solid var(--rule); border-radius: var(--r-carte);
+  padding: 22px 24px; margin: 0; font-size: 13.5px; color: var(--ink-soft);
+  max-width: 62ch; text-wrap: pretty;
+}
+
+@media (max-width: 1180px) {
+  .grille-corps { grid-template-columns: minmax(0, 1fr); }
+  .saisie { max-width: 520px; }
 }

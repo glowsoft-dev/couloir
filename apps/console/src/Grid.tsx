@@ -13,7 +13,16 @@ import { DAYS, type Lesson, type Period, type TimetableSetup, api } from "./api.
  * Une matière revient rarement une seule fois par semaine.
  */
 
-export function GridView({ setup, onChanged }: { setup: TimetableSetup; onChanged: () => void }) {
+export function GridView({
+  setup,
+  externe = false,
+  onChanged,
+}: {
+  setup: TimetableSetup;
+  /** Vrai quand les écrans lisent un logiciel externe, pas cette grille. */
+  externe?: boolean;
+  onChanged: () => void;
+}) {
   const [classId, setClassId] = useState(setup.classes[0]?.id ?? "");
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const [editing, setEditing] = useState<{ dayOfWeek: number; period: Period; lesson?: Lesson } | null>(null);
@@ -45,28 +54,39 @@ export function GridView({ setup, onChanged }: { setup: TimetableSetup; onChange
 
   if (setup.periods.length === 0) {
     return (
-      <section className="panel">
-        <header>
-          <h2>Grille</h2>
+      <div className="grille">
+        <header className="grille-tete">
+          <div>
+            <h1>Emploi du temps</h1>
+            <p>Aucun créneau : il n'y a nulle part où poser un cours.</p>
+          </div>
         </header>
-        <p className="empty">
-          Définissez d'abord la grille horaire dans l'onglet Réglages : sans créneaux, il n'y a
-          nulle part où poser un cours.
+        <p className="grille-amorce">
+          Définissez d'abord la grille horaire dans <strong>Réglages</strong> — les heures de début
+          et de fin de chaque créneau. Toute la semaine s'y accroche.
         </p>
-      </section>
+      </div>
     );
   }
 
+  const aujourdHui = new Date(`${setup.today}T12:00:00`).getDay() || 7;
+
   return (
-    <div className="split">
-      <section className="panel">
-        <header>
-          <h2>Grille hebdomadaire</h2>
-          <span className="spacer" />
+    <div className="grille">
+      <header className="grille-tete">
+        <div>
+          <h1>Emploi du temps</h1>
+          <p>
+            Grille hebdomadaire · {lessons.length} cours saisis pour cette classe
+          </p>
+        </div>
+        <div className="grille-source">
           <select
             value={classId}
-            onChange={(e) => setClassId(e.target.value)}
-            style={{ width: 180 }}
+            onChange={(e) => {
+              setClassId(e.target.value);
+              setEditing(null);
+            }}
             aria-label="Classe"
           >
             {setup.classes.map((schoolClass) => (
@@ -75,75 +95,88 @@ export function GridView({ setup, onChanged }: { setup: TimetableSetup; onChange
               </option>
             ))}
           </select>
-        </header>
-
-        <div className="body">
-          {error && <p className="notice error">{error}</p>}
-
-          <div className="grid-scroll">
-            <table className="grid">
-              <thead>
-                <tr>
-                  <th />
-                  {days.map((day) => (
-                    <th key={day.value}>{day.short}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {setup.periods.map((period) => (
-                  <tr key={period.id}>
-                    <th className="grid-period">
-                      {period.label}
-                      <br />
-                      <span className="mono">{period.startsAt}</span>
-                    </th>
-                    {days.map((day) => {
-                      const lesson = at(day.value, period.id);
-                      return (
-                        <td key={day.value}>
-                          <button
-                            type="button"
-                            className={lesson ? "cell filled" : "cell"}
-                            // Sans nom explicite, une case n'est qu'un bouton
-                            // vide : impossible à situer autrement qu'à l'œil.
-                            aria-label={
-                              lesson
-                                ? `${day.label} ${period.label}, ${lesson.subjectLabel} en ${lesson.roomCode}`
-                                : `${day.label} ${period.label}, libre`
-                            }
-                            onClick={() =>
-                              setEditing({ dayOfWeek: day.value, period, ...(lesson ? { lesson } : {}) })
-                            }
-                          >
-                            {lesson ? (
-                              <>
-                                <span className="cell-subject">{lesson.subjectLabel}</span>
-                                <span className="cell-room">{lesson.roomCode}</span>
-                                {lesson.weekParity !== "all" && (
-                                  <span className="cell-parity">{lesson.weekParity}</span>
-                                )}
-                              </>
-                            ) : (
-                              <span className="cell-empty">+</span>
-                            )}
-                          </button>
-                        </td>
-                      );
-                    })}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          <p className="hint">
-            {lessons.length} cours saisis pour cette classe.
-          </p>
+          {/* D'où vient ce que les écrans affichent. Quand un logiciel externe
+              alimente les couloirs, cette grille ne les atteint pas — le dire
+              ici évite d'y saisir une année pour rien. */}
+          <span className={externe ? "grille-origine grille-origine--externe" : "grille-origine"}>
+            {externe ? "alimenté par NetYPareo" : "alimenté à la main"}
+          </span>
         </div>
-      </section>
+      </header>
 
-      <div>
+      {error && <p className="notice error">{error}</p>}
+
+      <div className="grille-corps">
+        <div className="grille-cadre">
+          <table className="grille-semaine">
+            <thead>
+              <tr>
+                <th />
+                {days.map((day) => (
+                  <th
+                    key={day.value}
+                    scope="col"
+                    className={day.value === aujourdHui ? "grille-jour grille-jour--aujourdhui" : "grille-jour"}
+                  >
+                    {day.short}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {setup.periods.map((period) => (
+                <tr key={period.id}>
+                  <th scope="row" className="grille-creneau">
+                    {period.label}
+                    <span>{period.startsAt}</span>
+                  </th>
+                  {days.map((day) => {
+                    const lesson = at(day.value, period.id);
+                    const ouvert =
+                      editing?.dayOfWeek === day.value && editing.period.id === period.id;
+                    return (
+                      <td key={day.value}>
+                        <button
+                          type="button"
+                          className={[
+                            "case",
+                            lesson ? "case--pleine" : "case--libre",
+                            ouvert ? "case--ouverte" : "",
+                          ]
+                            .filter(Boolean)
+                            .join(" ")}
+                          // Sans nom explicite, une case n'est qu'un bouton
+                          // vide : impossible à situer autrement qu'à l'œil.
+                          aria-label={
+                            lesson
+                              ? `${day.label} ${period.label}, ${lesson.subjectLabel} en ${lesson.roomCode}`
+                              : `${day.label} ${period.label}, libre`
+                          }
+                          onClick={() =>
+                            setEditing({ dayOfWeek: day.value, period, ...(lesson ? { lesson } : {}) })
+                          }
+                        >
+                          {lesson ? (
+                            <>
+                              <span className="case-matiere">{lesson.subjectLabel}</span>
+                              <span className="case-salle">{lesson.roomCode}</span>
+                              {lesson.weekParity !== "all" && (
+                                <span className="case-quinzaine">{lesson.weekParity}</span>
+                              )}
+                            </>
+                          ) : (
+                            <span className="case-plus">+</span>
+                          )}
+                        </button>
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
         {editing ? (
           <LessonForm
             key={`${editing.dayOfWeek}-${editing.period.id}`}
@@ -160,12 +193,12 @@ export function GridView({ setup, onChanged }: { setup: TimetableSetup; onChange
             }}
           />
         ) : (
-          <section className="panel">
-            <header>
-              <h2>Saisie</h2>
-            </header>
-            <p className="empty">Cliquez sur une case de la grille.</p>
-          </section>
+          <aside className="saisie saisie--vide">
+            <p>Cliquez sur une case de la grille.</p>
+            <p className="saisie-astuce">
+              Une case pleine s'ouvre pour être corrigée, une case vide pour recevoir un cours.
+            </p>
+          </aside>
         )}
       </div>
     </div>
@@ -240,25 +273,27 @@ function LessonForm({
     }
   }
 
-  return (
-    <section className="panel">
-      <header>
-        <h2>
-          {dayLabel} · {period.label}
-        </h2>
-        <span className="spacer" />
-        <span className="pill mono">
-          {period.startsAt}–{period.endsAt}
-        </span>
-      </header>
+  const jours = days.filter((day) => day !== dayOfWeek);
 
-      <form className="body" onSubmit={submit}>
+  return (
+    <aside className="saisie">
+      <div className="saisie-tete">
+        <span className="saisie-quand">
+          {dayLabel} · {period.label}
+        </span>
+        <span className="saisie-heures">
+          {period.startsAt} – {period.endsAt}
+        </span>
+      </div>
+
+      <form className="saisie-forme" onSubmit={submit}>
         {error && <p className="notice error">{error}</p>}
 
-        <div className="field">
+        <div>
           <label htmlFor="subject">Matière</label>
           <input
             id="subject"
+            className="saisie-vedette"
             value={subject}
             placeholder="Mathématiques"
             onChange={(e) => setSubject(e.target.value)}
@@ -266,8 +301,8 @@ function LessonForm({
           />
         </div>
 
-        <div className="field-row">
-          <div className="field">
+        <div className="saisie-paire">
+          <div>
             <label htmlFor="teacher">Enseignant</label>
             <input
               id="teacher"
@@ -276,52 +311,76 @@ function LessonForm({
               onChange={(e) => setTeacher(e.target.value)}
             />
           </div>
-          <div className="field">
+          <div>
             <label htmlFor="room">Salle</label>
             <input id="room" value={room} placeholder="B 204" onChange={(e) => setRoom(e.target.value)} />
           </div>
         </div>
 
-        <div className="field">
-          <label htmlFor="parity">Fréquence</label>
-          <select id="parity" value={parity} onChange={(e) => setParity(e.target.value as typeof parity)}>
-            <option value="all">Toutes les semaines</option>
-            <option value="A">Semaine A seulement</option>
-            <option value="B">Semaine B seulement</option>
-          </select>
+        <div>
+          {/* Trois boutons plutôt qu'une liste déroulante : la quinzaine se
+              lit d'un coup d'œil, et c'est ce qu'on relit en corrigeant. */}
+          <label>Fréquence</label>
+          <div className="saisie-frequence">
+            {(
+              [
+                ["all", "Chaque semaine"],
+                ["A", "A"],
+                ["B", "B"],
+              ] as const
+            ).map(([valeur, libelle]) => (
+              <button
+                type="button"
+                key={valeur}
+                className={[
+                  "frequence",
+                  valeur === "all" ? "frequence--large" : "",
+                  parity === valeur ? "frequence--active" : "",
+                ]
+                  .filter(Boolean)
+                  .join(" ")}
+                aria-pressed={parity === valeur}
+                onClick={() => setParity(valeur)}
+              >
+                {libelle}
+              </button>
+            ))}
+          </div>
         </div>
 
-        {!lesson && (
-          <div className="field">
+        {!lesson && jours.length > 0 && (
+          <div>
             <label>Aussi ces jours-là</label>
-            <div className="day-picker">
-              {days
-                .filter((day) => day !== dayOfWeek)
-                .map((day) => {
-                  const info = DAYS.find((d) => d.value === day)!;
-                  const selected = alsoOn.includes(day);
-                  return (
-                    <button
-                      key={day}
-                      type="button"
-                      className="day-chip"
-                      aria-pressed={selected}
-                      onClick={() =>
-                        setAlsoOn((current) =>
-                          selected ? current.filter((d) => d !== day) : [...current, day],
-                        )
-                      }
-                    >
-                      {info.short}
-                    </button>
-                  );
-                })}
+            <div className="saisie-jours">
+              {jours.map((day) => {
+                const info = DAYS.find((d) => d.value === day)!;
+                const selected = alsoOn.includes(day);
+                return (
+                  <button
+                    key={day}
+                    type="button"
+                    className={selected ? "jour-chip jour-chip--actif" : "jour-chip"}
+                    aria-pressed={selected}
+                    onClick={() =>
+                      setAlsoOn((current) =>
+                        current.includes(day)
+                          ? current.filter((d) => d !== day)
+                          : [...current, day],
+                      )
+                    }
+                  >
+                    {info.short}
+                  </button>
+                );
+              })}
             </div>
-            <p className="hint">Même créneau, même matière. Les cases déjà prises sont laissées telles quelles.</p>
+            <p className="saisie-note">
+              Même créneau, même matière. Les cases déjà prises sont laissées telles quelles.
+            </p>
           </div>
         )}
 
-        <div style={{ display: "flex", gap: 8 }}>
+        <div className="saisie-pied">
           <button type="submit" className="primary" disabled={!subject.trim() || busy}>
             {busy ? "Enregistrement…" : lesson ? "Modifier" : "Ajouter"}
           </button>
@@ -329,12 +388,12 @@ function LessonForm({
             Annuler
           </button>
           {lesson && (
-            <button type="button" className="ghost" style={{ marginLeft: "auto" }} onClick={() => void remove()}>
+            <button type="button" className="saisie-supprimer" onClick={() => void remove()}>
               Supprimer
             </button>
           )}
         </div>
       </form>
-    </section>
+    </aside>
   );
 }

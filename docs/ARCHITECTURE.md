@@ -1410,6 +1410,39 @@ dont un champ que le client lisait sans l'avoir déclaré. Son script de
 construction lance maintenant `tsc --noEmit` d'abord, et l'intégration
 continue le lance en construisant la console.
 
+## L'emploi du temps
+
+Une année scolaire, c'est plusieurs centaines de cours à saisir. Tout est
+réglé pour que ça reste supportable : on clique une case, on tape trois
+champs, on valide, et la case suivante est déjà prête. Le raccourci qui change
+tout — **« Aussi ces jours-là »** — pose la même matière au même créneau sur
+plusieurs jours d'un coup, une matière revenant rarement une seule fois par
+semaine. Les cases déjà prises sont laissées telles quelles : le raccourci
+ajoute, il n'écrase jamais.
+
+La quinzaine passe d'une liste déroulante à trois boutons. On la relit en
+corrigeant, et une liste fermée oblige à l'ouvrir pour savoir ce qu'elle dit.
+
+### La table reste une table
+
+Le dessin aurait été le même avec une grille de `<div>`. Mais un lecteur
+d'écran ne dirait plus « mardi, M3 » en arrivant sur une case, et la grille
+deviendrait illisible autrement qu'à l'œil. Les en-têtes portent leur `scope`,
+et chaque case porte son nom complet — jour, créneau, matière, salle.
+
+### D'où vient ce que les couloirs affichent
+
+Une pastille le dit : *alimenté à la main*, ou *alimenté par NetYPareo*. La
+seconde est en ton d'avertissement, parce qu'elle change tout — quand un
+logiciel externe alimente les écrans, cette grille ne les atteint plus, et
+personne ne devrait y saisir une année pour rien.
+
+### Le jour où l'on est
+
+La colonne du jour porte l'accent. C'est le seul repère dans une semaine de
+cases qui se ressemblent toutes, et la case ouverte porte un liseré : sans
+lui, on corrige un cours en croyant en corriger un autre.
+
 ## Ce qui n'est pas encore fait
 
 Le socle tourne, mais il reste volontairement incomplet :
