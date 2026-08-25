@@ -1443,6 +1443,45 @@ La colonne du jour porte l'accent. C'est le seul repère dans une semaine de
 cases qui se ressemblent toutes, et la case ouverte porte un liseré : sans
 lui, on corrige un cours en croyant en corriger un autre.
 
+## La journée d'un écran
+
+On glisse une affiche dans un créneau, et elle ne paraîtra qu'à ce moment-là.
+C'est la même donnée que la période d'affichage réglée ailleurs — une autre
+façon de l'éditer, pas un autre mécanisme.
+
+Trois choses que la chronologie ne disait pas, et qui se voyaient à l'usage :
+
+### Deux affiches qui se croisent se cachaient
+
+La seconde recouvrait la première, qu'on ne pouvait plus ni lire ni attraper.
+Elles se partagent maintenant la largeur. La largeur se compte **par grappe**
+de plages qui se touchent, et non sur toute la journée : deux affiches le
+matin et deux l'après-midi font deux colonnes partout, pas quatre.
+
+### Où en est la journée
+
+Un trait de « maintenant » traverse la chronologie. Sans lui, on programme une
+affiche pour « tout à l'heure » sans voir qu'il est déjà passé.
+
+### Et après ?
+
+Une phrase sous la chronologie dit ce qui prend la main une fois le dernier
+contenu terminé, et à quelle heure la dalle s'éteint. Elle est calculée à
+partir des réglages réels de l'écran — contenu par défaut, contenus sans
+horaire, plages d'extinction. Un trou n'est pas une erreur, mais encore
+faut-il le dire : sinon on remplit la soirée d'affiches pour rien.
+
+Elle se tait quand rien n'est programmé — une autre phrase le dit déjà, et
+deux messages qui disent la même chose finissent par se contredire.
+
+### Un créneau court cachait ses propres commandes
+
+Une demi-heure fait vingt pixels : la vignette et les deux heures passaient
+sous le bloc voisin, hors d'atteinte. En dessous d'une heure et demie, le bloc
+se met sur une ligne et perd sa vignette ; et tout bloc a un plancher de
+34 px. Il exagère un peu la durée — les heures exactes sont écrites dedans, et
+un réglage hors d'atteinte coûte plus cher qu'un bloc légèrement trop grand.
+
 ## Ce qui n'est pas encore fait
 
 Le socle tourne, mais il reste volontairement incomplet :

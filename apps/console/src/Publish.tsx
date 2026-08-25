@@ -965,6 +965,8 @@ export function PublishPanel({
             <VueJour
               items={items}
               media={media}
+              displayOff={displayOff}
+              parDefaut={parDefaut}
               onChange={(suivants) => touch(() => setItems(suivants))}
             />
           </div>

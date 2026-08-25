@@ -1,5 +1,6 @@
-import { useRef, useState } from "react";
-import { type Media, type PublishItem, humanSize } from "./api.js";
+import { useEffect, useRef, useState } from "react";
+import { type DisplayOffWindow, type Media, type PublishItem, humanSize } from "./api.js";
+import { type Relais, disposerLesBlocs, enFrancais, finDeJournee } from "./journee.js";
 
 /**
  * La journée d'un écran, en tranches horaires.
@@ -17,6 +18,14 @@ import { type Media, type PublishItem, humanSize } from "./api.js";
 const DEBUT_JOURNEE = 7;
 const FIN_JOURNEE = 20;
 const HEURES = Array.from({ length: FIN_JOURNEE - DEBUT_JOURNEE }, (_, i) => DEBUT_JOURNEE + i);
+
+/**
+ * En dessous, le bloc se met sur une ligne.
+ *
+ * Douze pour cent de l'amplitude, soit une heure et demie : c'est en dessous
+ * que la vignette et les deux heures ne tiennent plus l'une sous l'autre.
+ */
+const HAUTEUR_MINIMALE_POUR_DEUX_LIGNES = 12;
 
 type Draft = PublishItem & { key: string; title: string };
 
@@ -52,17 +61,64 @@ function position(item: Draft): { debut: number; hauteur: number } | null {
 export function VueJour({
   items,
   media,
+  displayOff,
+  parDefaut,
   onChange,
 }: {
   items: Draft[];
   media: Media[];
+  /** Les plages d'extinction de l'écran, pour dire quand la dalle s'éteint. */
+  displayOff?: DisplayOffWindow[];
+  /** Ce que l'écran montre quand rien n'est programmé. */
+  parDefaut?: { assetId?: string; emploiDuTemps?: boolean };
   onChange: (items: Draft[]) => void;
 }) {
   const grille = useRef<HTMLDivElement>(null);
   const [survolé, setSurvolé] = useState<number | null>(null);
+  /**
+   * L'heure qu'il est, pour le trait de « maintenant ».
+   *
+   * À la minute : un trait qui saute d'une heure entière se remarquerait
+   * comme une panne, et à la seconde on redessinerait pour rien.
+   */
+  const [maintenant, setMaintenant] = useState(() => new Date());
+  useEffect(() => {
+    const horloge = setInterval(() => setMaintenant(new Date()), 60_000);
+    return () => clearInterval(horloge);
+  }, []);
 
   const programmés = items.filter((i) => position(i) !== null);
   const permanents = items.filter((i) => position(i) === null);
+
+  // Deux affiches aux horaires qui se croisent se recouvraient : la seconde
+  // cachait la première, qu'on ne pouvait plus ni lire ni attraper.
+  const placements = disposerLesBlocs(
+    programmés.map((i) => ({
+      debut: enMinutes(i.visibility!.dailyStart!),
+      fin: Math.max(
+        enMinutes(i.visibility!.dailyStart!) + 15,
+        enMinutes(i.visibility!.dailyEnd!),
+      ),
+    })),
+  );
+
+  const relais: Relais = permanents.length > 0
+    ? { quoi: "permanents" }
+    : parDefaut?.emploiDuTemps
+      ? { quoi: "emploiDuTemps" }
+      : parDefaut?.assetId
+        ? { quoi: "media", nom: media.find((m) => m.id === parDefaut.assetId)?.filename ?? "le contenu par défaut" }
+        : { quoi: "rien" };
+
+  const aprèsCoup = finDeJournee({
+    fins: programmés.map((i) => enMinutes(i.visibility!.dailyEnd!)),
+    relais,
+    ...(displayOff ? { extinctions: displayOff } : {}),
+  });
+
+  const minutesMaintenant = maintenant.getHours() * 60 + maintenant.getMinutes();
+  const partMaintenant =
+    (minutesMaintenant - DEBUT_JOURNEE * 60) / ((FIN_JOURNEE - DEBUT_JOURNEE) * 60);
 
   /** L'heure sous le curseur, arrondie au quart d'heure. */
   function heureSous(clientY: number): number {
@@ -238,20 +294,60 @@ export function VueJour({
             </div>
           )}
 
-          {programmés.map((i) => {
+          {/* Où en est la journée. Sans ce trait, on programme une affiche
+              pour « tout à l'heure » sans voir qu'il est déjà passé. */}
+          {partMaintenant >= 0 && partMaintenant <= 1 && (
+            <div className="jour-maintenant" style={{ top: `${partMaintenant * 100}%` }}>
+              <span>{enFrancais(minutesMaintenant)}</span>
+            </div>
+          )}
+
+          {programmés.map((i, rang) => {
             const p = position(i)!;
+            const place = placements[rang] ?? { colonne: 0, colonnes: 1 };
+            const largeur = 100 / place.colonnes;
+            /*
+             * Un créneau court n'a pas la hauteur de deux lignes : la
+             * vignette et les heures débordaient sous le bloc suivant, donc
+             * hors d'atteinte. En dessous, tout tient sur une ligne.
+             */
+            const court = p.hauteur < HAUTEUR_MINIMALE_POUR_DEUX_LIGNES;
             return (
               <div
                 key={i.key}
-                className="jour-bloc"
-                style={{ top: `${p.debut}%`, height: `${p.hauteur}%` }}
+                className={court ? "jour-bloc jour-bloc--court" : "jour-bloc"}
+                style={{
+                  top: `${p.debut}%`,
+                  height: `${p.hauteur}%`,
+                  left: `calc(${place.colonne * largeur}% + 6px)`,
+                  width: `calc(${largeur}% - 12px)`,
+                }}
                 draggable
                 onDragStart={(e) => {
                   e.dataTransfer.setData("application/couloir", `item:${i.key}`);
                   e.dataTransfer.effectAllowed = "move";
                 }}
               >
-                <span className="jour-bloc-titre">{i.title}</span>
+                <span className="jour-bloc-tete">
+                  {/* La vignette du média : dans une journée chargée, on
+                      reconnaît une affiche à son image avant son nom. */}
+                  {court ? null : i.assetId &&
+                    media.find((m) => m.id === i.assetId)?.mime.startsWith("image/") ? (
+                    <img className="jour-bloc-vignette" src={`/v1/assets/${i.assetId}`} alt="" />
+                  ) : (
+                    <span className="jour-bloc-vignette jour-bloc-vignette--sans" />
+                  )}
+                  <span className="jour-bloc-titre">{i.title}</span>
+                  <button
+                    type="button"
+                    className="jour-bloc-retirer"
+                    aria-label={`Retirer l'horaire de ${i.title}`}
+                    title="Toute la journée"
+                    onClick={() => retirerLaPlage(i.key)}
+                  >
+                    ✕
+                  </button>
+                </span>
                 <span className="jour-bloc-heures">
                   <input
                     type="time"
@@ -266,25 +362,23 @@ export function VueJour({
                     onChange={(e) => ajusterHeures(i.key, "dailyEnd", e.target.value)}
                   />
                 </span>
-                <button
-                  type="button"
-                  className="ghost"
-                  aria-label={`Retirer l'horaire de ${i.title}`}
-                  title="Toute la journée"
-                  onClick={() => retirerLaPlage(i.key)}
-                >
-                  ✕
-                </button>
               </div>
             );
           })}
         </div>
 
-        {programmés.length === 0 && (
+        {programmés.length === 0 ? (
           <p className="hint jour-vide">
             Rien n'est programmé à une heure précise. Les contenus tournent toute la journée, et le
             contenu par défaut prend la main s'il n'y en a aucun.
           </p>
+        ) : (
+          aprèsCoup && (
+            <p className="jour-apres">
+              <span className="jour-apres-pastille" />
+              {aprèsCoup}
+            </p>
+          )
         )}
       </div>
     </div>

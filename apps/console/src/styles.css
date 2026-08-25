@@ -940,7 +940,7 @@ button.ghost.danger:hover:not(:disabled) {
 
 .jour-grille {
   position: relative; display: flex; flex-direction: column;
-  min-height: 420px;
+  min-height: 520px;
   border: 1px solid var(--rule); border-radius: var(--radius);
   background: var(--surface); overflow: hidden;
 }
@@ -957,24 +957,74 @@ button.ghost.danger:hover:not(:disabled) {
   padding-left: 6px; pointer-events: none;
 }
 
+/* La position et la largeur viennent du calcul de colonnes : deux affiches
+   aux horaires qui se croisent se partagent la place au lieu de se cacher. */
 .jour-bloc {
-  position: absolute; left: 6px; right: 6px;
-  display: flex; align-items: flex-start; gap: 8px;
-  padding: 6px 8px; overflow: hidden; cursor: grab;
+  position: absolute;
+  /* Un plancher, sinon une demi-heure fait vingt pixels et le bloc devient
+     plus court que ses propres commandes. Il exagère un peu la durée — les
+     heures exactes sont écrites dedans, et un réglage hors d'atteinte coûte
+     plus cher qu'un bloc légèrement trop grand. */
+  min-height: 34px;
+  display: flex; flex-direction: column; gap: 7px;
+  padding: 9px 10px; overflow: hidden; cursor: grab;
   background: var(--accent-doux); border: 1px solid var(--accent);
-  border-radius: 7px;
+  border-radius: var(--r-nav);
 }
 .jour-bloc:active { cursor: grabbing; }
+.jour-bloc-tete { display: flex; align-items: center; gap: 8px; }
+.jour-bloc-vignette {
+  width: 34px; height: 22px; flex: none; border-radius: 4px;
+  object-fit: cover; background: var(--rule-strong);
+}
+.jour-bloc-vignette--sans { background: var(--rule); }
 .jour-bloc-titre {
   flex: 1; min-width: 0; font-size: 12.5px; font-weight: 500;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
-.jour-bloc-heures { display: flex; gap: 4px; flex: none; }
-.jour-bloc-heures input {
-  width: auto; padding: 2px 5px; font-size: 11px;
-  font-variant-numeric: tabular-nums; border-radius: 4px;
+.jour-bloc-retirer {
+  flex: none; padding: 2px 6px; font-size: 11px;
+  background: none; border: 0; color: var(--ink-soft);
 }
-.jour-bloc button { padding: 2px 6px; font-size: 11px; }
+/* Un créneau court tient sur une ligne : sinon ses heures passent sous le
+   bloc voisin, donc hors d'atteinte. */
+.jour-bloc--court {
+  flex-direction: row; align-items: center; gap: 8px; padding: 4px 8px;
+}
+.jour-bloc--court .jour-bloc-tete { flex: 1; min-width: 0; }
+.jour-bloc--court .jour-bloc-heures input { padding: 1px 4px; font-size: 11px; }
+
+.jour-bloc-heures { display: flex; gap: 5px; flex: none; }
+.jour-bloc-heures input {
+  width: auto; padding: 3px 6px; font-size: 11.5px;
+  font-variant-numeric: tabular-nums; border-radius: 5px;
+}
+
+/* Où en est la journée. Sans lui, on programme une affiche pour « tout à
+   l'heure » sans voir qu'il est déjà passé. */
+.jour-maintenant {
+  position: absolute; left: 0; right: 0; height: 0;
+  border-top: 2px dashed var(--accent); pointer-events: none;
+}
+.jour-maintenant span {
+  display: inline-block; margin: 2px 0 0 8px; padding: 1px 7px;
+  border-radius: var(--r-pastille); background: var(--accent); color: var(--accent-ink);
+  font-family: "IBM Plex Mono", monospace; font-size: 11px; font-weight: 500;
+}
+
+/* Et après ? Un trou n'est pas une erreur : c'est là que le contenu par
+   défaut prend la main, encore faut-il le dire. */
+.jour-apres {
+  grid-column: 2; margin: 9px 0 0;
+  display: flex; align-items: center; gap: 9px;
+  padding: 9px 12px; border-radius: var(--r-nav);
+  background: var(--surface-2); border: 1px dashed var(--rule-strong);
+  font-size: 12px; color: var(--ink-soft); text-wrap: pretty;
+}
+.jour-apres-pastille {
+  width: 7px; height: 7px; flex: none; border-radius: 50%; background: var(--rule-strong);
+}
+
 .jour-vide { grid-column: 2; margin-top: 8px; }
 
 @media (max-width: 760px) {
