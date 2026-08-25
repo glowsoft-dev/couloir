@@ -201,9 +201,10 @@ Déclenchez une urgence pendant ce temps — **il se rallume**.
 
 ### 8. L'emploi du temps
 
-Onglet **Réglages** : créez une classe, des créneaux, un calendrier scolaire.
-Onglet **Grille** : remplissez la semaine en cliquant dans les cases.
-Onglet **Aujourd'hui** : signalez une absence ou un changement de salle.
+La démonstration arrive avec quatre classes et une semaine type : il y a de
+quoi faire tout de suite. Pour partir d'une page blanche, l'onglet **Réglages**
+crée classes, créneaux et calendrier, et l'onglet **Grille** remplit la
+semaine.
 
 Publiez sur un écran avec la mise en page **Contenu + colonne des cours**.
 Sans sélection, toutes les classes défilent ; une seule classe, et l'écran
@@ -211,6 +212,24 @@ l'affiche en permanence.
 
 > **Ce que ça éprouve** — le remplacement du logiciel d'emploi du temps de
 > l'école, et le fait qu'un changement du matin se voie dans le couloir.
+
+### 8 bis. Les changements du jour
+
+Onglet **Changements du jour**. Annulez le cours de 10:10 ; regardez la dalle
+de droite : le cours se barre, sa salle devient un tiret. Changez la salle
+d'un autre ; la mention paraît aussitôt.
+
+Deux choses valent le détour :
+
+- **« Où ça s'affiche »** nomme les écrans concernés. Branchez NetYPareo sur
+  l'un d'eux et la page vous dira que ce changement ne l'atteindra pas — c'est
+  vrai, et c'est le genre de silence qui coûte cher.
+- **Les flèches de jour.** Regardez demain : l'aperçu montre la journée de
+  demain, sans mention de fraîcheur parasite. Le samedi montre la page sans
+  cours.
+
+> **Ce que ça éprouve** — le geste de tous les matins, et le fait que
+> l'aperçu soit le vrai rendu et non une imitation qui dérive.
 
 ### 9. Le téléphone
 

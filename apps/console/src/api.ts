@@ -105,6 +105,8 @@ export interface PublishSpec {
    * Absent = tout. Liste vide = seulement l'heure et l'intitulé.
    */
   timetableChamps?: ChampEdt[];
+  /** Ce que l'écran montre quand rien n'est programmé pour maintenant. */
+  parDefaut?: { assetId?: string; emploiDuTemps?: boolean };
   /** Plages d'extinction de la dalle. Un message d'urgence la rallume. */
   displayOff?: DisplayOffWindow[];
   /** Combien d'actualités du site tournent avec le reste. 0 = aucune. */
@@ -430,12 +432,20 @@ export const api = {
    * Le parc. `avecManifeste` joint ce que chaque écran diffuse, en une seule
    * requête — le mur d'aperçus se remplirait sinon par à-coups.
    */
-  screens: (avecManifeste = false) =>
+  screens: (avecManifeste = false, avecComposition = false) =>
     call<{
       screens: ScreenStatus[];
       pending: PendingDevice[];
       manifestes?: Record<string, unknown | null>;
-    }>(`/screens${avecManifeste ? "?avecManifeste=1" : ""}`),
+      compositions?: Record<string, PublishSpec | null>;
+    }>(
+      `/screens${
+        [avecManifeste ? "avecManifeste=1" : "", avecComposition ? "avecComposition=1" : ""]
+          .filter(Boolean)
+          .map((q, i) => (i === 0 ? `?${q}` : `&${q}`))
+          .join("")
+      }`,
+    ),
   screen: (id: string) => call<{ screen: ScreenStatus; manifest: unknown }>(`/screens/${id}`),
 
   media: () => call<{ media: Media[] }>("/media"),

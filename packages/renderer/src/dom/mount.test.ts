@@ -192,6 +192,55 @@ describe("économie de rendu", () => {
     expect(container.textContent).not.toContain("Portes ouvertes");
   });
 
+  it("retire la salle d'un cours annulé", () => {
+    // Un cours annulé qui garde sa salle envoie quelqu'un devant une porte
+    // fermée — c'est le trajet même que la mention « annulé » évite.
+    const renderer = mountRenderer(container);
+    renderer.update({
+      ...zonesScreen(),
+      zones: [
+        {
+          ...zonesScreen().zones[0]!,
+          slide: {
+            kind: "data",
+            slideId: "cours",
+            sourceId: "edt",
+            view: "timetable-day",
+            params: {},
+            staleLabel: null,
+            payload: {
+              days: [
+                {
+                  classId: "sio1",
+                  classLabel: "BTS SIO 1",
+                  entries: [
+                    {
+                      time: "10:10",
+                      subject: "Anglais",
+                      room: "A 112",
+                      teacher: "Mme Roche",
+                      change: "cancelled",
+                      note: "Annulé — Mme Roche absente",
+                    },
+                    { time: "11:10", subject: "Économie-droit", room: "A 210", teacher: "Mme Bréan" },
+                  ],
+                },
+              ],
+            },
+          },
+        },
+      ],
+    });
+
+    const texte = container.textContent ?? "";
+    expect(texte).toContain("Annulé — Mme Roche absente");
+    expect(texte).not.toContain("A 112");
+    expect(container.querySelector(".couloir-row--cancelled .room")?.textContent).toBe("—");
+    // Le cours suivant, lui, garde tout.
+    expect(texte).toContain("A 210");
+    expect(texte).toContain("Mme Bréan");
+  });
+
   it("dessine tout ce que la séance porte : horaires, groupe, module, salle, enseignant", () => {
     // Six informations arrivent du logiciel de l'école. En laisser deux au
     // fond de la charge utile, c'est faire monter quelqu'un à l'échelle pour

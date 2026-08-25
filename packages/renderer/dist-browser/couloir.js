@@ -1,4 +1,4 @@
-const N = {
+const O = {
   Mon: 1,
   Tue: 2,
   Wed: 3,
@@ -16,7 +16,7 @@ function D(e, t) {
   }).formatToParts(new Date(e)), r = (i) => n.find((a) => a.type === i)?.value ?? "";
   return `${r("year")}-${r("month")}-${r("day")}`;
 }
-function C(e, t) {
+function E(e, t) {
   const n = new Intl.DateTimeFormat("en-US", {
     timeZone: t,
     weekday: "short",
@@ -25,7 +25,7 @@ function C(e, t) {
     hour12: !1
   }).formatToParts(new Date(e)), r = (o) => n.find((l) => l.type === o)?.value ?? "", i = Number(r("hour")) % 24, a = Number(r("minute"));
   return {
-    dayOfWeek: N[r("weekday")] ?? 1,
+    dayOfWeek: O[r("weekday")] ?? 1,
     minutesOfDay: i * 60 + a
   };
 }
@@ -56,7 +56,7 @@ function $(e, t, n) {
       return { status: "fallback", ageSec: r };
   }
 }
-function O(e) {
+function N(e) {
   return e.status === "usable" || e.status === "stale-shown";
 }
 function T(e, t = "fr-FR", n = "Europe/Paris") {
@@ -69,7 +69,7 @@ function T(e, t = "fr-FR", n = "Europe/Paris") {
 }
 function L(e, t, n) {
   if (e.startsAt && t < Date.parse(e.startsAt) || e.endsAt && t >= Date.parse(e.endsAt)) return !1;
-  const r = C(t, n);
+  const r = E(t, n);
   return !(e.daysOfWeek && e.daysOfWeek.length > 0 && !e.daysOfWeek.includes(r.dayOfWeek) || e.dailyStart && e.dailyEnd && !z(r.minutesOfDay, e.dailyStart, e.dailyEnd));
 }
 function W(e, t, n) {
@@ -85,7 +85,7 @@ function W(e, t, n) {
 function q(e, t, n) {
   if (!e) return !0;
   if (e.startsAt && t < Date.parse(e.startsAt) || e.endsAt && t >= Date.parse(e.endsAt)) return !1;
-  const r = C(t, n);
+  const r = E(t, n);
   if (e.dailyStart && e.dailyEnd && !z(r.minutesOfDay, e.dailyStart, e.dailyEnd))
     return !1;
   if (e.daysOfWeek && e.daysOfWeek.length > 0) {
@@ -95,7 +95,7 @@ function q(e, t, n) {
   return !0;
 }
 function R(e, t) {
-  const n = C(t, e.timezone), r = (n.dayOfWeek + 5) % 7 + 1;
+  const n = E(t, e.timezone), r = (n.dayOfWeek + 5) % 7 + 1;
   return e.displayOff.some((i) => {
     if (!z(n.minutesOfDay, i.from, i.to)) return !1;
     if (i.daysOfWeek.length === 0) return !0;
@@ -201,7 +201,7 @@ function Y(e) {
         return !0;
       case "data": {
         const b = o.get(w.sourceId);
-        if (b === void 0 || !O(b)) return !1;
+        if (b === void 0 || !N(b)) return !1;
         if (w.view.startsWith("timetable") && "payload" in b) {
           const k = K(b.payload, w.params.classId);
           if (k?.date && k.date !== D(n, t.settings.timezone)) return !1;
@@ -214,7 +214,7 @@ function Y(e) {
     return w ? w.kind === "media" && w.durationMs === void 0 ? null : X(w).effectiveMs : 0;
   }, I = e.forceFallback ? "fallback" : "normal", c = /* @__PURE__ */ new Map(), d = [], m = [];
   for (const f of t.layout.zones) {
-    const w = e.forceFallback ? t.fallbackPlaylistId : W(t, f.id, n) ?? f.playlistId, b = a.get(w), k = e.rotations.get(f.id), E = k && k.playlistId === w ? b?.slideIds[k.index] ?? null : null, S = A({
+    const w = e.forceFallback ? t.fallbackPlaylistId : W(t, f.id, n) ?? f.playlistId, b = a.get(w), k = e.rotations.get(f.id), C = k && k.playlistId === w ? b?.slideIds[k.index] ?? null : null, S = A({
       state: k,
       playlistId: w,
       slideIds: b?.slideIds ?? [],
@@ -225,7 +225,7 @@ function Y(e) {
     });
     S.state && c.set(f.id, S.state), S.changed && d.push({
       zoneId: f.id,
-      fromSlideId: E,
+      fromSlideId: C,
       toSlideId: S.currentSlideId,
       atMs: n
     });
@@ -246,8 +246,8 @@ function Y(e) {
       durationMsOf: g,
       nowMs: n,
       mediaEnded: e.mediaEndedZoneIds?.has(b) ?? !1
-    }), E = k.currentSlideId ? r.get(k.currentSlideId) : void 0;
-    if (E)
+    }), C = k.currentSlideId ? r.get(k.currentSlideId) : void 0;
+    if (C)
       return k.state && c.set(b, k.state), {
         screen: {
           mode: "normal",
@@ -256,7 +256,7 @@ function Y(e) {
               zoneId: b,
               rect: { xPercent: 0, yPercent: 0, widthPercent: 100, heightPercent: 100 },
               playlistId: f,
-              slide: F(E, i, o, t.settings.timezone)
+              slide: F(C, i, o, t.settings.timezone)
             }
           ],
           emergency: null,
@@ -287,7 +287,7 @@ function F(e, t, n, r) {
       return { kind: "widget", slideId: e.id, widget: e.widget, config: e.config };
     case "data": {
       const i = n.get(e.sourceId);
-      return !i || !O(i) ? null : {
+      return !i || !N(i) ? null : {
         kind: "data",
         slideId: e.id,
         sourceId: e.sourceId,
@@ -740,7 +740,7 @@ function se(e, t, n) {
       const p = e.createElement("span");
       p.appendChild(e.createTextNode(o.subject)), o.note && p.appendChild(y(e, "span", "couloir-badge", o.note)), i.has("module") && o.detail && p.appendChild(y(e, "span", "couloir-detail", o.detail));
       const g = e.createElement("span");
-      g.className = "room", i.has("salle") && g.appendChild(e.createTextNode(o.room)), i.has("enseignant") && o.teacher && g.appendChild(y(e, "span", "couloir-prof", o.teacher)), s.append(u, p, g), a.appendChild(s);
+      g.className = "room", o.change === "cancelled" ? g.appendChild(e.createTextNode("—")) : (i.has("salle") && g.appendChild(e.createTextNode(o.room)), i.has("enseignant") && o.teacher && g.appendChild(y(e, "span", "couloir-prof", o.teacher))), s.append(u, p, g), a.appendChild(s);
     }
     t.appendChild(a);
     return;
@@ -854,11 +854,11 @@ export {
   Y as direct,
   X as effectiveDuration,
   R as isDisplayOffPeriod,
-  O as isDisplayable,
+  N as isDisplayable,
   L as isScheduleActive,
   q as isVisible,
   z as isWithinDailyWindow,
-  C as localMoment,
+  E as localMoment,
   H as minReadableDurationMs,
   te as mountRenderer,
   x as parseClock,

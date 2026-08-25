@@ -303,22 +303,34 @@ export function registerConsoleApi(app: FastifyInstance, options: ConsoleApiOpti
    * permet à la console de dessiner le mur d'aperçus en UNE requête : vingt
    * écrans feraient sinon vingt allers-retours, et la page se remplirait par
    * à-coups sous les yeux de l'utilisateur.
+   *
+   * `?avecComposition=1` joint ce qui a été SAISI, et non ce qui en a été
+   * composé. C'est ce qui permet de répondre à « quels écrans montrent
+   * l'emploi du temps de cette classe ? » — une question qui se lit dans les
+   * réglages, pas dans le manifeste, où les classes ont déjà été résolues en
+   * diapositives.
    */
-  app.get<{ Querystring: { avecManifeste?: string } }>(
+  app.get<{ Querystring: { avecManifeste?: string; avecComposition?: string } }>(
     `${CONSOLE_PREFIX}/screens`,
     async (request) => {
       const screens = await store.listScreenStatuses();
-      if (request.query.avecManifeste !== "1") {
-        return { screens, pending: await store.listPendingDevices() };
-      }
-      const manifestes = await Promise.all(
-        screens.map(async (screen) => [screen.id, await store.getManifest(screen.id)] as const),
-      );
-      return {
+      const reponse: Record<string, unknown> = {
         screens,
         pending: await store.listPendingDevices(),
-        manifestes: Object.fromEntries(manifestes),
       };
+      if (request.query.avecManifeste === "1") {
+        const manifestes = await Promise.all(
+          screens.map(async (screen) => [screen.id, await store.getManifest(screen.id)] as const),
+        );
+        reponse.manifestes = Object.fromEntries(manifestes);
+      }
+      if (request.query.avecComposition === "1") {
+        const compositions = await Promise.all(
+          screens.map(async (screen) => [screen.id, await store.getSpec(screen.id)] as const),
+        );
+        reponse.compositions = Object.fromEntries(compositions);
+      }
+      return reponse;
     },
   );
 

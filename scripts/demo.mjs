@@ -12,7 +12,7 @@
  * version. Je m'y suis laissé prendre.
  */
 import { spawn, spawnSync } from "node:child_process";
-import { createWriteStream, mkdirSync, rmSync } from "node:fs";
+import { createWriteStream, mkdirSync, rmSync, openSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -185,6 +185,21 @@ lancer("serveur", "pnpm", ["dev:server"], {
 });
 await attendre(`http://localhost:${PORT_SERVEUR}/health`, "le serveur");
 fait(`http://localhost:${PORT_SERVEUR}`);
+
+/*
+ * L'emploi du temps de démonstration.
+ *
+ * Posé après le serveur, qui vient d'appliquer les migrations, et en SQL
+ * plutôt que par l'API : créer un emploi du temps demande un compte, et il
+ * n'en existe encore aucun à ce moment-là. Le fichier ne fait rien si des
+ * classes sont déjà là — relancer la démonstration n'écrase pas ce qu'on y a
+ * saisi.
+ */
+étape("emploi du temps");
+exécuter("docker", ["compose", "exec", "-T", "postgres", "psql", "-q", "-U", "couloir", "-d", "couloir", "-v", "ON_ERROR_STOP=1", "-f", "-"], {
+  stdio: [openSync(join(process.cwd(), "scripts/demo-emploi-du-temps.sql"), "r"), "ignore", "ignore"],
+});
+fait("4 classes, une semaine type");
 
 for (const écran of ÉCRANS) {
   étape(écran.nom);

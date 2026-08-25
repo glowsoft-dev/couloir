@@ -473,9 +473,16 @@ function renderDataView(
       // l'intitulé, qui est ce qu'on lit de loin.
       const lieu = doc.createElement("span");
       lieu.className = "room";
-      if (montre.has("salle")) lieu.appendChild(doc.createTextNode(entry.room));
-      if (montre.has("enseignant") && entry.teacher) {
-        lieu.appendChild(el(doc, "span", "couloir-prof", entry.teacher));
+      if (entry.change === "cancelled") {
+        // Un cours annulé n'a plus de salle. Continuer à l'annoncer enverrait
+        // quelqu'un devant une porte fermée — c'est précisément le trajet que
+        // la mention « annulé » est là pour éviter.
+        lieu.appendChild(doc.createTextNode("—"));
+      } else {
+        if (montre.has("salle")) lieu.appendChild(doc.createTextNode(entry.room));
+        if (montre.has("enseignant") && entry.teacher) {
+          lieu.appendChild(el(doc, "span", "couloir-prof", entry.teacher));
+        }
       }
 
       row.append(time, label, lieu);

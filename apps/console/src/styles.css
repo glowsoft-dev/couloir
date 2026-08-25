@@ -363,15 +363,8 @@ button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   border-color: var(--accent);
 }
 
-/* ---------- changements du jour ---------- */
-.lesson-row {
-  display: grid; grid-template-columns: 46px minmax(0, 1fr) auto;
-  gap: 10px; align-items: center;
-  padding: 9px 0; border-top: 1px solid var(--rule);
-}
-.lesson-row:first-of-type { border-top: 0 }
-.lesson-row .time { color: var(--accent-texte); font-size: 12px; font-weight: 500 }
-.lesson-name { font-size: 13.5px; line-height: 1.3 }
+/* Les changements du jour ont leur propre famille, plus bas : voir
+   « les changements du jour ». Ce qui les servait ici a été retiré. */
 .applied { display: flex; align-items: center; gap: 4px }
 .pill.signal { border-color: var(--signal); color: var(--signal) }
 
@@ -384,34 +377,9 @@ button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .period-row:first-of-type, .holiday-row:first-of-type { border-top: 0 }
 .period-row input, .holiday-row input { padding: 5px 8px; font-size: 12.5px }
 
-/* ---------- aperçu de l'écran ----------
-   Dessiné comme le vrai rendu : on saisit un changement et on le voit tel
-   que les élèves le verront, sans aller dans un couloir. */
-.preview {
-  background: #0E1211; border: 1px solid var(--rule-strong); border-radius: 6px;
-  padding: 16px; min-height: 200px;
-}
-.preview-class {
-  font-size: 10px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase;
-  color: var(--accent-texte); margin: 0 0 12px;
-}
-.preview-notice { color: var(--ink-soft); font-size: 14px; margin: 0 }
-.preview-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 5px }
-.preview-row {
-  display: grid; grid-template-columns: auto minmax(0, 1fr) auto;
-  gap: 10px; align-items: baseline;
-  font-size: 13px; padding-bottom: 5px; border-bottom: 1px solid var(--rule);
-}
-.preview-row time { color: var(--accent-texte); font-variant-numeric: tabular-nums; font-weight: 600 }
-.preview-room { color: var(--ink-faint); font-size: 11.5px }
-.preview-row--changed, .preview-row--changed time, .preview-row--changed .preview-room { color: var(--signal) }
-/* Annulé : barré, mais toujours affiché — comme sur l'écran. */
-.preview-row--cancelled time, .preview-row--cancelled > span:nth-child(2) { text-decoration: line-through }
-.preview-row--cancelled { opacity: .78 }
-.preview-badge {
-  font-size: 9px; letter-spacing: .08em; text-transform: uppercase; font-weight: 700;
-  border: 1px solid currentColor; border-radius: 3px; padding: 1px 5px; margin-left: 7px;
-}
+/* L'aperçu des changements était dessiné à la main ici. Il passe maintenant
+   par le vrai noyau de rendu — une imitation dérive, et c'est précisément
+   quand on relit une faute de frappe qu'elle ne doit pas mentir. */
 
 /* ---------- aperçu fidèle ---------- */
 .preview-frame {
@@ -1484,4 +1452,176 @@ button.ghost.danger:hover:not(:disabled) {
   .dalle-titre { font-size: 30px; }
   .promesse-liste { gap: 9px; }
   .promesse-liste li { font-size: 14px; }
+}
+
+/* ---------- les changements du jour ----------
+ *
+ * L'écran de tous les matins. Une colonne de cours à gauche, ce que les
+ * élèves liront à droite — et la liste des écrans où ça paraîtra, parce que
+ * signaler une absence sans savoir où elle va ne rassure personne.
+ *
+ * Les noms disent « changements » et non « jour » : `.jour-*` appartient
+ * déjà à la vue jour de l'éditeur d'écran, et deux familles homonymes se
+ * seraient annulées l'une l'autre sur les marges.
+ */
+
+.changements { display: flex; flex-direction: column; }
+
+.changements-tete { display: flex; align-items: flex-end; gap: 16px; margin-bottom: 22px; }
+.changements-tete h1 {
+  margin: 0; font-family: "Fira Sans", Roboto, sans-serif;
+  font-size: 27px; font-weight: 700; letter-spacing: -.025em;
+}
+.changements-tete p { margin: 4px 0 0; font-size: 14px; color: var(--ink-soft); }
+
+.changements-nav { margin-left: auto; flex: none; display: flex; align-items: center; gap: 8px; }
+.changements-nav button {
+  flex: none; white-space: nowrap; font-size: 14px; padding: 9px 13px;
+  border-radius: var(--r-bouton); background: var(--surface);
+  color: var(--ink-soft); border: 1px solid var(--rule-strong);
+}
+/* Le jour où l'on est, distingué du jour qu'on regarde. */
+.changements-nav .changements-nav-actif {
+  font-family: "Fira Sans", Roboto, sans-serif; font-weight: 600;
+  color: var(--accent-texte); border-color: var(--accent);
+}
+
+.changements-classes { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 20px; }
+.puce-classe {
+  flex: none; white-space: nowrap; font-size: 13px; padding: 8px 14px;
+  border-radius: var(--r-pastille); background: var(--surface);
+  color: var(--ink); border: 1px solid var(--rule-strong);
+}
+.puce-classe--active {
+  background: var(--accent-texte); color: var(--accent-ink);
+  border-color: var(--accent-texte); font-weight: 500;
+}
+/* Le compte des changements déjà posés : c'est ce qu'on cherche du regard
+   en arrivant le matin, avant même de choisir une classe. */
+.puce-compte { margin-left: 7px; color: var(--warn); font-weight: 600; }
+.puce-classe--active .puce-compte { color: inherit; opacity: .7; font-weight: 400; }
+
+.changements-grille {
+  display: grid; grid-template-columns: minmax(0, 1fr) 420px;
+  gap: 22px; align-items: start;
+}
+
+.changements-cours {
+  background: var(--surface); border: 1px solid var(--rule);
+  border-radius: var(--r-carte); overflow: hidden;
+}
+.changements-vide { margin: 0; padding: 26px 18px; color: var(--ink-faint); font-size: 13.5px; }
+
+.ligne-cours {
+  display: grid; grid-template-columns: 78px minmax(0, 1fr) auto;
+  gap: 14px; align-items: center; padding: 15px 18px;
+  border-bottom: 1px solid var(--ground);
+}
+.ligne-cours:last-child { border-bottom: 0; }
+.ligne-cours--ouvert { align-items: start; background: var(--surface-2); }
+.ligne-cours--annule { background: var(--signal-doux); }
+.ligne-cours--change { background: var(--warn-doux); }
+
+.ligne-heure {
+  font-family: "IBM Plex Mono", monospace; font-size: 13px; font-weight: 500;
+  color: var(--accent-texte); font-variant-numeric: tabular-nums;
+}
+.ligne-heure span { display: block; font-size: 11px; color: var(--ink-faint); font-weight: 400; }
+.ligne-cours--annule .ligne-heure { color: var(--signal); }
+.ligne-cours--annule .ligne-heure span { color: #C88AA2; }
+
+.ligne-intitule { min-width: 0; }
+.ligne-matiere { display: block; font-size: 14.5px; }
+.ligne-lieu { display: block; font-size: 12.5px; color: var(--ink-soft); }
+.ligne-cours--annule .ligne-matiere { text-decoration: line-through; color: #8B6474; }
+.ligne-cours--annule .ligne-lieu { color: var(--signal); }
+.ligne-cours--change .ligne-lieu { color: var(--warn); }
+
+.ligne-signaler {
+  flex: none; white-space: nowrap; font-size: 13px; padding: 8px 14px;
+  border-radius: var(--r-bouton); background: var(--surface);
+  color: var(--accent-texte); border: 1px solid var(--rule-strong);
+}
+.ligne-pose { display: flex; align-items: center; gap: 8px; }
+.etiquette {
+  flex: none; white-space: nowrap; display: inline-block;
+  font-size: 10px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase;
+  padding: 3px 9px; border-radius: var(--r-pastille); color: #fff;
+}
+.etiquette--annule { background: var(--signal); }
+.etiquette--change { background: var(--warn-aplat); color: #3A2200; }
+.ligne-retirer {
+  flex: none; font-size: 13px; padding: 7px 9px; border-radius: var(--r-bouton);
+  background: none; color: var(--ink-soft); border: 0;
+}
+.ligne-cours--annule .ligne-retirer { color: #8B6474; }
+
+/* Le formulaire tient dans la ligne : on ne perd jamais de vue quel cours
+   on modifie, ni ce qu'il y a autour. */
+.ligne-forme { display: flex; flex-direction: column; min-width: 0; }
+.ligne-lieu-inline { color: var(--ink-soft); font-size: 12.5px; margin-left: 6px; }
+.ligne-choix { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 12px; }
+.choix {
+  flex: none; white-space: nowrap; font-size: 13px; padding: 8px 13px;
+  border-radius: var(--r-bouton); background: var(--surface);
+  color: var(--ink); border: 1px solid var(--rule-strong);
+}
+.choix--actif {
+  background: var(--accent-texte); color: var(--accent-ink);
+  border-color: var(--accent-texte); font-weight: 500;
+}
+.ligne-champs { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px; }
+.ligne-champs label { display: flex; flex-direction: column; gap: 5px; }
+.ligne-champs label span {
+  font-family: "Fira Sans", Roboto, sans-serif; font-size: 12.5px; font-weight: 500;
+}
+.ligne-champs input {
+  font-size: 13.5px; background: var(--surface); color: var(--ink);
+  border: 1px solid var(--rule-strong); border-radius: var(--r-bouton); padding: 8px 11px;
+}
+.champ-court input { width: 120px; border-color: var(--accent); }
+.champ-long { flex: 1; min-width: 180px; }
+.champ-long input { width: 100%; }
+.ligne-champs .notice { flex-basis: 100%; }
+
+.changements-apercu { display: flex; flex-direction: column; gap: 12px; }
+.changements-apercu-tete { display: flex; align-items: center; gap: 10px; }
+.changements-apercu-tete > span:first-child {
+  font-family: "Fira Sans", Roboto, sans-serif; font-size: 14px; font-weight: 600;
+}
+.changements-compte {
+  flex: none; white-space: nowrap; margin-left: auto; display: inline-block;
+  font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase;
+  padding: 4px 10px; border-radius: var(--r-pastille);
+  background: var(--accent-doux); color: var(--accent-texte);
+}
+
+/* La dalle, rendue par le vrai noyau d'affichage — pas une imitation. */
+.changements-dalle {
+  position: relative; aspect-ratio: 16 / 9; overflow: hidden;
+  background: #0E1211; border: 1px solid var(--rule-strong); border-radius: var(--r-apercu);
+}
+
+.changements-ou {
+  background: var(--surface); border: 1px solid var(--rule);
+  border-radius: var(--r-apercu); padding: 14px 16px;
+  display: flex; flex-direction: column; gap: 9px;
+}
+.changements-ou-titre {
+  font-family: "Fira Sans", Roboto, sans-serif; font-size: 13.5px; font-weight: 600;
+}
+.changements-ou-liste { font-size: 12.5px; color: var(--ink-soft); }
+.changements-ou-liste--vide { color: var(--warn); }
+/* Un écran branché sur NetYPareo ne verra jamais ce qu'on saisit ici. Le
+   taire ferait croire à une absence signalée alors qu'elle ne l'est pas. */
+.changements-ou-alerte {
+  margin: 0; font-size: 12.5px; color: var(--warn);
+  background: var(--warn-doux); border-radius: var(--r-bouton); padding: 9px 11px;
+  text-wrap: pretty;
+}
+.changements-ou-note { margin: 0; font-size: 12px; color: var(--ink-faint); text-wrap: pretty; }
+
+@media (max-width: 1180px) {
+  .changements-grille { grid-template-columns: minmax(0, 1fr); }
+  .changements-apercu { max-width: 520px; }
 }

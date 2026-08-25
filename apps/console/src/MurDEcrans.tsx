@@ -1,8 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { Manifest } from "@couloir/protocol";
-import { type RotationState, direct, mountRenderer } from "@couloir/renderer";
-import type { SourceSnapshot } from "@couloir/renderer";
-import { type ScreenStatus, relativeTime, sourceLocale } from "./api.js";
+import { type ScreenStatus, relativeTime } from "./api.js";
+import { Vignette } from "./Vignette.js";
 
 /**
  * Le mur d'écrans.
@@ -131,109 +130,5 @@ function CarteDEcran({
       </span>
       </button>
     </div>
-  );
-}
-
-/**
- * Une miniature vivante.
- *
- * Le rendu est dessiné à sa taille réelle — 1280 × 720 — puis réduit par une
- * transformation. Le dessiner petit donnerait des tailles de texte fausses :
- * le noyau de rendu calcule ses échelles typographiques sur la hauteur de la
- * dalle, et une miniature composée à 320 px de haut afficherait des titres
- * qu'aucun écran de couloir ne produira jamais.
- */
-function Vignette({ manifest, screenCode }: { manifest: Manifest | null; screenCode: string }) {
-  const cadre = useRef<HTMLSpanElement>(null);
-  const scene = useRef<HTMLSpanElement>(null);
-  const [largeur, setLargeur] = useState(0);
-
-  useEffect(() => {
-    const element = cadre.current;
-    if (!element) return;
-    const observateur = new ResizeObserver(() => setLargeur(element.clientWidth));
-    setLargeur(element.clientWidth);
-    observateur.observe(element);
-    return () => observateur.disconnect();
-  }, []);
-
-  useEffect(() => {
-    const element = scene.current;
-    if (!element || !manifest) return;
-
-    const renderer = mountRenderer(element, { assetUrl: (id) => `/v1/assets/${id}` });
-    let rotations = new Map<string, RotationState>();
-    const sources = new Map<string, SourceSnapshot>();
-    let vivant = true;
-
-    /**
-     * Les sources vivantes, chargées comme le ferait l'écran.
-     *
-     * Sans elles, la colonne des cours resterait vide dans la vignette alors
-     * qu'elle est pleine sur la dalle — l'aperçu mentirait précisément là où
-     * on compte sur lui.
-     */
-    const charger = () => {
-      for (const source of manifest.dataSources) {
-        void fetch(sourceLocale(source.url))
-          .then((r) => (r.ok ? r.json() : null))
-          .then((payload) => {
-            if (vivant && payload) sources.set(source.id, { fetchedAtMs: Date.now(), payload });
-          })
-          .catch(() => {});
-      }
-    };
-    charger();
-
-    const battement = () => {
-      const sortie = direct({
-        manifest,
-        nowMs: Date.now(),
-        sources,
-        // Tout est réputé téléchargé : la vignette montre le contenu voulu,
-        // pas l'état du cache d'un boîtier qu'on ne peut pas interroger.
-        availableAssetIds: new Set(manifest.assets.map((a) => a.id)),
-        rotations,
-        screenCode,
-      });
-      rotations = sortie.rotations;
-      renderer.update(sortie.screen);
-    };
-
-    battement();
-    const horloge = setInterval(battement, 1000);
-    const rafraichi = setInterval(charger, 5 * 60 * 1000);
-    return () => {
-      vivant = false;
-      clearInterval(horloge);
-      clearInterval(rafraichi);
-      renderer.destroy();
-    };
-  }, [manifest, screenCode]);
-
-  const échelle = largeur > 0 ? largeur / 1280 : 0;
-
-  if (!manifest) {
-    return (
-      <span className="vignette-vide" ref={cadre}>
-        Rien de publié
-      </span>
-    );
-  }
-
-  return (
-    <span className="vignette" ref={cadre}>
-      <span
-        className="vignette-scene"
-        ref={scene}
-        style={{
-          width: 1280,
-          height: 720,
-          transform: `scale(${échelle})`,
-          transformOrigin: "top left",
-          opacity: échelle > 0 ? 1 : 0,
-        }}
-      />
-    </span>
   );
 }

@@ -1348,6 +1348,68 @@ La dalle cède la place à ce qu'on s'engage à tenir — un écran débranché 
 son contenu, une urgence prend tous les écrans, la console ne s'ouvre jamais
 par défaut. Trois points, pas dix : ce sont ceux qu'on vérifiera.
 
+## Les changements du jour
+
+L'écran de tous les matins. Une colonne de cours à gauche, ce que les élèves
+liront à droite. Les classes sont des puces qu'on frappe, avec le nombre de
+changements déjà posés — c'est ce qu'on cherche du regard en arrivant. Le
+formulaire s'ouvre DANS la ligne du cours : on garde sous les yeux l'heure et
+les cours voisins, et on ne perd jamais de vue lequel on modifie.
+
+### L'aperçu passe par le vrai noyau de rendu
+
+Il était dessiné à la main en HTML de console. Une imitation dérive : le jour
+où la colonne change de typographie ou de mention, l'aperçu montre encore
+l'ancienne — et c'est précisément quand on relit une faute de frappe qu'il ne
+faut pas mentir.
+
+La page fabrique donc un manifeste minuscule — une zone, une source, une
+diapositive d'emploi du temps — et le donne au noyau, comme le mur d'écrans.
+Deux ajustements ont été nécessaires :
+
+- **Un instant figé.** Le noyau écarte un emploi du temps dont la date n'est
+  pas celle du jour, à raison : une colonne périmée envoie quelqu'un dans la
+  mauvaise salle. Regarder demain suppose donc de lui donner demain comme
+  instant, midi, loin des bascules de fuseau.
+- **La donnée est datée de cet instant-là.** Sinon, regarder vendredi fait
+  paraître la journée vieille de trois jours et l'aperçu porte un « mis à jour
+  mardi » qui ne dit rien de ce vendredi.
+
+Un instant figé n'a pas d'horloge, ce qui a fait apparaître un défaut : la
+vignette ne se redessinait qu'une fois, avant l'arrivée des données. Elle
+redessine maintenant à chaque source reçue, et un compteur la fait relire la
+journée après chaque saisie — sans quoi on annule un cours et la dalle
+continue de l'afficher pendant cinq minutes.
+
+### Où ça s'affiche
+
+La question paraît anodine. Elle ne l'est pas : on signale une absence et on
+veut savoir où elle va paraître. La règle se lit dans les réglages saisis, pas
+dans le manifeste, où les classes ont déjà été résolues en diapositives — on
+ne saurait plus y distinguer « cette classe » de « toutes les classes
+défilent ».
+
+Elle dit aussi ce qui est plus important que la liste : **un écran branché sur
+NetYPareo ne verra jamais ce qu'on saisit ici.** Le composeur ne mélange pas
+les deux sources ; dès qu'un afficheur est choisi, les classes locales ne sont
+plus montées. Taire ça laisserait croire à une absence signalée alors qu'elle
+ne l'est pas.
+
+### Un cours annulé n'a plus de salle
+
+Le rendu affichait encore la salle d'un cours annulé. Elle est remplacée par
+un tiret : continuer à l'annoncer envoie quelqu'un devant une porte fermée,
+c'est-à-dire exactement le trajet que la mention « annulé » existe pour
+éviter.
+
+### La console n'était pas vérifiée
+
+Elle n'entre pas dans `tsc --build` — elle n'émet rien — et Vite la transpile
+sans regarder les types. Deux erreurs de type y vivaient donc tranquillement,
+dont un champ que le client lisait sans l'avoir déclaré. Son script de
+construction lance maintenant `tsc --noEmit` d'abord, et l'intégration
+continue le lance en construisant la console.
+
 ## Ce qui n'est pas encore fait
 
 Le socle tourne, mais il reste volontairement incomplet :

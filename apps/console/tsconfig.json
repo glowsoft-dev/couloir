@@ -1,3 +1,10 @@
+/*
+ * La console n'est pas dans `tsc --build` : elle n'émet rien, et Vite la
+ * transpile sans regarder les types. Rien ne la vérifiait donc — deux
+ * erreurs de type y ont vécu jusqu'à ce qu'on aille les chercher à la main.
+ * Son script de construction lance maintenant `tsc --noEmit` d'abord, et
+ * l'intégration continue le lance en construisant la console.
+ */
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {

@@ -137,7 +137,7 @@ export function PublishPanel({
    * sous leur identifiant technique au lieu de leur nom de fichier.
    */
   const reopen = useCallback(async () => {
-    setLive({ version: null, loaded: false });
+    setLive({ version: null, loaded: false, reopenable: false });
     setMessage(null);
     setUndoTo(null);
     try {
