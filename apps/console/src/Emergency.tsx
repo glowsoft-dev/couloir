@@ -29,6 +29,61 @@ const TEMPLATES = [
   },
 ] as const;
 
+/**
+ * Le bandeau d'une urgence en cours, en haut du rail.
+ *
+ * Il dit qui l'a déclenchée, quand, et sur combien d'écrans. Le « qui » n'est
+ * pas décoratif : on cherche à qui demander avant de lever une évacuation. Le
+ * compte non plus — un écran posé après le déclenchement, ou sans rien de
+ * publié, ne l'a jamais reçue, et le silence sur ce point laisserait croire
+ * que tout le parc l'affiche.
+ */
+export function UrgenceEnCours({
+  urgence,
+  ecrans,
+  parc,
+  onLevee,
+}: {
+  urgence: Emergency;
+  ecrans: number;
+  parc: number;
+  onLevee: () => void;
+}) {
+  const [busy, setBusy] = useState(false);
+
+  async function lever() {
+    setBusy(true);
+    try {
+      await api.emergency.clear();
+      onLevee();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const heure = new Date(urgence.issuedAt).toLocaleTimeString("fr-FR", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
+  return (
+    <div className="urgence-bandeau">
+      <span className="urgence-mention">Urgence en cours</span>
+      <span className="urgence-titre">{urgence.title}</span>
+      <span className="urgence-detail">
+        déclenchée à {heure}
+        {urgence.parQui ? ` par ${urgence.parQui}` : ""} ·{" "}
+        {ecrans === parc
+          ? `${ecrans} écran${ecrans > 1 ? "s" : ""}`
+          : `${ecrans} écran${ecrans > 1 ? "s" : ""} sur ${parc}`}
+      </span>
+      <button type="button" className="urgence-lever" onClick={() => void lever()} disabled={busy}>
+        {busy ? "Retrait…" : "Retirer le message"}
+      </button>
+    </div>
+  );
+}
+
 export function EmergencyBar({
   active,
   onChanged,
@@ -47,19 +102,6 @@ export function EmergencyBar({
     } finally {
       setBusy(false);
     }
-  }
-
-  if (active) {
-    return (
-      <div className="emergency-active">
-        <span className="emergency-mark">Urgence en cours</span>
-        <span className="emergency-title">{active.title}</span>
-        <span className="spacer" />
-        <button type="button" className="emergency-stop" onClick={() => void clear()} disabled={busy}>
-          {busy ? "Retrait…" : "Retirer le message"}
-        </button>
-      </div>
-    );
   }
 
   return (

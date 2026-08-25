@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { ScreenActions } from "./Actions.js";
-import { EmergencyBar } from "./Emergency.js";
+import { EmergencyBar, UrgenceEnCours } from "./Emergency.js";
 import { GridView } from "./Grid.js";
 import { PageBibliotheque } from "./PageBibliotheque.js";
 import { DiffusionGroupee } from "./DiffusionGroupee.js";
@@ -72,6 +72,8 @@ export function App() {
   const [pending, setPending] = useState<PendingDevice[]>([]);
   const [setup, setSetup] = useState<TimetableSetup | null>(null);
   const [emergency, setEmergency] = useState<Emergency | null>(null);
+  /** Combien d'écrans portent l'alerte, et combien il y en a en tout. */
+  const [urgencePortee, setUrgencePortee] = useState({ ecrans: 0, parc: 0 });
   const [selectedId, setSelectedId] = useState<string | null>(null);
   /**
    * Incrémenté par un retour à une version passée.
@@ -114,7 +116,9 @@ export function App() {
       setScreens(result.screens);
       if (result.manifestes) setManifestes(result.manifestes);
       setPending(result.pending);
-      setEmergency((await api.emergency.current()).emergency);
+      const état = await api.emergency.current();
+      setEmergency(état.emergency);
+      setUrgencePortee({ ecrans: état.ecrans, parc: état.parc });
       setError(null);
     } catch (cause) {
       if (cause instanceof ApiError && cause.status === 401) {
@@ -219,6 +223,21 @@ export function App() {
           <span className="rail-produit">écrans</span>
         </div>
 
+        {/*
+          L'alerte en haut du rail, et non en bas près du bouton qui la
+          déclenche. Une urgence en cours n'est pas une action : c'est l'état
+          dans lequel se trouve l'établissement, et il doit être la première
+          chose lue en arrivant, quelle que soit la page ouverte.
+        */}
+        {emergency && (
+          <UrgenceEnCours
+            urgence={emergency}
+            ecrans={urgencePortee.ecrans}
+            parc={urgencePortee.parc}
+            onLevee={() => void refreshScreens()}
+          />
+        )}
+
         <div className="rail-entrees">
           {TABS.filter((entry) => !entry.administrateur || administrateur)
             .filter((entry) => publie || entry.id === "screens" || entry.id === "grid")
@@ -247,8 +266,11 @@ export function App() {
 
         <div className="rail-pied">
           {/* Un lecteur ne déclenche pas d'urgence : le serveur le refuserait,
-              et un bouton qui refuse est pire qu'un bouton absent. */}
-          {publie && <EmergencyBar active={emergency} onChanged={() => void refreshScreens()} />}
+              et un bouton qui refuse est pire qu'un bouton absent. Pendant une
+              urgence, le bouton laisse la place au bandeau du haut. */}
+          {publie && !emergency && (
+            <EmergencyBar active={null} onChanged={() => void refreshScreens()} />
+          )}
 
           <div className="rail-moi">
             <span className="rail-initiales" aria-hidden="true">
@@ -308,7 +330,15 @@ export function App() {
             <div className="mur-entete">
               <div className="mur-titre">
                 <h1>Mes écrans</h1>
-                <p>Voici ce qui est affiché en ce moment dans les couloirs.</p>
+                <p>
+                  {emergency
+                    ? urgencePortee.ecrans === screens.length
+                      ? "Tous les écrans affichent le message d'urgence. Le reste est suspendu."
+                      : `${urgencePortee.ecrans} écran${urgencePortee.ecrans > 1 ? "s" : ""} sur ${
+                          screens.length
+                        } affiche${urgencePortee.ecrans > 1 ? "nt" : ""} le message d'urgence. Le reste est suspendu.`
+                    : "Voici ce qui est affiché en ce moment dans les couloirs."}
+                </p>
               </div>
 
               <span className="mur-etat">
@@ -324,12 +354,23 @@ export function App() {
                 )}
               </span>
 
-              {publie && (
+              {publie && !emergency && (
                 <button type="button" className="primary" onClick={() => setPoseEnCours(true)}>
                   Poser un écran
                 </button>
               )}
             </div>
+
+            {/* Ce que l'urgence change, dit une fois, là où on le constate.
+                Sans cette phrase, on cherche pourquoi « Publier » est grisé
+                et pourquoi une dalle censée être éteinte est allumée. */}
+            {emergency && (
+              <p className="mur-note-urgence">
+                Pendant une urgence, publier est désactivé et les plages d'extinction sont
+                ignorées : une dalle éteinte se rallume. Le retrait du message est la seule
+                action qui rend les écrans à leur rotation.
+              </p>
+            )}
 
             {/* Une panne se raconte en une phrase, en haut du mur. Une
                 pastille dans un coin ne dit ni lequel, ni depuis quand, ni
@@ -427,6 +468,7 @@ export function App() {
               classes={setup?.classes ?? []}
               parc={screens}
               manifestes={manifestes}
+              urgenceEnCours={emergency !== null}
               onPublished={() => void refreshScreens()}
               secondaire={
                 <>

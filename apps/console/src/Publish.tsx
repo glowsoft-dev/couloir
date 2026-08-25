@@ -59,10 +59,20 @@ export function PublishPanel({
   secondaire,
   parc = [],
   manifestes = {},
+  urgenceEnCours = false,
 }: {
   screen: ScreenStatus;
   classes: SchoolClass[];
   onPublished: () => void;
+  /**
+   * Vrai tant qu'un message d'urgence est en ligne.
+   *
+   * Publier reste sans danger — le serveur reporte le message sur la nouvelle
+   * version — mais reste sans effet visible : l'alerte couvre tout. Un bouton
+   * qui ne change rien à ce qu'affichent les couloirs vaut mieux grisé, avec
+   * la raison écrite, que cliquable et muet.
+   */
+  urgenceEnCours?: boolean;
   /** Ce dont on se sert rarement : historique, actions sur le boîtier. */
   secondaire?: React.ReactNode;
   /** Les autres écrans, pour étendre la publication sans changer de page. */
@@ -425,7 +435,12 @@ export function PublishPanel({
             )}
           </span>
 
-          <button type="button" className="primary" onClick={publish} disabled={!ready || busy}>
+          <button
+            type="button"
+            className="primary"
+            onClick={publish}
+            disabled={!ready || busy || urgenceEnCours}
+          >
             {busy
               ? "Publication…"
               : aussi.length > 0
@@ -453,7 +468,13 @@ export function PublishPanel({
         )}
 
         {/* Un bouton grisé sans explication laisse chercher. */}
-        {items.length === 0 && actualites === 0 && layout !== "emploi-du-temps" && (
+        {urgenceEnCours && (
+          <p className="hint">
+            Un message d'urgence est en ligne : il couvre tout ce qui est publié. Retirez-le pour
+            rendre les écrans à leur rotation.
+          </p>
+        )}
+        {!urgenceEnCours && items.length === 0 && actualites === 0 && layout !== "emploi-du-temps" && (
           <p className="hint">
             Ajoutez au moins un contenu, ou des actualités du site, pour pouvoir publier.
           </p>

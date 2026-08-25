@@ -793,6 +793,7 @@ export function registerConsoleApi(app: FastifyInstance, options: ConsoleApiOpti
       ...(parsed.data.body?.trim() ? { body: parsed.data.body.trim() } : {}),
       issuedAt: iso(now),
       validUntil: iso(new Date(now.getTime() + parsed.data.validHours * 3_600_000)),
+      ...(request.identité?.auteur ? { parQui: request.identité.auteur } : {}),
     };
 
     const touched = await applyToScreens(store, parsed.data.screenIds, (manifest) => ({
@@ -829,14 +830,24 @@ export function registerConsoleApi(app: FastifyInstance, options: ConsoleApiOpti
     return touched;
   });
 
-  /** L'état courant, pour que la console sache quoi montrer. */
+  /**
+   * L'état courant, pour que la console sache quoi montrer.
+   *
+   * On rend aussi combien d'écrans le portent. « Urgence en cours » sans
+   * chiffre laisse croire que tout le parc l'affiche, alors qu'un écran posé
+   * après le déclenchement, ou sans rien de publié, ne l'a jamais reçu.
+   */
   app.get(`${CONSOLE_PREFIX}/emergency`, async () => {
     const screens = await store.listScreens();
+    let emergency: Manifest["emergency"] = null;
+    let ecrans = 0;
     for (const screen of screens) {
       const manifest = await store.getManifest(screen.id);
-      if (manifest?.emergency) return { emergency: manifest.emergency };
+      if (!manifest?.emergency) continue;
+      emergency ??= manifest.emergency;
+      ecrans += 1;
     }
-    return { emergency: null };
+    return { emergency, ecrans, parc: screens.length };
   });
 
   // --- Aperçu ----------------------------------------------------------
@@ -965,7 +976,11 @@ export function registerConsoleApi(app: FastifyInstance, options: ConsoleApiOpti
           media: media.index(),
           baseUrl,
         });
-        await store.putManifest(manifest, relu.data, request.identité?.auteur);
+        await store.putManifest(
+          reporterUrgence(manifest, existing),
+          relu.data,
+          request.identité?.auteur,
+        );
         options.commands?.issue(screenId, "sync-now");
         resultats.push({ screenId, code: screen.code, version: manifest.version });
       } catch (error) {
@@ -1023,14 +1038,17 @@ export function registerConsoleApi(app: FastifyInstance, options: ConsoleApiOpti
 
       try {
         const existing = await store.getManifest(screen.id);
-        const manifest = compose({
-          screenId: screen.id,
-          version: (existing?.version ?? 0) + 1,
-          issuedAt: new Date().toISOString().replace(/\.\d+Z$/, "Z"),
-          spec,
-          media: media.index(),
-          baseUrl: resolvePublicUrl(options.publicUrl, request.headers.host),
-        });
+        const manifest = reporterUrgence(
+          compose({
+            screenId: screen.id,
+            version: (existing?.version ?? 0) + 1,
+            issuedAt: new Date().toISOString().replace(/\.\d+Z$/, "Z"),
+            spec,
+            media: media.index(),
+            baseUrl: resolvePublicUrl(options.publicUrl, request.headers.host),
+          }),
+          existing,
+        );
 
         // On enregistre la composition SAISIE, pas la composition résolue :
         // rouvrir doit rendre « toutes les classes » et non la liste figée
@@ -1057,6 +1075,25 @@ export function registerConsoleApi(app: FastifyInstance, options: ConsoleApiOpti
       }
     },
   );
+}
+
+/**
+ * Reporte le message d'urgence sur la nouvelle version.
+ *
+ * Le composeur ne connaît pas les urgences : il compose ce qu'on lui donne.
+ * Publier pendant une évacuation produisait donc un manifeste sans message,
+ * et l'écran repartait sur ses affiches — un couloir sur six cessait
+ * d'annoncer l'évacuation, sans que personne l'ait demandé ni le voie.
+ *
+ * On ne le reporte pas s'il a expiré : un écran rallumé trois jours plus tard
+ * ne doit pas ressusciter une alerte périmée, et c'est déjà la règle côté
+ * rendu.
+ */
+function reporterUrgence(manifest: Manifest, précédent: Manifest | null): Manifest {
+  const urgence = précédent?.emergency;
+  if (!urgence) return manifest;
+  if (Date.parse(urgence.validUntil) <= Date.now()) return manifest;
+  return { ...manifest, emergency: urgence };
 }
 
 /**
@@ -1087,7 +1124,16 @@ async function applyToScreens(
     }
     const next = transform(manifest);
     if (!next) continue;
-    await store.putManifest(next);
+    /*
+     * On reporte la composition saisie sur la nouvelle version.
+     *
+     * Poser ou lever une urgence crée une version de plus. Sans ce report,
+     * elle n'aurait pas de composition : l'écran continuerait d'afficher le
+     * bon contenu, mais l'éditeur s'ouvrirait vide devant lui et proposerait
+     * d'« ajouter au moins un contenu » alors qu'il en diffuse trois.
+     */
+    const spec = await store.getSpec(screen.id, manifest.version);
+    await store.putManifest(next, spec ?? undefined);
     applied.push(screen.code);
     appliedIds.push(screen.id);
   }

@@ -1670,6 +1670,40 @@ exactement ce qu'on voulait vérifier. Le compteur qui le déclenche est remis �
 zéro en changeant d'écran : un retour fait sur le hall ne déplie pas
 l'historique du CDI.
 
+## Une urgence en cours
+
+Le bandeau passe en haut du rail, et non en bas près du bouton qui la
+déclenche. Une urgence n'est pas une action : c'est l'état dans lequel se
+trouve l'établissement, et il doit être la première chose lue, quelle que soit
+la page ouverte.
+
+Il dit **qui** l'a déclenchée, **quand**, et **sur combien d'écrans**. Le
+« qui » n'est pas décoratif — on cherche à qui demander avant de lever une
+évacuation. Le compte non plus : un écran posé après le déclenchement, ou qui
+n'a jamais rien reçu, ne la porte pas, et le taire laisserait croire que tout
+le parc l'affiche.
+
+### Publier effaçait l'urgence
+
+Le composeur ne connaît pas les urgences : il compose ce qu'on lui donne.
+Publier pendant une évacuation produisait donc un manifeste sans message, et
+**un couloir cessait de l'annoncer** — sans que personne l'ait demandé ni le
+voie.
+
+Le serveur reporte maintenant le message sur la nouvelle version, sauf s'il a
+expiré : un écran republié trois jours plus tard ne doit pas ressusciter une
+alerte périmée. Et la console grise « Publier » pendant ce temps, avec la
+raison écrite — l'alerte couvre tout, publier ne changerait rien à ce que
+montrent les couloirs.
+
+### Une urgence faisait perdre la composition
+
+Poser puis lever une urgence crée deux versions de plus, écrites sans
+composition saisie. L'écran continuait d'afficher le bon contenu, mais
+l'éditeur s'ouvrait vide devant lui et proposait d'« ajouter au moins un
+contenu » alors qu'il en diffusait trois. La composition est reportée avec le
+manifeste.
+
 ## Ce qui n'est pas encore fait
 
 Le socle tourne, mais il reste volontairement incomplet :

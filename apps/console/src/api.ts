@@ -78,6 +78,8 @@ export interface Emergency {
   body?: string;
   issuedAt: string;
   validUntil: string;
+  /** Qui l'a déclenchée. Absent pour une alerte posée par la clé de secours. */
+  parQui?: string;
 }
 
 export interface DisplayOffWindow {
@@ -508,7 +510,8 @@ export const api = {
     ),
 
   emergency: {
-    current: () => call<{ emergency: Emergency | null }>("/emergency"),
+    current: () =>
+      call<{ emergency: Emergency | null; ecrans: number; parc: number }>("/emergency"),
     raise: (input: { title: string; body?: string; screenIds?: string[]; validHours?: number }) =>
       call<{ emergency: Emergency; applied: string[]; skipped: string[] }>(
         "/emergency",

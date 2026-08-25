@@ -204,6 +204,76 @@ describe("mode urgence", () => {
     return { app, store, auth, screens };
   }
 
+  it("laisse l'éditeur rouvrir la composition après coup", async () => {
+    // Poser puis lever une urgence crée deux versions de plus. Sans report de
+    // la composition, l'éditeur s'ouvrait vide devant un écran qui diffuse.
+    const { app, auth, screens } = await withScreens();
+
+    await app.inject({
+      method: "POST", url: `${CONSOLE_PREFIX}/emergency`, headers: auth,
+      payload: { title: "Évacuation immédiate" },
+    });
+    await app.inject({ method: "DELETE", url: `${CONSOLE_PREFIX}/emergency`, headers: auth });
+
+    const composition = await app.inject({
+      method: "GET", url: `${CONSOLE_PREFIX}/screens/${screens[0]!.id}/composition`, headers: auth,
+    });
+    expect(composition.json().spec?.items).toHaveLength(1);
+  });
+
+  it("survit à une publication faite pendant l'urgence", async () => {
+    /*
+     * Le cas qui coûte le plus cher.
+     *
+     * Le composeur ne connaît pas les urgences : il compose ce qu'on lui
+     * donne. Publier pendant une évacuation produisait donc un manifeste sans
+     * message, et un couloir sur six cessait de l'annoncer — sans que
+     * personne l'ait demandé ni le voie.
+     */
+    const { app, store, auth, screens } = await withScreens();
+
+    await app.inject({
+      method: "POST", url: `${CONSOLE_PREFIX}/emergency`, headers: auth,
+      payload: { title: "Évacuation immédiate", body: "Parking nord." },
+    });
+
+    await app.inject({
+      method: "POST", url: `${CONSOLE_PREFIX}/screens/${screens[0]!.id}/publish`, headers: auth,
+      payload: { layout: "plein-ecran", items: [{ assetId: poster.id }] },
+    });
+
+    const manifest = await store.getManifest(screens[0]!.id);
+    expect(manifest?.emergency?.title).toBe("Évacuation immédiate");
+
+    const état = await app.inject({ method: "GET", url: `${CONSOLE_PREFIX}/emergency`, headers: auth });
+    expect(état.json().ecrans).toBe(2);
+  });
+
+  it("ne ressuscite pas une alerte périmée", async () => {
+    // Un écran republié après la fin de validité ne doit pas remettre en
+    // ligne une évacuation d'avant-hier.
+    const { app, store, auth, screens } = await withScreens();
+
+    await app.inject({
+      method: "POST", url: `${CONSOLE_PREFIX}/emergency`, headers: auth,
+      payload: { title: "Confinement" },
+    });
+
+    const courant = (await store.getManifest(screens[0]!.id))!;
+    await store.putManifest({
+      ...courant,
+      version: courant.version + 1,
+      emergency: { ...courant.emergency!, validUntil: "2020-01-01T00:00:00Z" },
+    });
+
+    await app.inject({
+      method: "POST", url: `${CONSOLE_PREFIX}/screens/${screens[0]!.id}/publish`, headers: auth,
+      payload: { layout: "plein-ecran", items: [{ assetId: poster.id }] },
+    });
+
+    expect((await store.getManifest(screens[0]!.id))?.emergency).toBeNull();
+  });
+
   it("prend tous les écrans et incrémente leur version", async () => {
     // Sans version incrémentée, l'agent ignorerait le manifeste : il refuse
     // toute version qui n'augmente pas.
@@ -283,8 +353,10 @@ describe("mode urgence", () => {
 
   it("dit s'il y a une urgence en cours", async () => {
     const { app, auth } = await withScreens();
+    // Le compte d'écrans accompagne l'état : « urgence en cours » sans
+    // chiffre laisserait croire que tout le parc l'affiche.
     expect((await app.inject({ method: "GET", url: `${CONSOLE_PREFIX}/emergency`, headers: auth })).json())
-      .toEqual({ emergency: null });
+      .toEqual({ emergency: null, ecrans: 0, parc: 2 });
 
     await app.inject({
       method: "POST", url: `${CONSOLE_PREFIX}/emergency`, headers: auth, payload: { title: "Alerte" },

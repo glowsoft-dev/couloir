@@ -245,6 +245,14 @@ export const EmergencyMessage = z.object({
    * une alerte incendie périmée.
    */
   validUntil: IsoDateTime,
+  /**
+   * Qui l'a déclenché.
+   *
+   * Une alerte que personne n'a signée est une alerte que personne ne lève :
+   * on cherche à qui demander avant de retirer un message d'évacuation. Elle
+   * ne s'affiche pas sur les dalles — c'est une information de console.
+   */
+  parQui: z.string().optional(),
 });
 export type EmergencyMessage = z.infer<typeof EmergencyMessage>;
 
