@@ -2,11 +2,23 @@ import { describe, expect, it } from "vitest";
 import { ressembleÀUnNom, séancesNominatives } from "./nomsDePersonnes.js";
 
 /*
- * Les chaînes ci-dessous sont celles que l'afficheur du campus a réellement
- * servies. C'est le seul jeu d'essai qui vaille pour une heuristique : elle
- * n'a pas à être élégante, elle a à trier CES intitulés-là.
+ * Les formes ci-dessous sont celles que l'afficheur du campus sert
+ * réellement — mais les noms sont inventés.
+ *
+ * Ce contrôle existe pour éviter qu'un nom d'élève parte sur un mur de
+ * couloir ; le graver dans un dépôt le publierait bien plus durablement. On
+ * garde donc ce qui compte pour l'heuristique — la casse, le nombre de mots,
+ * les particules courtes, les accents — et rien de ce qui désigne quelqu'un.
+ *
+ * Les quatre formes viennent d'une lecture de l'afficheur : « Prénom NOM »,
+ * « Prénom PARTICULE NOM », un prénom accentué, un patronyme court.
  */
 const NOMS_REELS = ["Marc BERTAUD", "Naïma EL OUARDI", "Élodie CHASSAGNE", "Tom PRAT"];
+/*
+ * Les intitulés, eux, sont conservés tels quels : ce sont des formations, pas
+ * des personnes, et ce sont exactement les chaînes que l'heuristique doit
+ * refuser de confondre avec un nom.
+ */
 const INTITULES_REELS = [
   "Attaché Commercial AC 2025-26",
   "BTS GESTION 2EME ANNE",
