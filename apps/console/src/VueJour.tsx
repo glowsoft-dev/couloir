@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import type { Draft } from "./brouillon.js";
 import { type DisplayOffWindow, type Media, type PublishItem, humanSize } from "./api.js";
 import { type Relais, disposerLesBlocs, enFrancais, finDeJournee } from "./journee.js";
 
@@ -27,7 +28,6 @@ const HEURES = Array.from({ length: FIN_JOURNEE - DEBUT_JOURNEE }, (_, i) => DEB
  */
 const HAUTEUR_MINIMALE_POUR_DEUX_LIGNES = 12;
 
-type Draft = PublishItem & { key: string; title: string };
 
 function enMinutes(hhmm: string): number {
   const [h, m] = hhmm.split(":").map(Number);

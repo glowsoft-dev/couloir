@@ -1,15 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import type { Draft } from "./brouillon.js";
 import type { Manifest } from "@couloir/protocol";
 import { ScreenPreview } from "./Preview.js";
 import { Bibliotheque } from "./Bibliotheque.js";
 import { OuCaPart } from "./OuCaPart.js";
-import { Periode } from "./Periode.js";
 import { VueJour } from "./VueJour.js";
 import { VueMois } from "./VueMois.js";
-import { MiseEnPage } from "./MiseEnPage.js";
-import { Schedule } from "./Schedule.js";
+import { ReglagesDeLEcran } from "./ReglagesDeLEcran.js";
+import { VoletContenu } from "./VoletContenu.js";
 import {
-  CHAMPS_EDT,
   type ChampEdt,
   type DisplayOffWindow,
   type Media,
@@ -18,7 +17,6 @@ import {
   type SchoolClass,
   type ScreenStatus,
   api,
-  humanSize,
 } from "./api.js";
 
 /**
@@ -40,7 +38,6 @@ import {
  *    « Revenir en arrière » se lit quand on en a besoin.
  */
 
-type Draft = PublishItem & { key: string; title: string };
 
 /** Ce qu'on relit depuis le serveur, transformé en brouillon éditable. */
 function toDrafts(spec: PublishSpec, media: Media[]): Draft[] {
@@ -549,416 +546,40 @@ export function PublishPanel({
           </div>
 
           <div className="volet-corps" hidden={volet !== "reglages"}>
-
-          <MiseEnPage valeur={layout} onChange={(suivant) => touch(() => setLayout(suivant))} />
-
-          {avecCours && afficheurs.length > 0 && (
-            <div className="reglage">
-              <div className="reglage-titre">Emploi du temps affiché</div>
-              <div className="day-picker">
-                {afficheurs.map((a) => {
-                  const choisi = afficheursChoisis.includes(a.afficheur);
-                  return (
-                    <button
-                      key={a.afficheur}
-                      type="button"
-                      className="day-chip"
-                      aria-pressed={choisi}
-                      title={a.batiment ? `Bâtiment ${a.batiment}` : "Tout l'établissement"}
-                      onClick={() =>
-                        touch(() =>
-                          setAfficheursChoisis((c) =>
-                            choisi ? c.filter((id) => id !== a.afficheur) : [...c, a.afficheur],
-                          ),
-                        )
-                      }
-                    >
-                      {a.libelle || `n°${a.afficheur}`}
-                    </button>
-                  );
-                })}
-              </div>
-              <p className="hint">
-                {afficheursChoisis.length === 0
-                  ? `Aucune sélection : l'écran prend celui de son bâtiment (${screen.building}), tout seul.`
-                  : afficheursChoisis.length === 1
-                    ? "Un seul : l'écran s'y tient."
-                    : `${afficheursChoisis.length} afficheurs, présentés à tour de rôle.`}
-              </p>
-            </div>
-          )}
-
-          {avecCours && (
-            <div className="reglage">
-              <div className="reglage-titre">Ce que montre la colonne des cours</div>
-              <p className="reglage-note reglage-note--avant">
-                L'heure de début et le nom du groupe sont toujours affichés — sans eux la colonne
-                ne dit plus rien.
-              </p>
-              <div className="day-picker">
-                {CHAMPS_EDT.map((champ) => {
-                  const montré = champsEdt === null || champsEdt.includes(champ.id);
-                  return (
-                    <button
-                      key={champ.id}
-                      type="button"
-                      className="day-chip"
-                      aria-pressed={montré}
-                      title={champ.aide}
-                      onClick={() =>
-                        touch(() =>
-                          setChampsEdt((actuels) => {
-                            const base = actuels ?? CHAMPS_EDT.map((c) => c.id);
-                            return montré
-                              ? base.filter((c) => c !== champ.id)
-                              : [...base, champ.id];
-                          }),
-                        )
-                      }
-                    >
-                      {champ.libelle}
-                    </button>
-                  );
-                })}
-              </div>
-              <p className="reglage-note">
-                Le reste se règle écran par écran : un couloir de bâtiment veut la salle, un écran
-                d'accueil préfère souvent s'en passer.
-              </p>
-            </div>
-          )}
-
-          {avecCours && afficheurs.length === 0 && (
-            <div className="reglage">
-              <div className="reglage-titre">Classes affichées dans la colonne</div>
-              {classes.length === 0 ? (
-                <p className="hint">Aucune classe. Créez-en dans l'onglet Réglages.</p>
-              ) : (
-                <>
-                  <div className="day-picker">
-                    {classes.map((schoolClass) => {
-                      const selected = classIds.includes(schoolClass.id);
-                      return (
-                        <button
-                          key={schoolClass.id}
-                          type="button"
-                          className="day-chip"
-                          aria-pressed={selected}
-                          title={schoolClass.label}
-                          onClick={() =>
-                            touch(() =>
-                              setClassIds((current) =>
-                                selected
-                                  ? current.filter((id) => id !== schoolClass.id)
-                                  : [...current, schoolClass.id],
-                              ),
-                            )
-                          }
-                        >
-                          {schoolClass.code}
-                        </button>
-                      );
-                    })}
-                  </div>
-                  <p className="hint">
-                    {classIds.length === 0
-                      ? "Aucune sélection : toutes les classes défilent."
-                      : classIds.length === 1
-                        ? "Une seule classe : l'écran l'affiche en permanence."
-                        : `${classIds.length} classes, affichées à tour de rôle.`}
-                  </p>
-                </>
-              )}
-            </div>
-          )}
-
-          <Schedule windows={displayOff} onChange={(next) => touch(() => setDisplayOff(next))} />
-
-            <div className="reglage">
-              <div className="reglage-titre">Quand rien n'est programmé</div>
-              <p className="reglage-note reglage-note--avant">
-                Ce que l'écran montre aux heures où aucun contenu n'est prévu. Sans réglage, il
-                affiche sa carte d'identité — correct, mais c'est le message d'un écran qui a perdu
-                le contact, pas d'un écran qui attend.
-              </p>
-
-              <div className="day-picker">
-                <button
-                  type="button"
-                  className="day-chip"
-                  aria-pressed={!parDefaut.assetId && !parDefaut.emploiDuTemps}
-                  onClick={() => touch(() => setParDefaut({}))}
-                >
-                  Carte d'identité
-                </button>
-                <button
-                  type="button"
-                  className="day-chip"
-                  aria-pressed={Boolean(parDefaut.emploiDuTemps)}
-                  onClick={() =>
-                    touch(() => setParDefaut({ emploiDuTemps: true }))
-                  }
-                >
-                  Les salles du jour
-                </button>
-              </div>
-
-              {media.length > 0 && (
-                <>
-                  <p className="hint">Ou une affiche de la bibliothèque :</p>
-                  <div className="media-grid">
-                    {media.map((m) => (
-                      <button
-                        key={m.id}
-                        type="button"
-                        className="media-tile"
-                        aria-pressed={parDefaut.assetId === m.id}
-                        title={m.filename ?? m.id}
-                        onClick={() =>
-                          touch(() =>
-                            setParDefaut(
-                              parDefaut.assetId === m.id ? {} : { assetId: m.id },
-                            ),
-                          )
-                        }
-                      >
-                        {m.mime.startsWith("image/") ? (
-                          <img src={`/v1/assets/${m.id}`} alt="" />
-                        ) : (
-                          <span className="kind">{m.mime.split("/")[1] ?? "fichier"}</span>
-                        )}
-                        <span className="name">{m.filename ?? m.id}</span>
-                      </button>
-                    ))}
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
-
-          <div className="volet-corps" hidden={volet !== "contenu"}>
-          {/*
-            La bibliothèque était ici ET dans la colonne de gauche — deux
-            grilles des mêmes fichiers, deux boutons « Importer », et la
-            rotation réduite à deux vignettes par rangée pour loger la copie.
-            Elle reste où elle sert : à côté, en permanence, quel que soit le
-            volet ouvert.
-          */}
-          <div className="field">
-            <label>Contenus à diffuser</label>
-            {items.length === 0 ? (
-              <p className="hint">Cliquez sur un média ci-dessus, ou ajoutez un texte.</p>
-            ) : (
-              /*
-               * Des vignettes, et non des lignes.
-               *
-               * La rotation est une suite d'images : en lignes, on relisait
-               * douze noms de fichiers pour retrouver l'affiche à retirer, et
-               * « affiche-po-2026 » ne dit pas de quoi elle a l'air. La
-               * vignette montre ce qui passera, et le rang se lit dessus.
-               */
-              <div className="rotation">
-                {items.map((item, index) => {
-                  // Le type du fichier vient de la bibliothèque : le brouillon
-                  // ne porte que son identifiant.
-                  const mime = media.find((m) => m.id === item.assetId)?.mime;
-                  return (
-                  <div className="rotation-carte" key={item.key}>
-                    <div className="rotation-vignette">
-                      {item.text ? (
-                        <span className="rotation-texte">{item.text.titre || "Sans titre"}</span>
-                      ) : mime?.startsWith("image/") ? (
-                        <img src={`/v1/assets/${item.assetId}`} alt="" />
-                      ) : (
-                        <span className="rotation-type">{mime?.split("/")[1] ?? "fichier"}</span>
-                      )}
-                      <span className="rotation-rang">{String(index + 1).padStart(2, "0")}</span>
-                      <button
-                        type="button"
-                        className="rotation-retirer"
-                        aria-label={`Retirer le contenu ${index + 1}`}
-                        title="Retirer"
-                        onClick={() =>
-                          touch(() =>
-                            setItems((current) => current.filter((it) => it.key !== item.key)),
-                          )
-                        }
-                      >
-                        ✕
-                      </button>
-                    </div>
-
-                    <div className="rotation-corps">
-                      {item.text ? (
-                        <input
-                          className="rotation-titre"
-                          value={item.text.titre}
-                          placeholder="Titre affiché à l'écran"
-                          aria-label={`Titre du contenu ${index + 1}`}
-                          aria-invalid={!item.text.titre.trim()}
-                          onChange={(e) =>
-                            touch(() =>
-                              setItems((current) =>
-                                current.map((it) =>
-                                  it.key === item.key
-                                    ? { ...it, text: { titre: e.target.value } }
-                                    : it,
-                                ),
-                              ),
-                            )
-                          }
-                        />
-                      ) : (
-                        <span className="rotation-nom" title={item.title}>
-                          {item.title}
-                        </span>
-                      )}
-
-                      <div className="rotation-reglages">
-                        {item.durationMs === undefined ? (
-                          <span className="hint" title="Une vidéo dure le temps qu'elle dure">
-                            durée vidéo
-                          </span>
-                        ) : (
-                          <label className="rotation-duree">
-                            <input
-                              type="number"
-                              min={1}
-                              max={60}
-                              value={Math.round(item.durationMs / 1000)}
-                              aria-label={`Durée du contenu ${index + 1}, en secondes`}
-                              onChange={(e) =>
-                                touch(() =>
-                                  setItems((current) =>
-                                    current.map((it) =>
-                                      it.key === item.key
-                                        ? {
-                                            ...it,
-                                            durationMs: Math.max(1, Number(e.target.value)) * 1000,
-                                          }
-                                        : it,
-                                    ),
-                                  ),
-                                )
-                              }
-                            />
-                            <span>s</span>
-                          </label>
-                        )}
-
-                        {!item.text && (
-                          <button
-                            type="button"
-                            className="ajustement"
-                            aria-pressed={item.fit === "remplir"}
-                            title={
-                              item.fit === "remplir"
-                                ? "L'image couvre toute la zone, quitte à rogner les bords."
-                                : "L'image tient en entier, quitte à laisser des bandes."
-                            }
-                            onClick={() =>
-                              touch(() =>
-                                setItems((current) =>
-                                  current.map((it) =>
-                                    it.key === item.key
-                                      ? ({
-                                          ...it,
-                                          ...(it.fit === "remplir"
-                                            ? { fit: undefined }
-                                            : { fit: "remplir" as const }),
-                                        } as Draft)
-                                      : it,
-                                  ),
-                                ),
-                              )
-                            }
-                          >
-                            {item.fit === "remplir" ? "Remplit" : "Entière"}
-                          </button>
-                        )}
-                      </div>
-
-                      <div className="rotation-pied">
-                        <Periode
-                          valeur={item.visibility}
-                          libellé={`Contenu ${index + 1}`}
-                          onChange={(v) =>
-                            touch(() =>
-                              setItems((current) =>
-                                current.map((it) =>
-                                  it.key === item.key ? ({ ...it, visibility: v } as Draft) : it,
-                                ),
-                              ),
-                            )
-                          }
-                        />
-                        <span className="rotation-ordre">
-                          <button
-                            type="button"
-                            aria-label={`Avancer le contenu ${index + 1}`}
-                            title="Avancer dans la rotation"
-                            disabled={index === 0}
-                            onClick={() => move(item.key, -1)}
-                          >
-                            ←
-                          </button>
-                          <button
-                            type="button"
-                            aria-label={`Reculer le contenu ${index + 1}`}
-                            title="Reculer dans la rotation"
-                            disabled={index === items.length - 1}
-                            onClick={() => move(item.key, 1)}
-                          >
-                            →
-                          </button>
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-          <div className="field">
-            <label htmlFor="ticker">Bandeau défilant</label>
-            <textarea
-              id="ticker"
-              value={ticker}
-              placeholder="Conseil de classe jeudi 17 · Inscriptions au voyage jusqu'au 30 septembre"
-              onChange={(e) => touch(() => setTicker(e.target.value))}
+            <ReglagesDeLEcran
+              screen={screen}
+              media={media}
+              classes={classes}
+              layout={layout}
+              setLayout={setLayout}
+              afficheurs={afficheurs}
+              afficheursChoisis={afficheursChoisis}
+              setAfficheursChoisis={setAfficheursChoisis}
+              champsEdt={champsEdt}
+              setChampsEdt={setChampsEdt}
+              classIds={classIds}
+              setClassIds={setClassIds}
+              displayOff={displayOff}
+              setDisplayOff={setDisplayOff}
+              parDefaut={parDefaut}
+              setParDefaut={setParDefaut}
+              touch={touch}
             />
           </div>
 
-          <div className="field">
-            <label htmlFor="actus">Actualités du site</label>
-            {sourceActive === false ? (
-              <p className="hint">
-                Aucune source configurée. Renseignez l'adresse du site dans l'onglet Réglages, et
-                les articles rejoindront la rotation ici.
-              </p>
-            ) : (
-              <>
-                <input
-                  id="actus"
-                  type="number"
-                  min={0}
-                  max={10}
-                  value={actualites}
-                  onChange={(e) =>
-                    touch(() => setActualites(Math.min(10, Math.max(0, Number(e.target.value)))))
-                  }
-                />
-                <p className="hint">
-                  {actualites === 0
-                    ? "Aucune actualité dans la rotation."
-                    : `${actualites} article${actualites > 1 ? "s" : ""} du site, ${actualites > 1 ? "affichés" : "affiché"} entre vos contenus. Ils se mettent à jour tout seuls.`}
-                </p>
-              </>
-            )}
-          </div>
-
+          <div className="volet-corps" hidden={volet !== "contenu"}>
+            <VoletContenu
+              media={media}
+              items={items}
+              setItems={setItems}
+              ticker={ticker}
+              setTicker={setTicker}
+              actualites={actualites}
+              setActualites={setActualites}
+              sourceActive={sourceActive}
+              move={move}
+              touch={touch}
+            />
           </div>
 
           {/* Le mois répond à « quels jours », la journée à « à quelle

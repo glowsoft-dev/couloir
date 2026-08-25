@@ -1,4 +1,5 @@
 import { useState } from "react";
+import type { Draft } from "./brouillon.js";
 import type { Media, PublishItem } from "./api.js";
 import { enDate, grilleDuMois, nomDuMois, paraitLeJour } from "./mois.js";
 
@@ -16,7 +17,6 @@ import { enDate, grilleDuMois, nomDuMois, paraitLeJour } from "./mois.js";
 
 const JOURS = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
 
-type Draft = PublishItem & { key: string; title: string };
 
 export function VueMois({ items, media }: { items: Draft[]; media: Media[] }) {
   const aujourdHui = new Date();

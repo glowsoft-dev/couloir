@@ -1795,6 +1795,27 @@ Et non cinq ou six selon le mois. Une grille qui change de hauteur en
 changeant de mois fait sauter tout ce qui est en dessous, et on perd le fil en
 feuilletant.
 
+## L'éditeur, découpé
+
+`Publish.tsx` mêlait sur mille cinquante lignes trois questions sans rapport :
+ce qu'on diffuse aujourd'hui, quand ça paraît, et comment l'écran est réglé.
+Chaque volet est maintenant un fichier qu'on lit seul — l'éditeur retombe à
+680 lignes, et il n'y garde que ce qui les relie.
+
+**L'état reste chez l'éditeur.** C'est une seule composition qu'on modifie, et
+la découper en états séparés ferait diverger l'aperçu de ce qu'on publie. Les
+volets reçoivent donc beaucoup de propriétés, et c'est ce qui les rend
+lisibles : on voit d'un coup ce que chacun touche, au lieu de le deviner.
+
+`Draft` — un contenu en cours d'édition — était déclaré à l'identique dans
+quatre fichiers. Rien n'aurait signalé qu'ils divergent ; il est défini une
+fois.
+
+Un découpage ne se prouve pas en compilant. Vérifié en naviguant : les quatre
+volets, un changement de mise en page qui révèle les cartes qui en dépendent,
+un contenu ajouté, un bandeau saisi, une publication, et la composition
+relue entière après rechargement.
+
 ## Ce qui n'est pas encore fait
 
 Le socle tourne, mais il reste volontairement incomplet :
