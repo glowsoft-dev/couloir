@@ -11,7 +11,7 @@ distance depuis une seule application.
 ```bash
 pnpm install
 pnpm demo          # tout, d'un coup : serveur + 2 écrans + console
-pnpm test          # 298 tests
+pnpm test          # 301 tests
 pnpm build
 pnpm build:browser # le bundle de rendu servi au navigateur
 pnpm build:console # la console compilée

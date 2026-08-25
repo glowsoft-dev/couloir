@@ -859,6 +859,109 @@ export function registerConsoleApi(app: FastifyInstance, options: ConsoleApiOpti
     },
   );
 
+  // --- Publication sur plusieurs écrans ---------------------------------
+
+  /**
+   * Les réglages qui appartiennent à l'ÉCRAN, pas au contenu.
+   *
+   * Une même affiche part sur cinq couloirs, mais chacun garde sa mise en
+   * page, son afficheur d'emploi du temps et son heure d'extinction. Les
+   * écraser reviendrait à reconfigurer cinq écrans pour publier une image —
+   * et personne ne s'en apercevrait avant de passer devant.
+   */
+  const REGLAGES_DE_L_ECRAN = [
+    "layout",
+    "timetableAfficheurs",
+    "timetableChamps",
+    "timetableClassIds",
+    "displayOff",
+    "parDefaut",
+  ] as const;
+
+  const PublicationGroupee = z.object({
+    screenIds: z.array(z.string()).min(1),
+    spec: PublishBody,
+  });
+
+  app.post(`${CONSOLE_PREFIX}/publications`, async (request, reply) => {
+    const parsed = PublicationGroupee.safeParse(request.body);
+    if (!parsed.success) {
+      return reply.code(400).send({
+        code: "invalid-body",
+        message: "La publication est incomplète.",
+        retryable: false,
+        details: parsed.error.flatten(),
+      });
+    }
+
+    const baseUrl = resolvePublicUrl(options.publicUrl, request.headers.host);
+    const resultats: {
+      screenId: string;
+      code?: string;
+      version?: number;
+      erreur?: string;
+    }[] = [];
+
+    for (const screenId of parsed.data.screenIds) {
+      const screen = await store.getScreen(screenId);
+      if (!screen) {
+        resultats.push({ screenId, erreur: "Écran inconnu." });
+        continue;
+      }
+
+      // Le réglage propre de l'écran l'emporte sur celui de la composition.
+      const ancienne = (await store.getSpec(screenId)) as Record<string, unknown> | null;
+      const corps = { ...parsed.data.spec } as Record<string, unknown>;
+      for (const clef of REGLAGES_DE_L_ECRAN) {
+        if (ancienne?.[clef] !== undefined) corps[clef] = ancienne[clef];
+      }
+
+      const relu = PublishBody.safeParse(corps);
+      if (!relu.success) {
+        resultats.push({ screenId, code: screen.code, erreur: "Réglages de l'écran illisibles." });
+        continue;
+      }
+
+      try {
+        const spec = await resolveSpec(relu.data, options, baseUrl, screen.building);
+        const existing = await store.getManifest(screenId);
+        const manifest = compose({
+          screenId,
+          version: (existing?.version ?? 0) + 1,
+          issuedAt: iso(new Date()),
+          spec,
+          media: media.index(),
+          baseUrl,
+        });
+        await store.putManifest(manifest, relu.data);
+        options.commands?.issue(screenId, "sync-now");
+        resultats.push({ screenId, code: screen.code, version: manifest.version });
+      } catch (error) {
+        // Un écran qui refuse n'empêche pas les autres : on publie ce qu'on
+        // peut et on rend le détail. Tout annuler pour une mise en page
+        // impossible sur un seul écran serait pire.
+        resultats.push({
+          screenId,
+          code: screen.code,
+          erreur: error instanceof CompositionError ? error.message : "Composition impossible.",
+        });
+      }
+    }
+
+    const publies = resultats.filter((r) => r.version !== undefined);
+    if (options.comptes && publies.length > 0) {
+      await journaliserAction(
+        request,
+        options.comptes,
+        "publication groupée",
+        publies.map((r) => r.code).join(", "),
+        { ecrans: publies.length },
+      );
+    }
+    request.log.info({ ecrans: publies.length, total: resultats.length }, "publication groupée");
+    return { resultats };
+  });
+
   // --- Publication -----------------------------------------------------
 
   app.post<{ Params: { screenId: string } }>(

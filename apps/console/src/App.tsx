@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { ScreenActions } from "./Actions.js";
 import { EmergencyBar } from "./Emergency.js";
 import { GridView } from "./Grid.js";
+import { DiffusionGroupee } from "./DiffusionGroupee.js";
 import { MurDEcrans } from "./MurDEcrans.js";
 import { NouvelEcran } from "./NouvelEcran.js";
 import { HistoryPanel } from "./History.js";
@@ -83,6 +84,8 @@ export function App() {
   const [poseEnCours, setPoseEnCours] = useState(false);
   /** Les écrans cochés sur le mur, pour agir sur plusieurs d'un geste. */
   const [selection, setSelection] = useState<string[]>([]);
+  /** La fenêtre de diffusion groupée. */
+  const [diffusion, setDiffusion] = useState(false);
   /** Le nom de l'établissement, affiché dans la barre. */
   const [etablissement, setEtablissement] = useState<string | null>(null);
   /** Vrai quand l'emploi du temps vient d'un logiciel externe. */
@@ -353,7 +356,18 @@ export function App() {
                 : {})}
             />
 
-            {publie && selection.length > 0 && (
+            {diffusion && (
+              <DiffusionGroupee
+                ecrans={screens.filter((e) => selection.includes(e.id))}
+                onFait={() => {
+                  setSelection([]);
+                  void refreshScreens();
+                }}
+                onFermer={() => setDiffusion(false)}
+              />
+            )}
+
+            {publie && selection.length > 0 && !diffusion && (
               <div className="barre-selection">
                 <span className="barre-compte">
                   {selection.length} écran{selection.length > 1 ? "s" : ""} sélectionné
@@ -363,13 +377,7 @@ export function App() {
                 <button
                   type="button"
                   className="barre-action-forte"
-                  onClick={() => {
-                    // Publier sur plusieurs écrans à la fois n'existe pas
-                    // encore côté serveur : on ouvre le premier plutôt que
-                    // de faire croire à un geste groupé.
-                    const premier = selection[0];
-                    if (premier) setSelectedId(premier);
-                  }}
+                  onClick={() => setDiffusion(true)}
                 >
                   Publier un contenu
                 </button>

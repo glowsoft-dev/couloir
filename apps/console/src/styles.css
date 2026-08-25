@@ -1303,3 +1303,20 @@ button.ghost.danger:hover:not(:disabled) {
 @media (max-width: 900px) {
   .barre-selection { left: 50%; }
 }
+
+/* ---------- fenêtre modale ---------- */
+
+.modale-fond {
+  position: fixed; inset: 0; z-index: 40;
+  display: grid; place-items: center; padding: 24px;
+  background: rgba(22, 33, 43, .45);
+}
+.modale {
+  width: 100%; max-width: 560px; max-height: 90vh; overflow-y: auto;
+  padding: 24px 26px 22px;
+  background: var(--surface); border-radius: var(--r-carte);
+  box-shadow: var(--ombre-modale);
+}
+.modale.large { max-width: 720px; }
+.modale h2 { margin: 0 0 4px; font-size: 21px; font-weight: 700; letter-spacing: -0.02em; }
+.modale .row-actions { margin-top: 18px; }

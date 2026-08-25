@@ -855,6 +855,101 @@ describe("parcours de la console", () => {
     ).toThrow(CompositionError);
   });
 
+  it("publie la même affiche sur plusieurs écrans d'un geste", async () => {
+    const { app, store, auth } = await ready();
+    const codes = ["F·0·01", "F·0·02", "F·0·03"];
+    const ids: string[] = [];
+    for (const [i, code] of codes.entries()) {
+      const device = await store.startEnrollment(String(i).repeat(44), { platform: "linux" } as never);
+      const { screen } = await store.claimNew(device.deviceId, {
+        code, label: code, building: "F", floor: 0, area: "couloir", orientation: "landscape",
+      });
+      ids.push(screen.id);
+    }
+
+    const réponse = await app.inject({
+      method: "POST",
+      url: `${CONSOLE_PREFIX}/publications`,
+      headers: auth,
+      payload: {
+        screenIds: ids,
+        spec: { layout: "plein-ecran", items: [{ assetId: poster.id }], ticker: "Portes ouvertes" },
+      },
+    });
+
+    expect(réponse.statusCode).toBe(200);
+    const { resultats } = réponse.json();
+    expect(resultats).toHaveLength(3);
+    expect(resultats.every((r: { version?: number }) => r.version === 1)).toBe(true);
+    for (const id of ids) {
+      expect(JSON.stringify(await store.getManifest(id))).toContain("Portes ouvertes");
+    }
+  });
+
+  it("garde à chaque écran ses propres réglages", async () => {
+    // Une même affiche part sur plusieurs couloirs, mais chacun garde sa
+    // mise en page. Les écraser reviendrait à reconfigurer des écrans pour
+    // publier une image — et personne ne s'en apercevrait avant de passer
+    // devant.
+    const { app, store, auth } = await ready();
+    const device = await store.startEnrollment("g".repeat(44), { platform: "linux" } as never);
+    const { screen } = await store.claimNew(device.deviceId, {
+      code: "G·0·01", label: "Hall", building: "G", floor: 0, area: "hall", orientation: "landscape",
+    });
+
+    // L'écran a d'abord ses propres réglages : extinction le soir.
+    await app.inject({
+      method: "POST",
+      url: `${CONSOLE_PREFIX}/screens/${screen.id}/publish`,
+      headers: auth,
+      payload: {
+        layout: "plein-ecran",
+        items: [{ assetId: poster.id }],
+        displayOff: [{ daysOfWeek: [1, 2, 3, 4, 5], from: "19:00", to: "07:30" }],
+      },
+    });
+
+    // Puis une publication groupée qui n'en parle pas.
+    await app.inject({
+      method: "POST",
+      url: `${CONSOLE_PREFIX}/publications`,
+      headers: auth,
+      payload: {
+        screenIds: [screen.id],
+        spec: { layout: "plein-ecran", items: [{ assetId: video.id }] },
+      },
+    });
+
+    const manifest = await store.getManifest(screen.id);
+    expect(manifest?.settings.displayOff).toEqual([
+      { daysOfWeek: [1, 2, 3, 4, 5], from: "19:00", to: "07:30" },
+    ]);
+  });
+
+  it("publie sur les écrans qui acceptent, et dit lesquels refusent", async () => {
+    // Tout annuler pour un seul écran en défaut serait pire : on publie ce
+    // qu'on peut, et on rend le détail.
+    const { app, store, auth } = await ready();
+    const device = await store.startEnrollment("h".repeat(44), { platform: "linux" } as never);
+    const { screen } = await store.claimNew(device.deviceId, {
+      code: "H·0·01", label: "Hall", building: "H", floor: 0, area: "hall", orientation: "landscape",
+    });
+
+    const réponse = await app.inject({
+      method: "POST",
+      url: `${CONSOLE_PREFIX}/publications`,
+      headers: auth,
+      payload: {
+        screenIds: [screen.id, "ecran-qui-nexiste-pas"],
+        spec: { layout: "plein-ecran", items: [{ assetId: poster.id }] },
+      },
+    });
+
+    const { resultats } = réponse.json();
+    expect(resultats[0].version).toBe(1);
+    expect(resultats[1].erreur).toBe("Écran inconnu.");
+  });
+
   it("refuse de publier sur un écran inconnu", async () => {
     const { app, auth } = await ready();
     const response = await app.inject({

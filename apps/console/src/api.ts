@@ -456,6 +456,19 @@ export const api = {
   publish: (screenId: string, spec: PublishSpec) =>
     call<{ screenId: string; version: number }>(`/screens/${screenId}/publish`, json("POST", spec)),
 
+  /**
+   * Publie la même composition sur plusieurs écrans.
+   *
+   * Chaque écran garde ses propres réglages — mise en page, emploi du temps,
+   * extinction. Un écran qui refuse n'empêche pas les autres : le détail
+   * revient écran par écran.
+   */
+  publierGroupe: (screenIds: string[], spec: PublishSpec) =>
+    call<{ resultats: { screenId: string; code?: string; version?: number; erreur?: string }[] }>(
+      "/publications",
+      json("POST", { screenIds, spec }),
+    ),
+
   /** Compose sans enregistrer : le même chemin que la publication. */
   previewSpec: (screenId: string, spec: PublishSpec) =>
     call<{ manifest: unknown }>(`/screens/${screenId}/preview`, json("POST", spec)),

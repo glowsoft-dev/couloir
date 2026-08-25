@@ -1262,6 +1262,32 @@ Quand le défaut est l'emploi du temps, il réutilise la source que la mise en
 page monte déjà. Deux sources identiques feraient deux appels réseau par écran
 pour la même journée.
 
+## Publier sur plusieurs écrans
+
+Une affiche se pose sur cinq couloirs en un geste, au lieu de cinq passages
+dans l'éditeur. On coche les écrans sur le mur, une barre apparaît, on choisit
+le contenu.
+
+### Chaque écran garde ses réglages
+
+C'est la règle qui donne son sens au geste. La mise en page, l'afficheur
+d'emploi du temps, les colonnes de la colonne des cours, l'heure d'extinction
+et le contenu par défaut appartiennent à l'**écran**, pas au contenu. Une
+publication groupée ne remplace que la rotation.
+
+Les écraser reviendrait à reconfigurer cinq écrans pour publier une image — et
+personne ne s'en apercevrait avant de passer devant. Vérifié : un écran réglé
+en « emploi du temps seul » garde sa mise en page quand une affiche part sur
+lui et deux autres.
+
+### Un refus n'arrête pas les autres
+
+Chaque écran est composé pour lui-même, et une composition impossible sur l'un
+— une mise en page qui réclame une source absente — ne doit pas priver les
+autres. On publie ce qu'on peut, et on rend le détail écran par écran :
+« B·1·01 v5, C·0·01 v3, D·0·02 — cet afficheur n'existe plus ». Tout annuler
+pour un seul écran en défaut serait pire.
+
 ## Ce qui n'est pas encore fait
 
 Le socle tourne, mais il reste volontairement incomplet :
