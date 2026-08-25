@@ -82,11 +82,45 @@ absents. Des médias sans la base ne disent pas quel écran affichait quoi.
 
 ## Mettre à jour
 
+Le serveur va chercher lui-même. Personne n'entre sur le réseau du campus :
+**c'est lui qui sort**, vers le registre, en HTTPS — comme il sort déjà pour
+NetYPareo. Ni port à ouvrir, ni tunnel permanent à négocier.
+
+```bash
+sudo install -m 644 couloir-maj.service couloir-maj.timer /etc/systemd/system/
+sudo systemctl enable --now couloir-maj.timer
+```
+
+Mettre en production devient alors : publier une image. Le serveur la prendra
+la nuit suivante.
+
+Pour l'appliquer tout de suite, ou pour voir s'il y a du nouveau :
+
+```bash
+./mise-a-jour.sh
+./mise-a-jour.sh --verifier
+```
+
+Le script tire, bascule, **attend que le serveur réponde, et revient à
+l'image précédente s'il ne répond pas**. Il sort en échec même quand le retour
+a réussi : une mise à jour annulée doit se voir dans le journal, pas passer
+pour un succès.
+
+Le délai d'attente est de 90 secondes, réglable par `COULOIR_DELAI_SANTE`.
+Les migrations de base tournent au démarrage : trop court, on annulerait une
+mise à jour saine qui n'avait pas fini de s'appliquer.
+
+### Construire soi-même, sans registre
+
 ```bash
 git pull
 docker build -t couloir-serveur:latest ..
 docker compose --env-file .env up -d serveur
 ```
+
+Utile pour une machine isolée. Sur un Raspberry, c'est long : construire une
+image Node sur ARM prend un temps déraisonnable, et c'est précisément ce que
+le registre évite.
 
 Les écrans ne perdent rien pendant le redémarrage : ils continuent d'afficher
 ce qu'ils ont en cache, et reprennent contact dans les secondes qui suivent.
@@ -116,3 +150,6 @@ Ce choix se prend avec le service informatique de l'école, pas à sa place.
   identifiant, sans expiration.
 - **La sauvegarde automatique.** Les commandes ci-dessus sont à mettre dans
   une tâche planifiée ; personne ne l'a fait.
+- **Le dépôt distant.** La publication de l'image est écrite et prête, mais
+  aucun dépôt GitHub n'est configuré : tant que le code n'y est pas, rien ne
+  se publie et la mise à jour tirée n'a rien à tirer.

@@ -57,18 +57,48 @@ jobs:
   image:
     runs-on: ubuntu-latest
     needs: tests
+    permissions:
+      contents: read
+      packages: write
     steps:
       - uses: actions/checkout@v4
 
+      # Le serveur tourne sur un Raspberry : arm64. Les exécuteurs GitHub sont
+      # en amd64, et sans cette émulation on publierait une image que la
+      # machine cible refuse d'exécuter — avec un message qui ne dit pas
+      # pourquoi.
+      - uses: docker/setup-qemu-action@v3
       - uses: docker/setup-buildx-action@v3
 
-      # Construite à chaque fois, publiée jamais : tant qu'il n'y a pas
-      # d'hébergement décidé, pousser l'image quelque part serait décider à
-      # la place de l'école. Ce travail garantit seulement qu'elle construit.
-      - name: construction de l'image
+      - name: connexion au registre
+        # Sur une branche de contribution extérieure, le jeton est en lecture
+        # seule : on construit sans publier plutôt que d'échouer.
+        if: github.event_name == 'push'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: étiquettes
+        id: etiquettes
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}/serveur
+          # `sha` sert à épingler une version précise ; `main` est ce que le
+          # serveur suit s'il se met à jour tout seul.
+          tags: |
+            type=raw,value=main,enable={{is_default_branch}}
+            type=sha,format=long
+            type=ref,event=tag
+
+      - name: construction et publication
         uses: docker/build-push-action@v6
         with:
           context: .
-          push: false
+          platforms: linux/amd64,linux/arm64
+          push: ${{ github.event_name == 'push' }}
+          tags: ${{ steps.etiquettes.outputs.tags }}
+          labels: ${{ steps.etiquettes.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max

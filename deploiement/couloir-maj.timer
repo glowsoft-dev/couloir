@@ -1,0 +1,19 @@
+# Quand le serveur va voir s'il existe du nouveau.
+#
+# La nuit, et pas en journée : une bascule coupe la console une poignée de
+# secondes, et personne ne doit la découvrir en pleine saisie des changements
+# du matin. Les écrans, eux, continuent d'afficher pendant ce temps.
+[Unit]
+Description=Couloir — vérification quotidienne des mises à jour
+
+[Timer]
+OnCalendar=*-*-* 03:30:00
+# Étalé : plusieurs établissements sur le même registre ne le solliciteraient
+# pas tous à la même seconde.
+RandomizedDelaySec=1800
+# Rattrapé si la machine était éteinte à l'heure dite — un Raspberry d'école
+# passe des vacances hors tension.
+Persistent=true
+
+[Install]
+WantedBy=timers.target

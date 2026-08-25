@@ -1880,6 +1880,42 @@ qu'un boîtier neuf et un boîtier mis à jour se ressemblent.
 Le rendu (`couloir.js`) voyage avec le lecteur et se lit à côté de lui : les
 deux ne peuvent pas se désynchroniser.
 
+## Le serveur se met à jour sans qu'on entre
+
+Tiré, et non poussé. Le serveur sort vers le registre en HTTPS — comme il sort
+déjà pour NetYPareo — au lieu qu'on ouvre un accès vers lui. Il n'y a donc ni
+port à ouvrir sur le pare-feu du campus, ni tunnel permanent à négocier avec
+leur informatique.
+
+Ça change la conversation à leur avoir : demander « un tunnel permanent pour
+administrer » et demander « un accès de dépannage ponctuel » n'obtiennent pas
+la même réponse. Avec les écrans qui se mettent à jour seuls et le serveur qui
+tire, **l'accès distant ne sert plus qu'à diagnostiquer**.
+
+### L'image est publiée pour deux architectures
+
+Le serveur tourne sur un Raspberry — arm64 — et les exécuteurs
+d'intégration continue sont en amd64. Sans l'émulation, on publierait une
+image que la machine cible refuse d'exécuter, avec un message qui ne dit pas
+pourquoi.
+
+### Ce qui empêche un serveur mort
+
+La même discipline que pour les écrans, avec un enjeu différent : un serveur
+mort, c'est la console injoignable et les publications impossibles — les
+écrans, eux, continuent d'afficher. Mais personne ne s'en aperçoit avant d'en
+avoir besoin, et c'est le moment où l'on n'a pas le temps de diagnostiquer.
+
+Le script bascule, attend que le serveur réponde, et revient à l'image
+précédente s'il ne répond pas. Il sort en échec même quand le retour a
+réussi : une mise à jour annulée doit se voir dans le journal, pas passer pour
+un succès.
+
+Le contrôle de santé interroge le serveur **depuis l'intérieur du réseau
+Docker** : on vérifie l'application, pas la terminaison TLS ni le DNS, qui ont
+leurs propres pannes et les signaleraient à tort comme un défaut de la
+nouvelle image.
+
 ## Ce qui n'est pas encore fait
 
 Le socle tourne, mais il reste volontairement incomplet :

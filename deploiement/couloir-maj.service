@@ -1,0 +1,16 @@
+# La mise à jour du serveur, tirée depuis le registre.
+#
+# Déclenché par le minuteur voisin. Rien n'entre sur le réseau du campus :
+# c'est le serveur qui sort, en HTTPS, vers le registre.
+[Unit]
+Description=Couloir — mise à jour du serveur
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+# À adapter si le dépôt est ailleurs.
+WorkingDirectory=/opt/couloir/deploiement
+ExecStart=/opt/couloir/deploiement/mise-a-jour.sh
+# Pas de Restart : une mise à jour qui échoue ne se rattrape pas en la
+# relançant en boucle. Le minuteur repassera, et le journal garde la trace.
