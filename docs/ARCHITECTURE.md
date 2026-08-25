@@ -1482,6 +1482,42 @@ se met sur une ligne et perd sa vignette ; et tout bloc a un plancher de
 34 px. Il exagère un peu la durée — les heures exactes sont écrites dedans, et
 un réglage hors d'atteinte coûte plus cher qu'un bloc légèrement trop grand.
 
+## Les réglages d'un écran
+
+Ce qu'on pose une fois : mise en page, colonnes de l'emploi du temps,
+extinction, contenu de repli. Chacun dans sa carte, avec la phrase qui dit ce
+qu'il fait. L'empilement de champs nus qui précédait obligeait à publier pour
+savoir ce qu'on venait de choisir.
+
+### La mise en page se montre au lieu de se décrire
+
+Une liste déroulante disait « Vos contenus + l'emploi du temps à droite » et
+il fallait la croire sur parole. Trois schémas au format de la dalle montrent
+où va quoi, **dans les proportions du composeur** — deux tiers, un tiers — et
+non dans des proportions inventées pour la vignette.
+
+Ce ne sont pas des aperçus : aucun contenu n'y figure. C'est le découpage
+qu'ils montrent, et rien d'autre. L'aperçu réel est à côté, et lui joue le
+vrai rendu.
+
+### Les sept jours en carrés
+
+L'extinction se lit d'un coup d'œil : les jours actifs sont pleins. Une ligne
+de cases à cocher demandait de relire les libellés un à un.
+
+La phrase qui suit chaque plage reste la même, et reste nécessaire : les jours
+désignent le soir où la plage COMMENCE, si bien qu'une extinction du vendredi
+soir court jusqu'au samedi matin. Sans elle on cherche pourquoi un écran est
+noir un samedi à 7 h.
+
+### Les actions dangereuses sur leur propre rangée
+
+Mêlées aux autres, on cherchait « Capturer » entre « Redémarrer » et
+« Éteindre la dalle » — et on cliquait à côté. Elles ont maintenant leur
+rangée, et la phrase qui la suit dit pourquoi : elles laissent un couloir
+noir. Les confirmations, elles, étaient déjà là et ne portent que sur ces
+trois-là — une confirmation posée partout ne se lit plus nulle part.
+
 ## Ce qui n'est pas encore fait
 
 Le socle tourne, mais il reste volontairement incomplet :

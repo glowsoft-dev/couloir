@@ -5,6 +5,7 @@ import { Bibliotheque } from "./Bibliotheque.js";
 import { OuCaPart } from "./OuCaPart.js";
 import { Periode } from "./Periode.js";
 import { VueJour } from "./VueJour.js";
+import { MiseEnPage } from "./MiseEnPage.js";
 import { Schedule } from "./Schedule.js";
 import {
   CHAMPS_EDT,
@@ -528,29 +529,11 @@ export function PublishPanel({
 
           <div className="volet-corps" hidden={volet !== "reglages"}>
 
-          <div className="field">
-            <label htmlFor="layout">Mise en page</label>
-            <select
-              id="layout"
-              value={layout}
-              onChange={(e) => touch(() => setLayout(e.target.value as typeof layout))}
-            >
-              <option value="plein-ecran">Vos contenus, en plein écran</option>
-              <option value="principal-et-cours">Vos contenus + l'emploi du temps à droite</option>
-              <option value="emploi-du-temps">L'emploi du temps seul, en grand</option>
-            </select>
-            <p className="hint">
-              {layout === "plein-ecran"
-                ? "Affiches, vidéos et textes occupent toute la dalle."
-                : layout === "principal-et-cours"
-                  ? "Les contenus à gauche sur deux tiers, l'emploi du temps à droite."
-                  : "Rien d'autre que les cours et les salles. C'est la mise en page d'un hall où l'on cherche une salle."}
-            </p>
-          </div>
+          <MiseEnPage valeur={layout} onChange={(suivant) => touch(() => setLayout(suivant))} />
 
           {avecCours && afficheurs.length > 0 && (
-            <div className="field">
-              <label>Emploi du temps affiché</label>
+            <div className="reglage">
+              <div className="reglage-titre">Emploi du temps affiché</div>
               <div className="day-picker">
                 {afficheurs.map((a) => {
                   const choisi = afficheursChoisis.includes(a.afficheur);
@@ -585,8 +568,12 @@ export function PublishPanel({
           )}
 
           {avecCours && (
-            <div className="field">
-              <label>Ce que montre la colonne des cours</label>
+            <div className="reglage">
+              <div className="reglage-titre">Ce que montre la colonne des cours</div>
+              <p className="reglage-note reglage-note--avant">
+                L'heure de début et le nom du groupe sont toujours affichés — sans eux la colonne
+                ne dit plus rien.
+              </p>
               <div className="day-picker">
                 {CHAMPS_EDT.map((champ) => {
                   const montré = champsEdt === null || champsEdt.includes(champ.id);
@@ -613,17 +600,16 @@ export function PublishPanel({
                   );
                 })}
               </div>
-              <p className="hint">
-                L'heure de début et le nom du groupe sont toujours affichés — sans eux la colonne
-                ne dit plus rien. Le reste se règle écran par écran : un couloir de bâtiment veut la
-                salle, un écran d'accueil préfère souvent s'en passer.
+              <p className="reglage-note">
+                Le reste se règle écran par écran : un couloir de bâtiment veut la salle, un écran
+                d'accueil préfère souvent s'en passer.
               </p>
             </div>
           )}
 
           {avecCours && afficheurs.length === 0 && (
-            <div className="field">
-              <label>Classes affichées dans la colonne</label>
+            <div className="reglage">
+              <div className="reglage-titre">Classes affichées dans la colonne</div>
               {classes.length === 0 ? (
                 <p className="hint">Aucune classe. Créez-en dans l'onglet Réglages.</p>
               ) : (
@@ -667,9 +653,9 @@ export function PublishPanel({
 
           <Schedule windows={displayOff} onChange={(next) => touch(() => setDisplayOff(next))} />
 
-            <div className="field">
-              <label>Quand rien n'est programmé</label>
-              <p className="hint" style={{ marginTop: 0 }}>
+            <div className="reglage">
+              <div className="reglage-titre">Quand rien n'est programmé</div>
+              <p className="reglage-note reglage-note--avant">
                 Ce que l'écran montre aux heures où aucun contenu n'est prévu. Sans réglage, il
                 affiche sa carte d'identité — correct, mais c'est le message d'un écran qui a perdu
                 le contact, pas d'un écran qui attend.

@@ -57,17 +57,17 @@ export function Schedule({
   }
 
   return (
-    <div className="field">
+    <div className="reglage">
       <button
         type="button"
-        className="disclosure"
+        className="reglage-depliant"
         aria-expanded={open}
         onClick={() => setManual(!open)}
       >
         <span aria-hidden="true">{open ? "▾" : "▸"}</span>
         Extinction automatique
         {windows.length > 0 && (
-          <span className="pill warn">
+          <span className="reglage-compte">
             {windows.length === 1
               ? `${windows[0]!.from} – ${windows[0]!.to}`
               : `${windows.length} plages`}
@@ -76,23 +76,23 @@ export function Schedule({
       </button>
 
       {open && (
-        <div className="disclosure-body">
+        <div className="reglage-corps">
           {windows.length === 0 ? (
-            <p className="hint">
+            <p className="reglage-note">
               La dalle reste allumée en permanence. Ajoutez une plage pour l'éteindre la nuit ou le
               week-end.
             </p>
           ) : (
             windows.map((window, index) => (
-              <div className="schedule-row" key={index}>
-                <div className="day-picker">
+              <div className="plage" key={index}>
+                <div className="jours-semaine">
                   {DAYS.map((day) => {
                     const selected = window.daysOfWeek.includes(day.value);
                     return (
                       <button
                         key={day.value}
                         type="button"
-                        className="day-chip"
+                        className={selected ? "jour-carre jour-carre--actif" : "jour-carre"}
                         aria-pressed={selected}
                         aria-label={NOMS[day.value]}
                         onClick={() =>
@@ -130,14 +130,14 @@ export function Schedule({
 
                 <button
                   type="button"
-                  className="ghost"
+                  className="plage-retirer"
                   aria-label={`Retirer la plage ${index + 1}`}
                   onClick={() => onChange(windows.filter((_, i) => i !== index))}
                 >
                   ✕
                 </button>
 
-                <p className="hint schedule-summary">
+                <p className="plage-resume">
                   {/* Les jours désignent le soir où la plage commence : une
                       extinction du vendredi soir court jusqu'au samedi matin.
                       Le dire évite de faire chercher pourquoi un écran est
@@ -150,7 +150,7 @@ export function Schedule({
             ))
           )}
 
-          <div className="row-actions">
+          <div className="plage-actions">
             <button
               type="button"
               onClick={() =>
@@ -162,7 +162,9 @@ export function Schedule({
           </div>
 
           {windows.length > 0 && (
-            <p className="hint">Un message d'urgence rallume l'écran, même pendant une plage.</p>
+            <span className="reglage-note">
+              Un message d'urgence rallume l'écran, même pendant une plage.
+            </span>
           )}
         </div>
       )}

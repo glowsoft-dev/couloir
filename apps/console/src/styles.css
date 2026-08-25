@@ -459,22 +459,12 @@ button.ghost.danger:hover:not(:disabled) {
 
 /* ---------- extinction programmée ---------- */
 
-.schedule-row {
-  display: flex; flex-wrap: wrap; align-items: center; gap: 10px;
-  padding: 12px 0; border-top: 1px solid var(--rule);
-}
-.schedule-row:first-of-type { border-top: 0; }
-.schedule-row input[type="time"] {
-  width: auto; padding: 5px 8px; font-size: 12.5px;
-  font-variant-numeric: tabular-nums;
-}
 .inline {
   display: flex; align-items: center; gap: 6px;
   font-size: 12.5px; color: var(--ink-soft);
 }
 /* Le récapitulatif en clair passe sous la ligne : c'est lui qu'on relit
    pour vérifier, pas les champs qu'on vient de remplir. */
-.schedule-summary { flex-basis: 100%; margin-top: 0; }
 
 /* ---------- historique ---------- */
 
@@ -531,8 +521,7 @@ button.ghost.danger:hover:not(:disabled) {
   .day-chip { min-height: 38px; min-width: 38px; }
   .screen-row { padding: 14px 16px; }
 
-  .schedule-row { gap: 8px; }
-  .firstrun { flex-direction: column; align-items: flex-start; }
+    .firstrun { flex-direction: column; align-items: flex-start; }
   .firstrun button { width: 100%; }
 }
 
@@ -1803,3 +1792,104 @@ button.ghost.danger:hover:not(:disabled) {
   .grille-corps { grid-template-columns: minmax(0, 1fr); }
   .saisie { max-width: 520px; }
 }
+
+/* ---------- les réglages d'un écran ----------
+ *
+ * Ce qu'on pose une fois : mise en page, colonnes, extinction, contenu de
+ * repli. Chacun dans sa carte, avec la phrase qui dit ce qu'il fait — un
+ * empilement de champs nus obligeait à publier pour savoir.
+ */
+
+.reglage {
+  background: var(--surface); border: 1px solid var(--rule);
+  border-radius: var(--r-carte); padding: 18px 20px;
+  margin-bottom: 14px;
+}
+.reglage-titre {
+  font-family: "Fira Sans", Roboto, sans-serif;
+  font-size: 15px; font-weight: 600; margin-bottom: 12px;
+}
+.reglage-note { margin: 12px 0 0; font-size: 12.5px; color: var(--ink-faint); text-wrap: pretty; }
+/* Une note qui précède ce qu'elle explique : elle pose la règle avant qu'on
+   clique, au lieu de la corriger après. */
+.reglage-note--avant { margin: -8px 0 12px; }
+
+/* Trois schémas au format de la dalle, dans les proportions du composeur.
+   Ce ne sont pas des aperçus : c'est le découpage qu'ils montrent. */
+.dispositions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.disposition {
+  text-align: left; padding: 0; overflow: hidden;
+  border: 1px solid var(--rule); border-radius: 10px; background: var(--surface);
+}
+.disposition--choisie {
+  border: 2px solid var(--accent); background: var(--accent-doux); box-shadow: var(--ombre);
+}
+.disposition-dalle { display: block; aspect-ratio: 16 / 9; background: #0E1211; padding: 7px; }
+.disposition-zones { display: flex; gap: 4px; width: 100%; height: 100%; }
+.disposition-zone { border-radius: 3px; }
+.disposition-zone--contenu { background: rgba(17, 166, 196, .28); }
+.disposition-zone--cours { background: rgba(244, 246, 244, .16); }
+.disposition-libelle { display: block; padding: 9px 11px; font-size: 12.5px; line-height: 1.3; }
+.disposition--choisie .disposition-libelle { color: var(--accent-texte); font-weight: 500; }
+
+.reglage-depliant {
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  background: none; border: 0; padding: 0;
+  font-family: "Fira Sans", Roboto, sans-serif; font-size: 15px; font-weight: 600;
+  color: var(--ink); text-align: left;
+}
+.reglage-compte {
+  flex: none; white-space: nowrap; margin-left: auto; display: inline-block;
+  font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase;
+  padding: 4px 10px; border-radius: var(--r-pastille);
+  background: var(--warn-doux); color: var(--warn);
+}
+.reglage-corps { margin-top: 14px; }
+
+/* Les sept jours en carrés : on lit une semaine d'un coup d'œil, ce qu'une
+   ligne de cases à cocher ne donne pas. */
+.jours-semaine { display: flex; gap: 4px; }
+.jour-carre {
+  display: grid; place-items: center; width: 32px; height: 32px; padding: 0;
+  border-radius: var(--r-petit); background: var(--surface);
+  border: 1px solid var(--rule-strong); color: var(--ink-soft); font-size: 12.5px;
+}
+.jour-carre--actif {
+  background: var(--accent); color: var(--accent-ink);
+  border-color: var(--accent); font-weight: 600;
+}
+
+.plage {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 10px;
+  padding: 14px 0; border-top: 1px solid var(--ground);
+}
+.plage:first-of-type { border-top: 0; padding-top: 0; }
+.plage input[type="time"] {
+  width: auto; padding: 6px 9px; font-size: 12.5px;
+  border: 1px solid var(--rule-strong); border-radius: var(--r-petit);
+  font-variant-numeric: tabular-nums;
+}
+.plage-retirer {
+  flex: none; margin-left: auto; padding: 6px 10px; font-size: 13px;
+  background: none; border: 0; color: var(--ink-faint);
+}
+/* Les jours désignent le soir où la plage commence : une extinction du
+   vendredi soir court jusqu'au samedi matin. La phrase le dit, sinon on
+   cherche pourquoi un écran est noir un samedi à 7 h. */
+.plage-resume {
+  flex-basis: 100%; margin: 0; font-size: 12.5px; color: var(--ink-faint); text-wrap: pretty;
+}
+.plage-actions {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  padding-top: 14px; border-top: 1px solid var(--ground);
+}
+.plage-actions .reglage-note { margin: 0; }
+
+@media (max-width: 900px) {
+  .dispositions { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* Les actions dangereuses sur leur propre rangée : mêlées aux autres, on
+   cherchait « Capturer » entre « Redémarrer » et « Éteindre la dalle ». */
+.actions + .actions { margin-top: 8px; }
+.actions-avertissement { margin-top: 10px; }

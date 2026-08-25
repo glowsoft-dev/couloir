@@ -125,20 +125,34 @@ export function ScreenActions({ screen }: { screen: ScreenStatus }) {
           </p>
         )}
 
-        <div className="actions">
-          {ACTIONS.map((action) => (
-            <button
-              key={action.kind}
-              type="button"
-              className={action.danger ? "ghost danger" : ""}
-              title={action.hint}
-              disabled={!screen.online || busy !== null}
-              onClick={() => void run(action)}
-            >
-              {busy === action.kind ? "…" : action.label}
-            </button>
-          ))}
-        </div>
+        {/*
+          * Deux rangées, les inoffensives d'abord.
+          *
+          * Mêlées, on cherchait « Capturer » entre « Redémarrer » et
+          * « Éteindre la dalle » — et on cliquait à côté. Les séparer met la
+          * distance là où elle compte : les trois du bas laissent un couloir
+          * noir, et c'est ce que dit la phrase qui les suit.
+          */}
+        {([false, true] as const).map((danger) => (
+          <div className="actions" key={String(danger)}>
+            {ACTIONS.filter((a) => Boolean(a.danger) === danger).map((action) => (
+              <button
+                key={action.kind}
+                type="button"
+                className={action.danger ? "ghost danger" : ""}
+                title={action.hint}
+                disabled={!screen.online || busy !== null}
+                onClick={() => void run(action)}
+              >
+                {busy === action.kind ? "…" : action.label}
+              </button>
+            ))}
+          </div>
+        ))}
+
+        <p className="hint actions-avertissement">
+          Les trois du bas laissent un couloir noir : elles demandent confirmation.
+        </p>
 
         {shot && (
           <div style={{ marginTop: 14 }}>
