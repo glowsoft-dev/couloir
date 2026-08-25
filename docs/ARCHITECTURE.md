@@ -1572,6 +1572,29 @@ formation qu'il ne doit pas confondre avec eux. C'est le seul jeu d'essai qui
 vaille pour une heuristique : elle n'a pas à être élégante, elle a à trier
 CES intitulés-là.
 
+## Les comptes et le journal
+
+Qui peut quoi, et qui a fait quoi. La liste et le journal à gauche, le
+formulaire d'ajout à droite : on crée un compte en regardant ceux qui
+existent, ne serait-ce que pour ne pas doubler quelqu'un.
+
+### Les trois rôles se choisissent en les comparant
+
+Une liste déroulante ne montrait la description qu'après le choix — trop tard.
+Les trois sont posés côte à côte, chacun avec ce qu'il permet. Le rôle est la
+seule décision de cette page qui se prenne mal sans savoir.
+
+### Deux corrections d'écriture
+
+Le journal enregistre les connexions ; sa phrase d'explication ne les
+mentionnait pas, et énumérait une liste fermée qui les excluait. Elle le dit
+maintenant, et pourquoi : c'est la seule trace qui dise qu'un compte oublié
+sert encore.
+
+« Ne s'est jamais connecté » devient « aucune connexion à ce jour ». La
+première tournure devait accorder au genre d'une personne réelle, que la
+console ne connaît pas et n'a pas à deviner.
+
 ## Ce qui n'est pas encore fait
 
 Le socle tourne, mais il reste volontairement incomplet :

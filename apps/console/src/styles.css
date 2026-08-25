@@ -1978,3 +1978,49 @@ button.ghost.danger:hover:not(:disabled) {
 @media (max-width: 1100px) {
   .nety--avec-apercu { grid-template-columns: minmax(0, 1fr); }
 }
+
+/* ---------- les comptes ----------
+ *
+ * Qui peut quoi, et qui a fait quoi. La liste et le journal à gauche, le
+ * formulaire d'ajout à droite : créer un compte se fait en regardant ceux qui
+ * existent déjà, ne serait-ce que pour ne pas doubler quelqu'un.
+ */
+
+.comptes-tete { margin-bottom: 20px; }
+.comptes-tete h1 {
+  margin: 0; font-family: "Fira Sans", Roboto, sans-serif;
+  font-size: 25px; font-weight: 700; letter-spacing: -.025em;
+}
+.comptes-tete p { margin: 4px 0 0; font-size: 14px; color: var(--ink-soft); }
+
+.comptes-corps {
+  display: grid; grid-template-columns: minmax(0, 1fr) 360px;
+  gap: 22px; align-items: start;
+}
+
+/* Les trois rôles montrés ensemble. Une liste à déplier faisait choisir
+   avant de savoir ce qu'on choisissait. */
+.roles { display: flex; flex-direction: column; gap: 6px; }
+.role {
+  display: flex; align-items: flex-start; gap: 9px; margin: 0;
+  padding: 9px 11px; border-radius: var(--r-bouton);
+  background: var(--surface); border: 1px solid var(--rule);
+  font-size: 13px; font-weight: 400; cursor: pointer;
+}
+.role input { width: auto; margin: 2px 0 0; accent-color: var(--accent-texte); }
+.role--choisi {
+  background: var(--accent-doux); border-color: var(--accent); color: var(--accent-texte);
+}
+.role-aide { display: block; font-size: 12px; color: var(--ink-faint); }
+.role--choisi .role-aide { color: inherit; }
+
+.mot-de-passe { display: flex; gap: 8px; }
+.mot-de-passe input {
+  flex: 1; min-width: 0;
+  font-family: "IBM Plex Mono", monospace; font-size: 13px;
+}
+.mot-de-passe button { flex: none; white-space: nowrap; font-size: 12.5px; }
+
+@media (max-width: 1000px) {
+  .comptes-corps { grid-template-columns: minmax(0, 1fr); }
+}

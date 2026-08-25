@@ -64,16 +64,28 @@ export function Comptes({ moi }: { moi: Utilisateur }) {
     }
   }
 
+  const actifs = utilisateurs.filter((u) => u.actif).length;
+
   return (
-    <div className="split">
+    <div className="comptes">
+      <header className="comptes-tete">
+        <h1>Comptes</h1>
+        <p>
+          {actifs === 0
+            ? "Personne n'a accès à la console."
+            : actifs === 1
+              ? "Une seule personne a accès à la console."
+              : `${actifs} personnes ont accès à la console.`}
+          {utilisateurs.length > actifs &&
+            ` ${utilisateurs.length - actifs} compte${utilisateurs.length - actifs > 1 ? "s" : ""} désactivé${
+              utilisateurs.length - actifs > 1 ? "s" : ""
+            }.`}
+        </p>
+      </header>
+
+      <div className="comptes-corps">
       <div>
         <section className="panel">
-          <header>
-            <h2>Comptes</h2>
-            <span className="spacer" />
-            <span className="pill">{utilisateurs.length}</span>
-          </header>
-
           <div className="body">
             {erreur && <p className="notice error">{erreur}</p>}
             {message && <p className="notice">{message}</p>}
@@ -94,7 +106,7 @@ export function Comptes({ moi }: { moi: Utilisateur }) {
                     <span className="hint">
                       {u.derniereConnexion
                         ? `dernière connexion ${quand(u.derniereConnexion)}`
-                        : "ne s'est jamais connecté"}
+                        : "aucune connexion à ce jour"}
                     </span>
                   </div>
 
@@ -156,6 +168,7 @@ export function Comptes({ moi }: { moi: Utilisateur }) {
 
       <div>
         <Inviter onCréé={recharger} />
+      </div>
       </div>
     </div>
   );
@@ -272,37 +285,51 @@ function Inviter({ onCréé }: { onCréé: () => Promise<void> }) {
         </div>
 
         <div className="field">
-          <label htmlFor="n-role">Rôle</label>
-          <select id="n-role" value={role} onChange={(e) => setRole(e.target.value as Role)}>
+          {/* Trois choix montrés ensemble plutôt qu'une liste à déplier : on
+              choisit un rôle en comparant ce qu'il permet, et une description
+              qui n'apparaît qu'après le choix arrive trop tard. */}
+          <label>Rôle</label>
+          <div className="roles">
             {ROLES.map((r) => (
-              <option key={r} value={r}>
-                {libelléDuRole(r)}
-              </option>
+              <label key={r} className={r === role ? "role role--choisi" : "role"}>
+                <input
+                  type="radio"
+                  name="nouveau-role"
+                  checked={r === role}
+                  onChange={() => setRole(r)}
+                />
+                <span>
+                  {libelléDuRole(r)}
+                  <span className="role-aide">{descriptionDuRole(r)}</span>
+                </span>
+              </label>
             ))}
-          </select>
-          <p className="hint">{descriptionDuRole(role)}</p>
+          </div>
         </div>
 
         <div className="field">
           <label htmlFor="n-mdp">Mot de passe provisoire</label>
-          <input
-            id="n-mdp"
-            type="text"
-            value={motDePasse}
-            onChange={(e) => setMotDePasse(e.target.value)}
-          />
-          <div className="row-actions">
+          {/* Le bouton à côté du champ, et non sous lui : proposer une phrase
+              est le geste courant, taper la sienne l'exception. */}
+          <div className="mot-de-passe">
+            <input
+              id="n-mdp"
+              type="text"
+              value={motDePasse}
+              onChange={(e) => setMotDePasse(e.target.value)}
+            />
             <button
               type="button"
               onClick={() => setMotDePasse(phraseDePasse())}
               title="Trois mots tirés au hasard"
             >
-              Proposer une phrase
+              Proposer
             </button>
           </div>
           <p className="hint">
-            Douze caractères au minimum. Il est affiché en clair exprès : vous devez pouvoir le lire
-            à la personne.
+            Trois mots courants : plus facile à dire au téléphone, plus dur à deviner. Douze
+            caractères au minimum. Affiché en clair exprès — vous devez pouvoir le lire à la
+            personne.
           </p>
         </div>
 
@@ -372,9 +399,10 @@ function JournalPanel({ entrees }: { entrees: EntreeJournal[] }) {
             </ul>
           )}
           <p className="hint">
-            Seul ce qui change quelque chose y figure : publier, revenir en arrière, déclencher une
-            urgence, redémarrer un boîtier, toucher aux comptes. Consulter n'y est pas — un journal
-            noyé n'est lu par personne.
+            Ce qui change quelque chose y figure : publier, revenir en arrière, déclencher une
+            urgence, redémarrer un boîtier, toucher aux comptes. Les connexions aussi — c'est la
+            seule trace qui dise qu'un compte oublié sert encore. Consulter n'y est pas : un
+            journal noyé n'est lu par personne.
           </p>
         </div>
       )}
