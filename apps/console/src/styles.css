@@ -1320,3 +1320,91 @@ button.ghost.danger:hover:not(:disabled) {
 .modale.large { max-width: 720px; }
 .modale h2 { margin: 0 0 4px; font-size: 21px; font-weight: 700; letter-spacing: -0.02em; }
 .modale .row-actions { margin-top: 18px; }
+
+/* ---------- l'atelier : bibliothèque, aperçu, cible ---------- */
+
+.editeur.avec-biblio {
+  grid-template-columns: 264px minmax(0, 380px) minmax(0, 1fr);
+}
+
+/* La bibliothèque ne défile pas avec le reste : on y pioche en composant,
+   et la faire suivre obligeait à remonter à chaque ajout. */
+.biblio {
+  position: sticky; top: 76px; align-self: start;
+  display: flex; flex-direction: column; max-height: calc(100vh - 100px);
+  background: var(--surface); border: 1px solid var(--rule);
+  border-radius: var(--r-carte); box-shadow: var(--ombre); overflow: hidden;
+}
+.biblio-entete { padding: 16px 16px 12px; border-bottom: 1px solid var(--rule); }
+.biblio-entete h2 { margin: 0; font-size: 15px; font-weight: 600; letter-spacing: -0.01em; }
+.biblio-entete p { margin: 3px 0 0; font-size: 12.5px; color: var(--ink-faint); }
+
+.biblio-liste { flex: 1; overflow-y: auto; padding: 8px; }
+.biblio-ligne {
+  display: flex; align-items: center; gap: 10px;
+  padding: 7px 8px; border-radius: var(--r-bouton); cursor: pointer;
+}
+.biblio-ligne:hover { background: var(--accent-doux); }
+.biblio-ligne:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+.biblio-vignette {
+  flex: none; width: 60px; height: 38px; border-radius: var(--r-vignette);
+  overflow: hidden; background: #0E1211; display: grid; place-items: center;
+}
+.biblio-vignette img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.biblio-kind {
+  font-size: 9px; letter-spacing: .08em; text-transform: uppercase; color: #6E7772;
+}
+
+.biblio-texte { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.biblio-nom {
+  font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+/* Où passe ce média. Sans cette ligne, on ne sait pas si retirer une affiche
+   va vider un couloir, ni lesquels des trente fichiers servent encore. */
+.biblio-usage { font-size: 11.5px; color: var(--ink-faint); }
+.biblio-quelque-part { color: var(--accent-texte); font-weight: 500; }
+.biblio-nulle-part { color: var(--ink-faint); font-style: italic; }
+
+.biblio-pied {
+  padding: 10px; border-top: 1px solid var(--rule);
+  display: flex; flex-direction: column; gap: 7px;
+}
+.biblio-ajout {
+  border-style: dashed; box-shadow: none; font-size: 12.5px; width: 100%;
+}
+
+/* ---------- où ça part ---------- */
+
+.cible {
+  background: var(--surface); border: 1px solid var(--rule);
+  border-radius: var(--r-carte); box-shadow: var(--ombre); padding: 16px 18px;
+}
+.cible h3 { margin: 0 0 10px; font-size: 15px; font-weight: 600; letter-spacing: -0.01em; }
+
+.cible-ligne {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 0; border-top: 1px solid var(--rule); cursor: pointer;
+}
+.cible-ligne:first-of-type { border-top: 0; }
+.cible-ligne.fixe { cursor: default; }
+.cible-ligne.eteinte .cible-nom, .cible-ligne.eteinte .cible-note { color: var(--ink-soft); }
+.cible-ligne input[type="checkbox"] { width: auto; flex: none; margin: 0; }
+.cible-texte { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.cible-nom { font-size: 13.5px; font-weight: 500; }
+/* La conséquence, pas seulement le nom : c'est la différence entre cocher
+   une case et savoir ce qu'on fait. */
+.cible-note { font-size: 11.5px; color: var(--ink-faint); text-wrap: pretty; }
+.cible .dot { flex: none; }
+
+@media (max-width: 1300px) {
+  .editeur.avec-biblio { grid-template-columns: 240px minmax(0, 1fr); }
+  .editeur.avec-biblio .editeur-apercu { grid-column: 2; }
+  .editeur.avec-biblio .editeur-travail { grid-column: 1 / -1; }
+}
+@media (max-width: 1100px) {
+  .editeur.avec-biblio { grid-template-columns: 1fr; }
+  .editeur.avec-biblio .editeur-apercu,
+  .editeur.avec-biblio .editeur-travail { grid-column: auto; }
+  .biblio { position: static; max-height: none; }
+}

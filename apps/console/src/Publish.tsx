@@ -1,6 +1,8 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Manifest } from "@couloir/protocol";
 import { ScreenPreview } from "./Preview.js";
+import { Bibliotheque } from "./Bibliotheque.js";
+import { OuCaPart } from "./OuCaPart.js";
 import { Periode } from "./Periode.js";
 import { VueJour } from "./VueJour.js";
 import { Schedule } from "./Schedule.js";
@@ -54,12 +56,18 @@ export function PublishPanel({
   classes,
   onPublished,
   secondaire,
+  parc = [],
+  manifestes = {},
 }: {
   screen: ScreenStatus;
   classes: SchoolClass[];
   onPublished: () => void;
   /** Ce dont on se sert rarement : historique, actions sur le boîtier. */
   secondaire?: React.ReactNode;
+  /** Les autres écrans, pour étendre la publication sans changer de page. */
+  parc?: ScreenStatus[];
+  /** Ce que chaque écran diffuse, pour dire où passe chaque média. */
+  manifestes?: Record<string, unknown | null>;
 }) {
   const [media, setMedia] = useState<Media[]>([]);
   const [items, setItems] = useState<Draft[]>([]);
@@ -88,6 +96,8 @@ export function PublishPanel({
   const [parDefaut, setParDefaut] = useState<{ assetId?: string; emploiDuTemps?: boolean }>({});
   /** L'onglet ouvert dans l'éditeur. */
   const [volet, setVolet] = useState<"contenu" | "journee" | "reglages">("contenu");
+  /** Les autres écrans qui recevront aussi cette composition. */
+  const [aussi, setAussi] = useState<string[]>([]);
   /**
    * L'instant depuis lequel on regarde l'aperçu.
    *
@@ -290,6 +300,26 @@ export function PublishPanel({
     setMessage(null);
     const previous = live.version;
     try {
+      if (aussi.length > 0) {
+        // Publication groupée : chaque écran garde ses propres réglages, et
+        // un refus n'empêche pas les autres.
+        const { resultats } = await api.publierGroupe([screen.id, ...aussi], currentSpec());
+        const publies = resultats.filter((r) => r.version !== undefined);
+        const refuses = resultats.filter((r) => r.erreur);
+        setDirty(false);
+        setUndoTo(null);
+        await reopen();
+        setMessage({
+          text:
+            refuses.length === 0
+              ? `Diffusé sur ${publies.length} écran${publies.length > 1 ? "s" : ""} : ${publies.map((r) => r.code).join(", ")}.`
+              : `${publies.length} écran${publies.length > 1 ? "s" : ""} servi${publies.length > 1 ? "s" : ""}. Refusé par ${refuses.map((r) => `${r.code} (${r.erreur})`).join(", ")}.`,
+          ...(refuses.length > 0 ? { error: true } : {}),
+        });
+        onPublished();
+        return;
+      }
+
       const { version } = await api.publish(screen.id, currentSpec());
       setLive({ version, loaded: true, reopenable: true });
       setDirty(false);
@@ -325,6 +355,28 @@ export function PublishPanel({
   /** Les deux mises en page qui portent une colonne de cours. */
   const avecCours = layout === "principal-et-cours" || layout === "emploi-du-temps";
 
+  /**
+   * Combien d'écrans diffusent chaque média.
+   *
+   * Calculé sur les manifestes déjà chargés pour le mur : aucune requête de
+   * plus. C'est ce qui permet à la bibliothèque de dire « sur 5 écrans » ou
+   * « nulle part » — sans quoi on ne sait pas si retirer une affiche va
+   * vider un couloir.
+   */
+  const usageDesMedias = useMemo(() => {
+    const compte: Record<string, number> = {};
+    for (const manifeste of Object.values(manifestes)) {
+      const assets = (manifeste as { assets?: { id: string }[] } | null)?.assets;
+      if (!Array.isArray(assets)) continue;
+      for (const id of new Set(assets.map((a) => a.id))) {
+        compte[id] = (compte[id] ?? 0) + 1;
+      }
+    }
+    return compte;
+  }, [manifestes]);
+
+  const autresEcrans = parc.filter((e) => e.id !== screen.id);
+
   const invalidText = items.some((item) => item.text && !item.text.titre.trim());
   // Un écran qui ne diffuse que les actualités du site est une configuration
   // parfaitement légitime : c'est même celle du hall d'accueil.
@@ -334,7 +386,17 @@ export function PublishPanel({
   const nothingLive = live.loaded && live.version === null;
 
   return (
-    <div className="editeur">
+    <div className={`editeur ${volet === "contenu" ? "avec-biblio" : ""}`}>
+      {volet === "contenu" && (
+        <Bibliotheque
+          media={media}
+          usage={usageDesMedias}
+          onAjouter={addMedia}
+          onAjouterTexte={addText}
+          onImporter={(f) => void upload(f)}
+        />
+      )}
+
       {/*
         L'aperçu à gauche, collant : on ne compose pas à l'aveugle. Il était
         en bas d'un long formulaire, donc hors de vue pendant tout le travail
@@ -363,7 +425,13 @@ export function PublishPanel({
           </span>
 
           <button type="button" className="primary" onClick={publish} disabled={!ready || busy}>
-            {busy ? "Publication…" : dirty || nothingLive ? "Publier" : "Republier"}
+            {busy
+              ? "Publication…"
+              : aussi.length > 0
+                ? `Diffuser sur ${aussi.length + 1} écrans`
+                : dirty || nothingLive
+                  ? "Publier"
+                  : "Republier"}
           </button>
           {dirty && live.version !== null && (
             <button type="button" onClick={() => void reopen()} disabled={busy}>
@@ -390,6 +458,19 @@ export function PublishPanel({
           </p>
         )}
         {invalidText && <p className="hint">Un texte sans titre ne peut pas être publié.</p>}
+
+        <OuCaPart
+          ecranCourant={screen}
+          autres={autresEcrans}
+          choisis={aussi}
+          onBasculer={(id) =>
+            touch(() =>
+              setAussi((actuels) =>
+                actuels.includes(id) ? actuels.filter((x) => x !== id) : [...actuels, id],
+              ),
+            )
+          }
+        />
       </aside>
 
       <div className="editeur-travail">

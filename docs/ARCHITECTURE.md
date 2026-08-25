@@ -1288,6 +1288,37 @@ autres. On publie ce qu'on peut, et on rend le détail écran par écran :
 « B·1·01 v5, C·0·01 v3, D·0·02 — cet afficheur n'existe plus ». Tout annuler
 pour un seul écran en défaut serait pire.
 
+## L'éditeur qui part du contenu
+
+Le handoff explore deux directions et retient les deux : on entre par le parc
+d'écrans, on édite comme si l'on partait du contenu.
+
+### La bibliothèque en colonne, et où passe chaque média
+
+Elle ne défile plus avec le reste : on y pioche en composant, et la faire
+suivre obligeait à remonter à chaque ajout.
+
+Surtout, chaque média dit **où il passe** — « sur 3 écrans », « nulle part ».
+C'est l'information qui manquait : sans elle on ne sait pas si retirer une
+affiche va vider un couloir, ni lesquels des trente fichiers importés depuis
+septembre servent encore. Le compte se calcule sur les manifestes déjà
+chargés pour le mur, sans une requête de plus.
+
+### « Où ça part » : la conséquence, pas le nom
+
+L'écran ouvert est coché et ne se décoche pas — on est venu le modifier. Les
+autres s'ajoutent, et chacun dit ce que la publication lui fera : « muet
+depuis 14 min, recevra à son retour », « garde sa mise en page », « ne
+changera pas ».
+
+Écrire la conséquence plutôt que le seul nom, c'est la différence entre
+cocher une case et savoir ce qu'on fait. Le bouton suit : il devient
+« Diffuser sur 2 écrans ».
+
+Un cas à part, qui se lisait mal : un boîtier jamais vu affichait « muet
+depuis jamais vu ». Il dit maintenant « ne s'est jamais annoncé, recevra à sa
+première connexion ».
+
 ## Ce qui n'est pas encore fait
 
 Le socle tourne, mais il reste volontairement incomplet :

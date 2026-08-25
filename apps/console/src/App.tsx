@@ -411,6 +411,8 @@ export function App() {
               key={`${selected.id}:${restored}`}
               screen={selected}
               classes={setup?.classes ?? []}
+              parc={screens}
+              manifestes={manifestes}
               onPublished={() => void refreshScreens()}
               secondaire={
                 <>
