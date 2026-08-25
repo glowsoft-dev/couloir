@@ -1518,6 +1518,29 @@ rangée, et la phrase qui la suit dit pourquoi : elles laissent un couloir
 noir. Les confirmations, elles, étaient déjà là et ne portent que sur ces
 trois-là — une confirmation posée partout ne se lit plus nulle part.
 
+## Les réglages de l'établissement
+
+Un rail plutôt qu'un empilement. Sept panneaux à la file obligeaient à
+dérouler toute la page pour trouver les vacances, et à se souvenir de l'ordre.
+Cinq sections nommées se choisissent d'un coup d'œil, et chacune dit en une
+phrase à quoi elle sert.
+
+### Cinq sections, pas six
+
+Le handoff en dessine six, en séparant « Grille horaire » de « Classes ». Ils
+sont réunis : on définit les créneaux, puis les groupes qui les remplissent —
+c'est un seul geste, et deux destinations en auraient fait deux allers-retours.
+La maquette elle-même intitule sa page « Grille horaire et classes ». Même
+raison pour l'année et les vacances, qui se saisissent le même jour.
+
+### Ce qui reste tel quel
+
+Le titre de section et l'en-tête de la carte se répètent un peu quand la
+section n'en contient qu'une — « Identité », puis « Identité de
+l'établissement ». On le laisse : cet en-tête porte aussi l'état de la source
+(*éteinte*, *active*), et le retirer priverait la carte de son nom pour un
+lecteur d'écran. Une redondance douce coûte moins qu'un titre manquant.
+
 ## Ce qui n'est pas encore fait
 
 Le socle tourne, mais il reste volontairement incomplet :

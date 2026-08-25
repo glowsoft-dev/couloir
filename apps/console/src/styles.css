@@ -1893,3 +1893,59 @@ button.ghost.danger:hover:not(:disabled) {
    cherchait « Capturer » entre « Redémarrer » et « Éteindre la dalle ». */
 .actions + .actions { margin-top: 8px; }
 .actions-avertissement { margin-top: 10px; }
+
+/* ---------- les réglages de l'établissement ----------
+ *
+ * Un rail plutôt qu'un empilement. Sept panneaux à la file obligeaient à
+ * dérouler toute la page pour trouver les vacances, et à se souvenir de
+ * l'ordre. Cinq sections nommées se choisissent d'un coup d'œil.
+ */
+
+.reglages { display: grid; grid-template-columns: 236px minmax(0, 1fr); gap: 0; align-items: start; }
+
+.rail2 {
+  align-self: stretch;
+  background: var(--surface-2); border-right: 1px solid var(--rule);
+  padding: 8px 14px 28px;
+}
+.rail2-titre {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 11px; font-weight: 500; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--ink-faint); padding: 0 10px 12px;
+}
+.rail2-liste { display: flex; flex-direction: column; gap: 2px; }
+.rail2-entree {
+  text-align: left; padding: 9px 11px; border: 0; border-radius: var(--r-bouton);
+  background: none; color: var(--ink); font-size: 13.5px;
+}
+.rail2-entree--active {
+  background: var(--surface); color: var(--accent-texte);
+  font-family: "Fira Sans", Roboto, sans-serif; font-weight: 600;
+  box-shadow: var(--ombre);
+}
+
+.reglages-corps { padding: 0 0 0 28px; min-width: 0; }
+.reglages-tete { margin-bottom: 20px; }
+.reglages-tete h1 {
+  margin: 0; font-family: "Fira Sans", Roboto, sans-serif;
+  font-size: 25px; font-weight: 700; letter-spacing: -.025em;
+}
+.reglages-tete p {
+  margin: 4px 0 0; font-size: 14px; color: var(--ink-soft);
+  max-width: 76ch; text-wrap: pretty;
+}
+
+/* Deux panneaux qui se saisissent d'affilée : les créneaux puis les groupes
+   qui les remplissent, l'année puis ses vacances. */
+.reglages-paire {
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 20px; align-items: start;
+}
+
+@media (max-width: 1000px) {
+  .reglages { grid-template-columns: minmax(0, 1fr); }
+  .rail2 { border-right: 0; border-bottom: 1px solid var(--rule); padding: 12px 14px; }
+  .rail2-liste { flex-direction: row; flex-wrap: wrap; }
+  .reglages-corps { padding: 20px 0 0; }
+  .reglages-paire { grid-template-columns: minmax(0, 1fr); }
+}
