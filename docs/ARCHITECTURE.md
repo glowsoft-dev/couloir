@@ -1595,6 +1595,41 @@ sert encore.
 première tournure devait accorder au genre d'une personne réelle, que la
 console ne connaît pas et n'a pas à deviner.
 
+## La bibliothèque
+
+Elle existait en colonne dans l'éditeur, où elle sert à composer. La page
+entière répond à la question inverse : non pas « qu'est-ce que je mets sur cet
+écran », mais « qu'est-ce qui traîne dans le serveur, et est-ce que ça passe
+quelque part ».
+
+### Où passe chaque média
+
+C'est la seule colonne qui compte. La bibliothèque grossit d'une affiche de
+portes ouvertes, de sa version corrigée et de celle de l'an dernier — sans ce
+compte, plus personne n'ose rien retirer. L'infobulle nomme les écrans.
+
+On lit les compositions saisies et non les manifestes : le manifeste a déjà
+résolu le contenu par défaut en diapositive, et on ne distinguerait plus « il
+tourne dans la rotation » de « il attend qu'il n'y ait rien d'autre ». Les
+deux comptent — un média qui ne sert que de repli passe quand même dans le
+couloir.
+
+### Les dimensions viennent du navigateur
+
+Elles ne sont pas stockées, et les probes côté serveur auraient demandé un
+décodeur d'images. Le navigateur vient de charger la vignette : il connaît
+déjà `naturalWidth`. C'est exact et ça ne coûte rien.
+
+C'est ce qui fait voir qu'un fond d'écran de 9 000 pixels de large occupe à
+lui seul l'essentiel de la bibliothèque.
+
+### Pas de suppression
+
+Le serveur n'expose pas de route pour retirer un média, et on n'en ajoute pas
+ici : supprimer un fichier référencé par un manifeste en ligne laisserait un
+écran devant une adresse morte. La page dit ce qui ne passe nulle part ; la
+suite est une décision, pas un bouton.
+
 ## Ce qui n'est pas encore fait
 
 Le socle tourne, mais il reste volontairement incomplet :

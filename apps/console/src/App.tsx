@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { ScreenActions } from "./Actions.js";
 import { EmergencyBar } from "./Emergency.js";
 import { GridView } from "./Grid.js";
+import { PageBibliotheque } from "./PageBibliotheque.js";
 import { DiffusionGroupee } from "./DiffusionGroupee.js";
 import { MurDEcrans } from "./MurDEcrans.js";
 import { NouvelEcran } from "./NouvelEcran.js";
@@ -37,7 +38,7 @@ import {
  * matins pour signaler trois absences, pas la configuration annuelle.
  */
 
-type Tab = "today" | "screens" | "grid" | "settings" | "comptes";
+type Tab = "today" | "screens" | "grid" | "biblio" | "settings" | "comptes";
 
 /**
  * L'ordre des onglets suit ce qu'on fait, du plus fréquent au plus rare.
@@ -50,6 +51,7 @@ const TABS: { id: Tab; label: string; administrateur?: boolean }[] = [
   { id: "screens", label: "Mes écrans" },
   { id: "today", label: "Changements du jour" },
   { id: "grid", label: "Emploi du temps" },
+  { id: "biblio", label: "Bibliothèque" },
   { id: "settings", label: "Réglages" },
   { id: "comptes", label: "Comptes", administrateur: true },
 ];
@@ -432,8 +434,13 @@ export function App() {
 
         {tab === "comptes" && administrateur && <Comptes moi={moi} />}
 
+        {/* La bibliothèque ne dépend pas de l'emploi du temps : elle
+            s'affiche même sans base de données côté horaires. */}
+        {tab === "biblio" && <PageBibliotheque />}
+
         {tab !== "screens" &&
           tab !== "comptes" &&
+          tab !== "biblio" &&
           (setup ? (
             <>
               {tab === "today" && <TodayView setup={setup} onChanged={() => void refreshSetup()} />}
