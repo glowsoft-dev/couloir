@@ -13,6 +13,7 @@ import { Comptes } from "./Comptes.js";
 import { Entree } from "./Entree.js";
 import {
   ApiError,
+  relativeTime,
   type Emergency,
   type PendingDevice,
   type ScreenStatus,
@@ -80,10 +81,14 @@ export function App() {
   const [restored, setRestored] = useState(0);
   /** L'assistant de pose d'un nouveau boîtier. */
   const [poseEnCours, setPoseEnCours] = useState(false);
+  /** Les écrans cochés sur le mur, pour agir sur plusieurs d'un geste. */
+  const [selection, setSelection] = useState<string[]>([]);
   /** Le nom de l'établissement, affiché dans la barre. */
   const [etablissement, setEtablissement] = useState<string | null>(null);
   /** Vrai quand l'emploi du temps vient d'un logiciel externe. */
   const [emploiDuTempsExterne, setEmploiDuTempsExterne] = useState(false);
+  /** Combien de changements du jour restent à signaler. */
+  const [changementsEnAttente] = useState(0);
   const [error, setError] = useState<string | null>(null);
 
   const refreshScreens = useCallback(async () => {
@@ -128,6 +133,18 @@ export function App() {
       .moi()
       .then((r) => setMoi(r.utilisateur))
       .catch(() => setMoi(null));
+  }, []);
+
+  /**
+   * Les réglages, une fois connecté.
+   *
+   * Ils étaient demandés au chargement, donc avant la connexion : le serveur
+   * répondait 401, l'erreur était avalée, et plus rien ne les redemandait.
+   * Le nom de l'établissement retombait alors sur celui du logiciel, et
+   * personne ne comprenait pourquoi il revenait après un rechargement.
+   */
+  useEffect(() => {
+    if (!moi) return;
     void api.identite
       .lire()
       .then((r) => setEtablissement(r.identite.nom))
@@ -136,7 +153,7 @@ export function App() {
       .lire()
       .then((r) => setEmploiDuTempsExterne(r.reglages.actif && r.reglages.afficheurs.length > 0))
       .catch(() => {});
-  }, []);
+  }, [moi]);
 
   useEffect(() => {
     if (!moi) return;
@@ -154,54 +171,92 @@ export function App() {
   const administrateur = peutAdministrer(moi.role);
   const publie = peutPublier(moi.role);
 
+  /**
+   * Les compteurs du rail.
+   *
+   * Ce sont eux qui justifient la navigation latérale : la barre
+   * horizontale ne pouvait pas les porter sans se remplir, et savoir qu'il
+   * reste trois changements à saisir vaut mieux que de devoir aller voir.
+   */
+  const compteurs: Partial<Record<Tab, number>> = {
+    screens: screens.length,
+    ...(changementsEnAttente > 0 ? { today: changementsEnAttente } : {}),
+  };
+
   const selected = screens.find((screen) => screen.id === selectedId) ?? null;
 
-  const offline = screens.filter((s) => !s.online).length;
+  const muets = screens.filter((s) => !s.online);
+  const offline = muets.length;
 
   return (
     <div className="app">
-      <div className="topbar">
-        {/* Le nom de l'établissement, pas celui du logiciel : c'est chez
-            eux qu'on est, et ça se voit dès la barre. */}
-        <span className="brand">
-          {etablissement ?? "Couloir"} <span>écrans</span>
-        </span>
+      {/*
+        Navigation latérale plutôt qu'une barre d'onglets. Elle porte les
+        compteurs — combien d'écrans, combien de changements en attente — que
+        la barre horizontale ne pouvait pas montrer sans se remplir. Et elle
+        laisse le haut de page au titre et aux actions de l'écran courant.
+      */}
+      <nav className="rail">
+        <div className="rail-entete">
+          <span className="rail-marque">{etablissement ?? "Couloir"}</span>
+          <span className="rail-produit">écrans</span>
+        </div>
 
-        <nav className="tabs">
-          {TABS.filter((entry) => !entry.administrateur || administrateur).map((entry) => (
+        <div className="rail-entrees">
+          {TABS.filter((entry) => !entry.administrateur || administrateur)
+            .filter((entry) => publie || entry.id === "screens" || entry.id === "grid")
+            .map((entry) => (
+              <button
+                key={entry.id}
+                type="button"
+                className="rail-entree"
+                aria-current={tab === entry.id}
+                onClick={() => {
+                  setTab(entry.id);
+                  setSelectedId(null);
+                  setPoseEnCours(false);
+                }}
+              >
+                <span className="rail-carre" aria-hidden="true" />
+                <span className="rail-libelle">{entry.label}</span>
+                {compteurs[entry.id] !== undefined && (
+                  <span className={`rail-compteur ${entry.id === "today" ? "attention" : ""}`}>
+                    {compteurs[entry.id]}
+                  </span>
+                )}
+              </button>
+            ))}
+        </div>
+
+        <div className="rail-pied">
+          {/* Un lecteur ne déclenche pas d'urgence : le serveur le refuserait,
+              et un bouton qui refuse est pire qu'un bouton absent. */}
+          {publie && <EmergencyBar active={emergency} onChanged={() => void refreshScreens()} />}
+
+          <div className="rail-moi">
+            <span className="rail-initiales" aria-hidden="true">
+              {initiales(moi.nom)}
+            </span>
+            <span className="rail-identite">
+              <span className="rail-nom">{moi.nom}</span>
+              <span className="rail-role">
+                {publie ? libelléDuRole(moi.role) : "Lecture seule"}
+              </span>
+            </span>
             <button
-              key={entry.id}
               type="button"
-              className="tab"
-              aria-current={tab === entry.id}
-              onClick={() => setTab(entry.id)}
+              className="ghost"
+              title="Se déconnecter"
+              aria-label="Se déconnecter"
+              onClick={() => {
+                void api.deconnexion().finally(() => setMoi(null));
+              }}
             >
-              {entry.label}
+              ⏻
             </button>
-          ))}
-        </nav>
-
-        <span className="spacer" />
-        {/* Un lecteur ne déclenche pas d'urgence : le serveur le refuserait,
-            et un bouton qui refuse est pire qu'un bouton absent. */}
-        {publie && <EmergencyBar active={emergency} onChanged={() => void refreshScreens()} />}
-        <span className="pill">{screens.length - offline} en ligne</span>
-        {offline > 0 && <span className="pill warn">{offline} muets</span>}
-
-        <span className="moi" title={`${moi.courriel} · ${libelléDuRole(moi.role)}`}>
-          {moi.nom}
-          {!publie && <span className="pill">lecture seule</span>}
-        </span>
-        <button
-          type="button"
-          className="ghost"
-          onClick={() => {
-            void api.deconnexion().finally(() => setMoi(null));
-          }}
-        >
-          Se déconnecter
-        </button>
-      </div>
+          </div>
+        </div>
+      </nav>
 
       <div className="page">
         {error && <p className="notice error">{error}</p>}
@@ -234,19 +289,95 @@ export function App() {
         {tab === "screens" && !selected && !poseEnCours && (
           <>
             <div className="mur-entete">
-              <h1>Mes écrans</h1>
+              <div className="mur-titre">
+                <h1>Mes écrans</h1>
+                <p>Voici ce qui est affiché en ce moment dans les couloirs.</p>
+              </div>
+
+              <span className="mur-etat">
+                <span className="etat-ligne">
+                  <span className="dot online" />
+                  {screens.length - offline} en ligne
+                </span>
+                {offline > 0 && (
+                  <span className="etat-ligne muet">
+                    <span className="dot offline" />
+                    {offline} ne répond{offline > 1 ? "ent" : ""} pas
+                  </span>
+                )}
+              </span>
+
               {publie && (
                 <button type="button" className="primary" onClick={() => setPoseEnCours(true)}>
-                  Poser un nouvel écran
+                  Poser un écran
                 </button>
               )}
             </div>
+
+            {/* Une panne se raconte en une phrase, en haut du mur. Une
+                pastille dans un coin ne dit ni lequel, ni depuis quand, ni
+                ce qu'il reste affiché là-bas. */}
+            {muets.map((ecran) => (
+              <div className="bandeau-panne" key={ecran.id}>
+                <span className="dot offline" />
+                <p>
+                  <b>{ecran.label}</b> ne répond plus depuis{" "}
+                  {relativeTime(ecran.lastHeartbeatAtMs)}.{" "}
+                  {ecran.manifestVersion > 0
+                    ? "Il affiche encore son dernier contenu."
+                    : "Il n'avait rien reçu."}
+                </p>
+                <button type="button" onClick={() => setSelectedId(ecran.id)}>
+                  Diagnostiquer
+                </button>
+              </div>
+            ))}
+
             <PendingPanel pending={pending} onPaired={() => void refreshScreens()} />
             <MurDEcrans
               screens={screens}
               manifestes={manifestes}
               onChoisir={(s) => setSelectedId(s.id)}
+              {...(publie
+                ? {
+                    selection,
+                    // Mise à jour fonctionnelle : deux coches cliquées coup
+                    // sur coup doivent toutes deux compter.
+                    onBasculer: (id: string) =>
+                      setSelection((actuels) =>
+                        actuels.includes(id)
+                          ? actuels.filter((x) => x !== id)
+                          : [...actuels, id],
+                      ),
+                  }
+                : {})}
             />
+
+            {publie && selection.length > 0 && (
+              <div className="barre-selection">
+                <span className="barre-compte">
+                  {selection.length} écran{selection.length > 1 ? "s" : ""} sélectionné
+                  {selection.length > 1 ? "s" : ""}
+                </span>
+                <span className="barre-trait" aria-hidden="true" />
+                <button
+                  type="button"
+                  className="barre-action-forte"
+                  onClick={() => {
+                    // Publier sur plusieurs écrans à la fois n'existe pas
+                    // encore côté serveur : on ouvre le premier plutôt que
+                    // de faire croire à un geste groupé.
+                    const premier = selection[0];
+                    if (premier) setSelectedId(premier);
+                  }}
+                >
+                  Publier un contenu
+                </button>
+                <button type="button" className="barre-action" onClick={() => setSelection([])}>
+                  Désélectionner
+                </button>
+              </div>
+            )}
           </>
         )}
 
@@ -322,6 +453,16 @@ export function App() {
  * ne compose pas. On montre donc l'étape suivante, une seule à la fois, et
  * le bandeau disparaît de lui-même dès que l'installation tient debout.
  */
+/** « Jérémy Macadré » → « JM ». Deux lettres suffisent à se reconnaître. */
+function initiales(nom: string): string {
+  return nom
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((m) => m[0]?.toUpperCase() ?? "")
+    .join("");
+}
+
 function FirstRun({
   screens,
   pending,

@@ -20,10 +20,22 @@ export function MurDEcrans({
   screens,
   manifestes,
   onChoisir,
+  selection,
+  onBasculer,
 }: {
   screens: ScreenStatus[];
   manifestes: Record<string, unknown | null>;
   onChoisir: (screen: ScreenStatus) => void;
+  /** Les écrans cochés, pour agir sur plusieurs d'un geste. */
+  selection?: string[];
+  /**
+   * Bascule un écran.
+   *
+   * On remonte l'INTENTION, pas la liste calculée. Deux coches cliquées coup
+   * sur coup lisaient toutes deux la même liste figée, et la seconde
+   * écrasait la première : un écran sur deux disparaissait de la sélection.
+   */
+  onBasculer?: (id: string) => void;
 }) {
   if (screens.length === 0) {
     return (
@@ -45,6 +57,9 @@ export function MurDEcrans({
           screen={screen}
           manifest={(manifestes[screen.id] ?? null) as Manifest | null}
           onChoisir={() => onChoisir(screen)}
+          {...(onBasculer
+            ? { coche: selection?.includes(screen.id) ?? false, onCocher: () => onBasculer(screen.id) }
+            : {})}
         />
       ))}
     </div>
@@ -55,18 +70,47 @@ function CarteDEcran({
   screen,
   manifest,
   onChoisir,
+  coche,
+  onCocher,
 }: {
   screen: ScreenStatus;
   manifest: Manifest | null;
   onChoisir: () => void;
+  coche?: boolean;
+  onCocher?: () => void;
 }) {
   return (
-    <button type="button" className="carte-ecran" onClick={onChoisir}>
+    <div className={`carte-ecran ${coche ? "cochee" : ""}`}>
+      {/*
+        Deux gestes distincts sur la même carte : cliquer l'aperçu ouvre
+        l'écran, cocher le sélectionne. La coche arrête la propagation —
+        sans quoi sélectionner ferait quitter la page.
+      */}
+      {onCocher && (
+        <button
+          type="button"
+          className="carte-coche"
+          role="checkbox"
+          aria-checked={coche}
+          aria-label={`Sélectionner ${screen.label}`}
+          onClick={(e) => {
+            e.stopPropagation();
+            onCocher();
+          }}
+        >
+          {coche ? "✓" : ""}
+        </button>
+      )}
+
+      <button type="button" className="carte-ouvrir" onClick={onChoisir}>
       <span className="carte-vignette">
         <Vignette manifest={manifest} screenCode={screen.code} />
         {!screen.online && (
           <span className="carte-voile">
-            <span>Ne répond pas</span>
+            <span className="carte-voile-pastille">Ne répond pas</span>
+            <span className="carte-voile-note">
+              dernière image reçue {relativeTime(screen.lastHeartbeatAtMs)}
+            </span>
           </span>
         )}
       </span>
@@ -85,7 +129,8 @@ function CarteDEcran({
             : "hors ligne"}
         </span>
       </span>
-    </button>
+      </button>
+    </div>
   );
 }
 
