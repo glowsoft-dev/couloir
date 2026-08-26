@@ -27,7 +27,21 @@ Aucun flux entrant depuis Internet n'est nécessaire.
 ```bash
 cd deploiement
 cp .env.exemple .env
+chmod 600 .env
 ```
+
+Le `chmod` n'est pas décoratif : ce fichier porte le mot de passe de la base,
+la clé de secours de la console et les identifiants d'écriture sur la zone
+DNS. Par défaut il serait lisible par tout compte de la machine.
+
+**Ces secrets ne vont nulle part ailleurs.** Ni dans le dépôt — il est public
+et `.env` y est ignoré, mais l'habitude compte plus que le filet. Ni dans les
+secrets d'intégration continue : ceux-là servent aux machines qui construisent,
+et ne parviennent jamais au serveur qui renouvelle le certificat. Ni dans
+l'image, qui est publique.
+
+Gardez-en une copie dans un gestionnaire de mots de passe : la page d'OVH
+n'affiche les identifiants qu'une seule fois.
 
 Remplissez les trois valeurs. Les deux secrets se génèrent, ils ne s'inventent
 pas :
