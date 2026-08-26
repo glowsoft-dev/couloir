@@ -585,6 +585,14 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
       const octets = Buffer.byteLength(contenu, "utf8");
       fichiers.push({ nom, sha256: createHash("sha256").update(contenu).digest("hex"), octets });
     }
+    /*
+     * Jamais mise en cache, y compris quand il n'y a rien à servir.
+     *
+     * Un intermédiaire qui garderait ce 503 figerait le parc sur « pas de
+     * lecteur » alors que le serveur en sert un depuis une heure — et rien
+     * ne le signalerait, puisque les écrans continueraient d'afficher.
+     */
+    reply.header("cache-control", "no-store");
     if (fichiers.length === 0) {
       return reply.code(503).send({
         code: "artefact-absent",
@@ -603,7 +611,7 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
       .update(fichiers.map((f) => `${f.nom}:${f.sha256}`).join("\n"))
       .digest("hex")
       .slice(0, 12);
-    return reply.header("cache-control", "no-store").send({ version, fichiers });
+    return reply.send({ version, fichiers });
   });
 
   /** Le lecteur déployable, que l'installateur va chercher. */

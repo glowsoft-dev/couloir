@@ -301,11 +301,20 @@ describe("version du lecteur", () => {
     }
   });
 
-  it("ne se laisse pas mettre en cache", async () => {
-    // Un intermédiaire qui garderait cette réponse figerait le parc sur une
-    // version périmée, sans que rien ne le signale.
+  it("ne se laisse pas mettre en cache, même quand il n'y a rien à servir", async () => {
+    /*
+     * Un intermédiaire qui garderait cette réponse figerait le parc sur une
+     * version périmée — ou pire, sur « pas de lecteur » alors que le serveur
+     * en sert un depuis une heure. Rien ne le signalerait, puisque les écrans
+     * continueraient d'afficher.
+     *
+     * L'assertion ne dépend donc pas de la présence du lecteur : c'est
+     * précisément ce qui manquait, et l'intégration continue — qui construit
+     * sans le lecteur — l'a fait tomber là où le local passait.
+     */
     const app = buildApp();
     const reponse = await app.inject({ method: "GET", url: "/telechargements/version.json" });
+    expect([200, 503]).toContain(reponse.statusCode);
     expect(reponse.headers["cache-control"]).toBe("no-store");
   });
 });
