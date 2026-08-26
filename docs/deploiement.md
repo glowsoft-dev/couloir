@@ -150,6 +150,7 @@ Ce choix se prend avec le service informatique de l'école, pas à sa place.
   identifiant, sans expiration.
 - **La sauvegarde automatique.** Les commandes ci-dessus sont à mettre dans
   une tâche planifiée ; personne ne l'a fait.
-- **Le dépôt distant.** La publication de l'image est écrite et prête, mais
-  aucun dépôt GitHub n'est configuré : tant que le code n'y est pas, rien ne
-  se publie et la mise à jour tirée n'a rien à tirer.
+- **La pose du certificat racine sur les écrans.** Si l'établissement retient
+  l'autorité interne plutôt qu'un domaine public, l'installateur doit déposer
+  le certificat sur chaque boîtier. Il ne le fait pas encore, et sans lui
+  l'agent refuse la connexion — à raison.

@@ -46,6 +46,14 @@ COPY . .
 # seul certificat à gérer.
 RUN pnpm build && pnpm build:console
 
+# Et le lecteur, que le serveur sert aux boîtiers.
+#
+# Sans lui, l'image démarre, répond, affiche la console — et aucun Raspberry
+# ne peut être posé : `installer.sh` rend 404, et la mise à jour automatique
+# des écrans n'a rien à aller chercher. Le défaut ne se voit qu'en démarrant
+# l'image, jamais en la construisant.
+RUN pnpm build:browser && pnpm --filter @couloir/player-linux build:bundle
+
 # `deploy` reconstitue une arborescence autonome : les paquets de l'espace de
 # travail y sont copiés au lieu d'être liés. Un dossier de liens symboliques
 # ne survivrait pas à la copie dans l'image finale.
@@ -53,6 +61,15 @@ RUN pnpm deploy --filter=@couloir/server --prod --legacy /application
 
 # La console se dépose à côté du serveur, là où il la cherche.
 RUN cp -r apps/console/dist /application/dist/console
+
+# Le lecteur et son installateur, aux chemins que le serveur interroge en
+# premier — voir `lireArtefact` et `lireInstallateur`. Hors de l'image, il
+# retombe sur l'arborescence de développement, qui n'existe pas ici.
+RUN mkdir -p /application/dist/telechargements \
+ && cp apps/player-linux/dist-bundle/couloir-player.mjs \
+       apps/player-linux/dist-bundle/couloir.js \
+       /application/dist/telechargements/ \
+ && cp apps/player-linux/scripts/install.sh /application/dist/install.sh
 
 # Le garde-fou de la compilation croisée.
 #

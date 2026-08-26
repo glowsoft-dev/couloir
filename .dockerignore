@@ -2,6 +2,15 @@ node_modules
 **/node_modules
 **/dist
 **/dist-browser
+**/dist-bundle
+# L'état incrémental de TypeScript.
+#
+# Sans cette ligne, les .tsbuildinfo du poste partent dans le contexte,
+# `tsc --build` les lit, conclut « déjà compilé » et n'émet rien — alors que
+# les dist, eux, sont exclus. L'image dépend alors de l'état de la machine qui
+# la construit : propre sur l'intégration continue, incomplète depuis un poste
+# de développement, et sous le même nom.
+**/*.tsbuildinfo
 data
 .git
 .github
