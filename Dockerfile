@@ -6,7 +6,21 @@
 # voisins, remplaçables sans reconstruire l'application.
 
 # --- construction ----------------------------------------------------
-FROM node:22-alpine AS construction
+#
+# Compilée sur l'architecture de la MACHINE qui construit, jamais sur celle
+# de la cible.
+#
+# Le serveur tourne sur un Raspberry, en arm64, et les machines d'intégration
+# sont en amd64. Émuler arm64 pour compiler du TypeScript coûtait quarante
+# minutes là où la compilation native en prend deux — pour produire
+# exactement les mêmes octets, puisque le résultat est du JavaScript, qui n'a
+# pas d'architecture.
+#
+# Ça ne vaut que tant qu'aucune dépendance de production n'embarque de binaire
+# natif. Le contrôle plus bas s'en assure : le jour où l'une en apporte un, la
+# construction s'arrête ici plutôt que de livrer une image qui refuse de
+# démarrer sur le Pi avec un « invalid ELF header ».
+FROM --platform=$BUILDPLATFORM node:22-alpine AS construction
 ENV PNPM_HOME=/pnpm
 ENV PATH="$PNPM_HOME:$PATH"
 RUN corepack enable
@@ -39,6 +53,18 @@ RUN pnpm deploy --filter=@couloir/server --prod --legacy /application
 
 # La console se dépose à côté du serveur, là où il la cherche.
 RUN cp -r apps/console/dist /application/dist/console
+
+# Le garde-fou de la compilation croisée.
+#
+# Un binaire natif compilé pour amd64 et embarqué dans une image arm64 ne se
+# voit qu'au démarrage sur le Pi, par un « invalid ELF header » qui ne dit pas
+# d'où il vient. Mieux vaut échouer ici, avec la raison écrite.
+RUN if find /application -name '*.node' -print -quit | grep -q .; then \
+      echo "ERREUR : une dépendance de production embarque un binaire natif." >&2; \
+      echo "La compilation croisée ne vaut plus. Voir l'en-tête du Dockerfile." >&2; \
+      find /application -name '*.node' >&2; \
+      exit 1; \
+    fi
 
 # --- exécution -------------------------------------------------------
 FROM node:22-alpine AS execution
