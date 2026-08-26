@@ -1,0 +1,37 @@
+# Caddy, avec le module DNS d'OVH.
+#
+# L'image officielle ne le contient pas : les fournisseurs DNS sont des
+# modules communautaires, compilés dans le binaire. Sans celui-là, Caddy ne
+# sait obtenir un certificat que par la vérification HTTP, qui suppose le
+# serveur joignable depuis Internet — exactement ce que l'établissement ne
+# veut pas ouvrir.
+#
+# La vérification DNS, elle, prouve qu'on contrôle la zone, pas que la machine
+# est atteignable. Un enregistrement qui pointe vers une adresse privée obtient
+# donc un vrai certificat, reconnu par les écrans sans rien installer sur eux.
+#
+# Le module est communautaire et n'est pas maintenu par le projet Caddy. On
+# l'épingle par sa version plutôt que de suivre la branche : une image de
+# terminaison TLS qui change sous nos pieds coupe l'accès à la console et aux
+# écrans en même temps.
+
+FROM --platform=$BUILDPLATFORM caddy:2-builder-alpine AS construction
+
+# `xcaddy` compile pour l'architecture de la CIBLE tout en tournant sur celle
+# de la machine — c'est du Go, il croise nativement. Émuler arm64 pour cette
+# compilation coûterait des dizaines de minutes pour un résultat identique.
+ARG TARGETARCH
+ENV GOARCH=$TARGETARCH
+ENV GOOS=linux
+ENV CGO_ENABLED=0
+
+RUN xcaddy build \
+    --with github.com/caddy-dns/ovh@v1.1.0
+
+FROM caddy:2-alpine
+COPY --from=construction /usr/bin/caddy /usr/bin/caddy
+
+# Le binaire remplacé doit toujours savoir se présenter : si cette commande
+# échoue, l'image est cassée et on l'apprend ici plutôt qu'au démarrage sur le
+# Raspberry, où un Caddy mort veut dire une console injoignable.
+RUN caddy version && caddy list-modules | grep -q '^dns.providers.ovh$'

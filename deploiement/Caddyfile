@@ -6,6 +6,26 @@
 #
 # COULOIR_DOMAINE est lu depuis le fichier .env voisin.
 
+{
+	# Le certificat s'obtient par vérification DNS, jamais par HTTP.
+	#
+	# La vérification HTTP suppose le serveur joignable depuis Internet. Ici
+	# il ne l'est pas, et c'est voulu : rien n'entre sur le réseau du campus.
+	# La vérification DNS prouve qu'on contrôle la zone, pas que la machine
+	# est atteignable — un enregistrement qui pointe vers une adresse privée
+	# obtient donc un vrai certificat, reconnu par les écrans sans rien
+	# installer sur eux.
+	#
+	# Les identifiants OVH viennent du .env. Ils n'ont besoin que du droit
+	# d'écrire dans la zone : ni facturation, ni serveurs, ni domaines.
+	acme_dns ovh {
+		endpoint {$OVH_ENDPOINT}
+		application_key {$OVH_APPLICATION_KEY}
+		application_secret {$OVH_APPLICATION_SECRET}
+		consumer_key {$OVH_CONSUMER_KEY}
+	}
+}
+
 {$COULOIR_DOMAINE} {
 	# Compression : la console fait 265 ko de JavaScript, servis à chaque
 	# ouverture depuis un poste de l'école.

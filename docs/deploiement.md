@@ -6,12 +6,21 @@ ou ailleurs.
 
 ## Avant de commencer
 
-Il faut **un nom de domaine qui pointe déjà sur la machine**. Caddy demande le
-certificat au premier démarrage : si le domaine ne résout pas encore, la
-demande échoue et il faut attendre avant de réessayer.
+Il faut **un nom de domaine dont vous contrôlez la zone DNS**. Le certificat
+s'obtient par vérification DNS, qui prouve ce contrôle — et non par
+vérification HTTP, qui exigerait que le serveur soit joignable depuis
+Internet.
 
-Il faut aussi que les ports **80 et 443** soient joignables depuis l'extérieur.
-Le 80 sert uniquement à la vérification du certificat et à la redirection.
+C'est ce qui permet d'héberger sur le réseau interne d'un établissement sans
+rien y ouvrir : l'enregistrement peut parfaitement pointer vers une adresse
+privée. Il doit exister et résoudre, sinon les écrans ne trouveront pas le
+serveur — mais personne d'autre n'a besoin de l'atteindre.
+
+Il faut donc aussi **des identifiants d'API chez l'hébergeur de la zone**.
+Le fichier `.env.exemple` détaille les droits à accorder, qui se limitent à
+l'écriture d'enregistrements dans une seule zone.
+
+Aucun flux entrant depuis Internet n'est nécessaire.
 
 ## L'installation
 
@@ -127,20 +136,26 @@ ce qu'ils ont en cache, et reprennent contact dans les secondes qui suivent.
 Mesuré : le canal de commandes se rétablit en 6,9 s, le manifeste est repollé
 à 12,8 s.
 
-## Si l'école n'a pas de domaine public
+## Si l'établissement n'a pas de domaine
 
-Le certificat automatique suppose un domaine joignable depuis Internet. Sur un
-réseau interne fermé, deux chemins :
+Le domaine n'a pas à être le sien. Un sous-domaine d'une zone que vous
+contrôlez déjà convient — et vaut souvent mieux : l'établissement n'a alors
+rien à fournir, et le renouvellement ne dépend d'aucune demande à son service
+informatique.
 
-- **Un domaine public qui pointe sur une adresse privée.** Caddy sait alors
-  obtenir un certificat par vérification DNS. C'est la solution propre, et
-  elle demande un accès à la zone DNS.
-- **L'autorité interne de Caddy** (`tls internal` dans le Caddyfile). Le
-  certificat n'est signé par personne de connu : chaque écran doit recevoir le
-  certificat racine dans `NODE_EXTRA_CA_CERTS`, faute de quoi l'agent refuse
-  la connexion — et il a raison de la refuser.
+Deux choses à savoir avant de choisir cette voie :
 
-Ce choix se prend avec le service informatique de l'école, pas à sa place.
+- **Les écrans dépendront d'un domaine qui n'appartient pas à
+  l'établissement.** Si la zone expire ou si la relation s'arrête, ses
+  couloirs tombent. Que ce soit un choix écrit, pas une surprise.
+- **L'adresse privée devient publiquement lisible**, et le nom du
+  sous-domaine apparaît dans les journaux de transparence des certificats.
+  Sans gravité — une adresse privée ne mène nulle part de l'extérieur — mais
+  choisissez un nom neutre si la discrétion compte.
+
+Reste l'autorité interne de Caddy (`tls internal`), qui n'exige aucun domaine
+mais demande de déposer le certificat racine sur chaque écran, faute de quoi
+l'agent refuse la connexion — et il a raison de la refuser.
 
 ## Ce qui n'est pas encore là
 

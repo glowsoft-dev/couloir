@@ -84,7 +84,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: étiquettes
+      - name: étiquettes du serveur
         id: etiquettes
         uses: docker/metadata-action@v5
         with:
@@ -96,7 +96,7 @@ jobs:
             type=sha,format=long
             type=ref,event=tag
 
-      - name: construction et publication
+      - name: construction et publication du serveur
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -104,5 +104,33 @@ jobs:
           push: ${{ github.event_name == 'push' }}
           tags: ${{ steps.etiquettes.outputs.tags }}
           labels: ${{ steps.etiquettes.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # La terminaison TLS, reconstruite avec le module DNS d'OVH.
+      #
+      # L'image officielle de Caddy ne le contient pas : les fournisseurs DNS
+      # sont compilés dans le binaire. Sans lui, le certificat ne s'obtient que
+      # par une vérification HTTP, donc en ouvrant le serveur sur Internet —
+      # exactement ce que l'établissement ne veut pas.
+      - name: étiquettes de la terminaison TLS
+        id: etiquettes-tls
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}/tls
+          tags: |
+            type=raw,value=main,enable={{is_default_branch}}
+            type=sha,format=long
+            type=ref,event=tag
+
+      - name: construction et publication de la terminaison TLS
+        uses: docker/build-push-action@v6
+        with:
+          context: deploiement
+          file: deploiement/Dockerfile.caddy
+          platforms: linux/amd64,linux/arm64
+          push: ${{ github.event_name == 'push' }}
+          tags: ${{ steps.etiquettes-tls.outputs.tags }}
+          labels: ${{ steps.etiquettes-tls.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max

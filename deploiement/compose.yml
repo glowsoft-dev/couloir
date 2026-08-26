@@ -22,7 +22,7 @@ services:
     # Jamais exposée : seul le serveur la joint, par le réseau interne.
 
   serveur:
-    image: ${COULOIR_IMAGE:-couloir-serveur:latest}
+    image: ${COULOIR_IMAGE:-ghcr.io/glowsoft-dev/couloir/serveur:main}
     restart: unless-stopped
     depends_on:
       base:
@@ -40,12 +40,22 @@ services:
     # Pas de ports publiés : on ne joint le serveur qu'à travers Caddy.
 
   tls:
-    image: caddy:2-alpine
+    # Caddy reconstruit avec le module DNS d'OVH : l'image officielle ne le
+    # contient pas, et sans lui le certificat ne peut s'obtenir que par une
+    # vérification HTTP, donc en ouvrant le serveur sur Internet.
+    image: ${COULOIR_IMAGE_TLS:-ghcr.io/glowsoft-dev/couloir/tls:main}
     restart: unless-stopped
     depends_on: [serveur]
     ports: ["80:80", "443:443", "443:443/udp"]
     environment:
       COULOIR_DOMAINE: ${COULOIR_DOMAINE:?définissez COULOIR_DOMAINE dans .env}
+      # Les identifiants d'API OVH, à générer sur api.ovh.com. Ils n'ont
+      # besoin que du droit d'écrire dans la zone — c'est tout ce que la
+      # vérification DNS demande.
+      OVH_ENDPOINT: ${OVH_ENDPOINT:-ovh-eu}
+      OVH_APPLICATION_KEY: ${OVH_APPLICATION_KEY:?définissez OVH_APPLICATION_KEY dans .env}
+      OVH_APPLICATION_SECRET: ${OVH_APPLICATION_SECRET:?définissez OVH_APPLICATION_SECRET dans .env}
+      OVH_CONSUMER_KEY: ${OVH_CONSUMER_KEY:?définissez OVH_CONSUMER_KEY dans .env}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy-donnees:/data
