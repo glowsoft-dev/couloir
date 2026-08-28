@@ -170,6 +170,38 @@ sed -i "s|^Environment=COULOIR_SERVER=.*|Environment=COULOIR_SERVER=${SERVER}|" 
 NODE_BIN="$(command -v node)"
 sed -i "s|^ExecStart=.* /var/lib/couloir/lecteur/courant/couloir-player.mjs|ExecStart=${NODE_BIN} /var/lib/couloir/lecteur/courant/couloir-player.mjs|" \
   /etc/systemd/system/couloir-player.service
+#
+# Le droit de se relancer, et rien d'autre.
+#
+# Le lecteur se met à jour tout seul : il télécharge la nouvelle version,
+# vérifie son empreinte, la pose — puis doit redémarrer son propre service.
+# Sans cette règle, systemd répond « Interactive authentication required », et
+# la version posée n'entre en service qu'au prochain redémarrage de la
+# machine. Sur un écran qui tourne des mois, autant dire jamais : le parc
+# resterait sur une version périmée en croyant se mettre à jour.
+#
+# La règle est étroite à dessein. Elle nomme les deux services et le seul
+# compte concerné : elle ne donne pas à `couloir` le droit d'agir sur les
+# autres unités de la machine.
+#
+install -d /etc/polkit-1/rules.d
+cat > /etc/polkit-1/rules.d/50-couloir.rules <<'POLKIT'
+// Posé par l'installateur Couloir. Le lecteur redémarre ses propres services
+// après s'être mis à jour, et ceux-là seulement.
+polkit.addRule(function (action, subject) {
+  if (
+    action.id === "org.freedesktop.systemd1.manage-units" &&
+    subject.user === "couloir"
+  ) {
+    var unite = action.lookup("unit");
+    if (unite === "couloir-player.service" || unite === "couloir-kiosk.service") {
+      return polkit.Result.YES;
+    }
+  }
+});
+POLKIT
+chmod 644 /etc/polkit-1/rules.d/50-couloir.rules
+
 systemctl daemon-reload
 systemctl enable --now couloir-player
 # Le kiosque n'est activé que s'il y a de quoi afficher : un boîtier sans
