@@ -29,7 +29,12 @@ TTYVTDisallocate=yes
 ExecStart=/opt/couloir/player/kiosk.sh
 # Un verrou laissé par un X mort empêche le suivant de démarrer, et le
 # service tourne alors en boucle sans jamais rien afficher.
-ExecStartPre=-/bin/rm -f /tmp/.X0-lock /tmp/.X11-unix/X0
+#
+# Le `+` fait tourner ce nettoyage en root, et il n'est pas facultatif :
+# /tmp porte le bit collant, si bien que `couloir` ne peut pas effacer un
+# fichier laissé par quelqu'un d'autre. Sans lui, le nettoyage échouait en
+# silence et X refusait de s'ouvrir un socket.
+ExecStartPre=+-/bin/rm -f /tmp/.X0-lock /tmp/.X11-unix/X0
 Restart=always
 RestartSec=3
 

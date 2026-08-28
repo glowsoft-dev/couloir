@@ -54,6 +54,13 @@ command -v unclutter >/dev/null && unclutter -idle 0 -root &
 exec "$BROWSER" \
   --kiosk \
   --app="http://127.0.0.1:${PORT}/" \
+  `# Sans ça, Chromium réclame un mot de passe pour créer un trousseau de` \
+  `# clés au premier lancement, et attend. La dalle affiche alors une boîte` \
+  `# de dialogue à la place du contenu — sur chaque écran, le jour de la` \
+  `# pose. Il n'a de toute façon aucun secret à ranger : il ouvre une page` \
+  `# locale, sans compte ni mot de passe.` \
+  --password-store=basic \
+  --use-mock-keychain \
   --noerrdialogs \
   --disable-infobars \
   --disable-session-crashed-bubble \
