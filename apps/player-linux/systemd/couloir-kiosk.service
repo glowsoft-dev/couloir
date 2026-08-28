@@ -6,19 +6,30 @@ Description=Couloir — affichage kiosque
 After=couloir-player.service graphical.target
 Requires=couloir-player.service
 
+# Le terminal, qu'il faut prendre à qui l'occupe.
+#
+# Le kiosque démarre son propre serveur X — voir kiosk.sh — et X veut un
+# terminal virtuel. Or Raspberry Pi OS y lance une invite de connexion.
+# Sans ces deux lignes, systemd attend indéfiniment un tty qu'il n'obtiendra
+# jamais : le service se dit « actif », rien ne tourne, et le journal reste
+# muet. C'est le pire des trois symptômes possibles, parce qu'il ressemble à
+# un succès.
+Conflicts=getty@tty1.service
+After=getty@tty1.service
+
 [Service]
 Type=simple
 User=couloir
 Environment=DISPLAY=:0
-# Le kiosque démarre son propre serveur X quand il n'en trouve pas — voir
-# kiosk.sh. Il lui faut donc un terminal virtuel, que systemd ne donne pas
-# par défaut à un service.
+Environment=COULOIR_PORT=8080
 TTYPath=/dev/tty1
-StandardInput=tty
+StandardInput=tty-force
 StandardOutput=journal
 TTYVTDisallocate=yes
-Environment=COULOIR_PORT=8080
 ExecStart=/opt/couloir/player/kiosk.sh
+# Un verrou laissé par un X mort empêche le suivant de démarrer, et le
+# service tourne alors en boucle sans jamais rien afficher.
+ExecStartPre=-/bin/rm -f /tmp/.X0-lock /tmp/.X11-unix/X0
 Restart=always
 RestartSec=3
 
