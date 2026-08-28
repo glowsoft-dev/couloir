@@ -139,6 +139,28 @@ trap 'rm -rf "$TEMPO_APPOINT"' EXIT
 recuperer kiosk.sh scripts/kiosk.sh "$PREFIX"/kiosk.sh 755
 chown -R couloir:couloir /opt/couloir
 
+#
+# De quoi laisser le kiosque démarrer son propre serveur X.
+#
+# Sans bureau installé — ce qu'on veut pour un écran de couloir — personne ne
+# lance X, et c'est donc au kiosque de le faire. Deux choses le lui
+# permettent : l'appartenance aux groupes qui donnent accès à la carte
+# graphique et au terminal, et l'autorisation de lancer X sans être root.
+#
+# Par défaut, Debian réserve ce lancement à une console déjà ouverte. Un
+# service systemd n'en a aucune : sans cette ligne, Chromium sort sur
+# « Missing X server » et la dalle reste noire pendant que tout le reste
+# fonctionne.
+#
+usermod -aG video,input,tty,render couloir 2>/dev/null || usermod -aG video,input,tty couloir
+install -d /etc/X11
+cat > /etc/X11/Xwrapper.config <<'XWRAPPER'
+# Posé par l'installateur Couloir : le kiosque démarre X depuis un service,
+# sans console de rattachement.
+allowed_users=anybody
+needs_root_rights=yes
+XWRAPPER
+
 echo "→ services"
 recuperer couloir-player.service systemd/couloir-player.service /etc/systemd/system/couloir-player.service 644
 recuperer couloir-kiosk.service systemd/couloir-kiosk.service /etc/systemd/system/couloir-kiosk.service 644

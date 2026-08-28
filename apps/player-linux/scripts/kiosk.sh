@@ -25,6 +25,32 @@ fi
 # noir deux secondes qu'une page d'erreur du navigateur devant les élèves.
 until curl -sf "http://127.0.0.1:${PORT}/state" >/dev/null 2>&1; do sleep 1; done
 
+#
+# Le serveur graphique, qu'on lance nous-mêmes.
+#
+# L'unité posait `DISPLAY=:0` en supposant qu'un serveur X tournait déjà.
+# Sur une installation sans bureau — celle qu'on veut pour un écran de
+# couloir, qui n'a rien à faire d'un gestionnaire de session — il n'y en a
+# aucun, et Chromium sortait sur « Missing X server or $DISPLAY ». L'agent
+# tournait, le contenu arrivait, et la dalle restait noire.
+#
+# On se relance donc sous `xinit`, qui démarre X puis nous rappelle avec un
+# affichage bien à nous. Le drapeau évite la récursion.
+#
+if [ "${1:-}" != "--sous-x" ]; then
+  if xset q >/dev/null 2>&1; then
+    # Un affichage existe déjà — un bureau, par exemple. On s'y greffe.
+    :
+  else
+    exec xinit "$0" --sous-x -- "${DISPLAY:-:0}" vt1 -nolisten tcp
+  fi
+fi
+
+# Ni économiseur d'écran, ni extinction, ni curseur : une dalle de couloir
+# reste allumée, et rien ne doit venir s'y superposer.
+xset s off -dpms s noblank 2>/dev/null || true
+command -v unclutter >/dev/null && unclutter -idle 0 -root &
+
 exec "$BROWSER" \
   --kiosk \
   --app="http://127.0.0.1:${PORT}/" \

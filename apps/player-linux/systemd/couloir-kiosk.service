@@ -10,6 +10,13 @@ Requires=couloir-player.service
 Type=simple
 User=couloir
 Environment=DISPLAY=:0
+# Le kiosque démarre son propre serveur X quand il n'en trouve pas — voir
+# kiosk.sh. Il lui faut donc un terminal virtuel, que systemd ne donne pas
+# par défaut à un service.
+TTYPath=/dev/tty1
+StandardInput=tty
+StandardOutput=journal
+TTYVTDisallocate=yes
 Environment=COULOIR_PORT=8080
 ExecStart=/opt/couloir/player/kiosk.sh
 Restart=always
