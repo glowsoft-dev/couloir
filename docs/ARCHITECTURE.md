@@ -1916,6 +1916,31 @@ Docker** : on vérifie l'application, pas la terminaison TLS ni le DNS, qui ont
 leurs propres pannes et les signaleraient à tort comme un défaut de la
 nouvelle image.
 
+## La demi-journée, et la taille qui va avec
+
+Douze séances sur une dalle, c'est du texte qu'on ne lit pas en passant à
+quatre mètres. Et personne, dans un couloir à neuf heures, ne cherche la salle
+du cours de seize heures.
+
+Un écran peut donc ne montrer que **la demi-journée en cours** — le matin les
+cours du matin, l'après-midi ceux de l'après-midi. Deux fois moins de lignes,
+deux fois plus grandes : **c'est la même décision**, pas deux réglages.
+
+Deux garde-fous, pour la même raison — un écran vide est pire qu'un écran
+chargé. Si la demi-journée en cours n'a rien, on montre l'autre : un couloir à
+dix-huit heures doit dire ce qu'il y a demain matin. Et si le tri ne laisse
+rien du tout, on rend la journée entière.
+
+### La taille suit la place, pas seulement la dalle
+
+L'échelle typographique se déduisait de la hauteur de l'écran, ce qui convient
+à un titre mais pas à une liste : quatre séances dans une colonne de mille
+pixels laissaient les deux tiers vides avec du texte resté petit.
+
+Elle est bornée des deux côtés. En bas, parce qu'en dessous ça ne se lit plus
+de loin — mieux vaut déborder que mentir sur la lisibilité. En haut, parce
+qu'une seule séance en lettres géantes ressemble à une panne.
+
 ## Ce qui n'est pas encore fait
 
 Le socle tourne, mais il reste volontairement incomplet :

@@ -107,6 +107,8 @@ export interface PublishSpec {
    * Absent = tout. Liste vide = seulement l'heure et l'intitulé.
    */
   timetableChamps?: ChampEdt[];
+  /** Ne montrer que la demi-journée en cours, en plus grand. */
+  timetableDemiJournee?: boolean;
   /** Ce que l'écran montre quand rien n'est programmé pour maintenant. */
   parDefaut?: { assetId?: string; emploiDuTemps?: boolean };
   /** Plages d'extinction de la dalle. Un message d'urgence la rallume. */

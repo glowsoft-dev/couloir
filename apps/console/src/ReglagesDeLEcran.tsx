@@ -27,6 +27,8 @@ export function ReglagesDeLEcran({
   setAfficheursChoisis,
   champsEdt,
   setChampsEdt,
+  demiJournee,
+  setDemiJournee,
   classIds,
   setClassIds,
   displayOff,
@@ -45,6 +47,8 @@ export function ReglagesDeLEcran({
   setAfficheursChoisis: (f: (c: string[]) => string[]) => void;
   champsEdt: ChampEdt[] | null;
   setChampsEdt: (f: (c: ChampEdt[] | null) => ChampEdt[]) => void;
+  demiJournee: boolean;
+  setDemiJournee: (v: boolean) => void;
   classIds: string[];
   setClassIds: (f: (c: string[]) => string[]) => void;
   displayOff: DisplayOffWindow[];

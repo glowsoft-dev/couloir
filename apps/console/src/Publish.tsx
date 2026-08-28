@@ -101,6 +101,8 @@ export function PublishPanel({
    * qui veut dire « seulement l'heure et l'intitulé » — un choix délibéré.
    */
   const [champsEdt, setChampsEdt] = useState<ChampEdt[] | null>(null);
+  /** Ne montrer que la demi-journée en cours, en plus grand. */
+  const [demiJournee, setDemiJournee] = useState(false);
   /** Ce que l'écran montre quand rien n'est programmé pour maintenant. */
   const [parDefaut, setParDefaut] = useState<{ assetId?: string; emploiDuTemps?: boolean }>({});
   /** L'onglet ouvert dans l'éditeur. */
@@ -163,6 +165,7 @@ export function PublishPanel({
         setActualites(spec.actualites ?? 0);
         setAfficheursChoisis(spec.timetableAfficheurs ?? []);
         setChampsEdt(spec.timetableChamps ?? null);
+        setDemiJournee(spec.timetableDemiJournee ?? false);
         setParDefaut(spec.parDefaut ?? {});
       } else {
         setLayout("plein-ecran");
@@ -198,6 +201,7 @@ export function PublishPanel({
       ...(actualites > 0 ? { actualites } : {}),
       ...(afficheursChoisis.length > 0 ? { timetableAfficheurs: afficheursChoisis } : {}),
       ...(champsEdt !== null ? { timetableChamps: champsEdt } : {}),
+      ...(demiJournee ? { timetableDemiJournee: true } : {}),
       ...(parDefaut.assetId || parDefaut.emploiDuTemps ? { parDefaut } : {}),
     };
   }
@@ -557,6 +561,8 @@ export function PublishPanel({
               setAfficheursChoisis={setAfficheursChoisis}
               champsEdt={champsEdt}
               setChampsEdt={setChampsEdt}
+              demiJournee={demiJournee}
+              setDemiJournee={setDemiJournee}
               classIds={classIds}
               setClassIds={setClassIds}
               displayOff={displayOff}

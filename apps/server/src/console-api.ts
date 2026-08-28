@@ -118,6 +118,13 @@ const PublishBody = z.object({
    * l'intitulé.
    */
   timetableChamps: z.array(z.enum(["heureFin", "module", "salle", "enseignant"])).optional(),
+  /**
+   * Ne montrer que la demi-journée en cours.
+   *
+   * Une journée entière tient rarement sur une dalle sans devenir illisible,
+   * et personne à neuf heures ne cherche la salle du cours de seize heures.
+   */
+  timetableDemiJournee: z.boolean().optional(),
   /** Combien d'actualités du site tournent avec le reste. 0 = aucune. */
   actualites: z.number().int().min(0).max(10).optional(),
   /** Ce que l'écran montre quand rien n'est programmé pour maintenant. */
@@ -919,6 +926,7 @@ export function registerConsoleApi(app: FastifyInstance, options: ConsoleApiOpti
     "layout",
     "timetableAfficheurs",
     "timetableChamps",
+    "timetableDemiJournee",
     "timetableClassIds",
     "displayOff",
     "parDefaut",

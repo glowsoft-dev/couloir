@@ -2334,3 +2334,14 @@ button.ghost.danger:hover:not(:disabled) {
 .mois-reste { font-size: 10px; color: var(--ink-faint); }
 
 .mois-note { margin: 14px 0 0; font-size: 12.5px; color: var(--ink-faint); text-wrap: pretty; }
+
+/* La demi-journée : une case dans les réglages de l'écran, avec la raison
+   sous elle plutôt qu'ailleurs. */
+.demi-journee {
+  display: flex; align-items: flex-start; gap: 10px; margin-top: 14px;
+  padding: 12px 14px; border-radius: var(--r-bouton);
+  background: var(--surface-2); border: 1px solid var(--rule);
+  font-size: 13.5px; cursor: pointer;
+}
+.demi-journee input { width: auto; flex: none; margin: 2px 0 0; accent-color: var(--accent-texte); }
+.demi-journee .reglage-note { margin-top: 4px; }

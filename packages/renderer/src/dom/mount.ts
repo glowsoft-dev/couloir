@@ -1,5 +1,6 @@
 import type { RenderedSlide, RenderedZone, ScreenState } from "../director.js";
 import { typeScale } from "../readability.js";
+import { demiJourneeEnCours, minutesLocales, tailleDesLignes } from "../demi-journee.js";
 import { RENDERER_CSS } from "./styles.js";
 
 /**
@@ -304,7 +305,7 @@ function renderSlide(
     }
 
     case "data": {
-      renderDataView(doc, wrapper, slide);
+      renderDataView(doc, wrapper, slide, options.timezone ?? "Europe/Paris");
       if (slide.staleLabel) {
         // On dit franchement que la donnée n'est plus fraîche plutôt que de
         // laisser croire qu'elle l'est.
@@ -427,6 +428,7 @@ function renderDataView(
   doc: Document,
   wrapper: HTMLElement,
   slide: Extract<RenderedSlide, { kind: "data" }>,
+  timezone: string,
 ): void {
   if (slide.view.startsWith("timetable")) {
     const day = pickDay(slide.payload, slide.params["classId"]);
@@ -442,9 +444,34 @@ function renderDataView(
       return;
     }
 
+    /*
+     * La demi-journée en cours, quand l'écran le demande.
+     *
+     * Douze séances sur une dalle, c'est du texte qu'on ne lit pas en
+     * passant à quatre mètres — et personne, à neuf heures, ne cherche la
+     * salle du cours de seize heures. Moins de lignes, des lignes plus
+     * grandes : c'est la même décision.
+     */
+    const entrees =
+      slide.params["demiJournee"] === "1"
+        ? demiJourneeEnCours(day.entries, minutesLocales(Date.now(), timezone))
+        : day.entries;
+
     const list = doc.createElement("ul");
     list.className = "couloir-list";
-    for (const entry of day.entries) {
+    /*
+     * La taille suit la place disponible, pas seulement la hauteur de la
+     * dalle. Quatre séances dans une colonne de mille pixels laissaient les
+     * deux tiers vides avec du texte resté petit.
+     */
+    const hauteur = wrapper.clientHeight || wrapper.parentElement?.clientHeight || 0;
+    if (hauteur > 0 && entrees.length > 0) {
+      const base = Number.parseFloat(
+        doc.defaultView?.getComputedStyle(wrapper).fontSize ?? "24",
+      ) || 24;
+      list.style.fontSize = `${tailleDesLignes(hauteur, entrees.length, base)}px`;
+    }
+    for (const entry of entrees) {
       const changed = entry.change && entry.change !== "none";
       const row = doc.createElement("li");
       row.className = changed ? "couloir-row couloir-row--changed" : "couloir-row";

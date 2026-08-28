@@ -100,6 +100,8 @@ export interface PublishSpec {
    * Absent = tout. Une liste vide = seulement l'heure et l'intitulé.
    */
   timetableChamps?: string[];
+  /** Ne montrer que la demi-journée en cours, en plus grand. */
+  timetableDemiJournee?: boolean;
 }
 
 export interface ComposeInput {
@@ -356,6 +358,9 @@ export function compose(input: ComposeInput): Manifest {
   const paramsEdt: Record<string, string> = spec.timetableChamps
     ? { champs: spec.timetableChamps.join(",") }
     : {};
+  // Ne montrer que la demi-journée en cours, et grossir d'autant. Douze
+  // séances sur une dalle ne se lisent pas à quatre mètres.
+  if (spec.timetableDemiJournee) paramsEdt["demiJournee"] = "1";
 
   /**
    * L'emploi du temps comme contenu par défaut.
