@@ -28,6 +28,17 @@ export const RENDERER_CSS = `
   color: var(--ink);
   font-family: "Archivo", "Helvetica Neue", Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
+  /* Pas de curseur sur une dalle de couloir. On le masque ici plutôt qu'avec
+     un outil du systeme : unclutter ne vaut que pour X, et les boitiers
+     tournent aussi sous Wayland. La page est a nous, elle sait le faire
+     partout. */
+  cursor: none;
+  /* Ni selection ni tirer-deposer : personne ne saisit rien sur un mur, et
+     un texte surligne par un doigt curieux resterait bleu jusqu'au prochain
+     redemarrage. */
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
 }
 
 .couloir-zone {
