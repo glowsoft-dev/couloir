@@ -21,6 +21,18 @@ services:
   serveur:
     # Le port sort directement, puisqu'il n'y a plus de Caddy devant.
     ports: ["3000:3000"]
+    environment:
+      # L'adresse inscrite dans les manifestes, et donc celle par laquelle les
+      # écrans iront chercher leurs médias.
+      #
+      # `compose.yml` la déduit du domaine en https. Sans cette ligne, un
+      # essai en clair produirait des manifestes pointant vers une adresse en
+      # https qui ne répond pas — les écrans resteraient sur leur contenu
+      # précédent, et rien dans la console ne le signalerait.
+      COULOIR_PUBLIC_URL: ${COULOIR_PUBLIC_URL:?indiquez COULOIR_PUBLIC_URL, par exemple http://10.0.0.5:3000}
+      # Hors HTTPS, un cookie `Secure` n'est tout simplement pas posé par le
+      # navigateur, et la console deviendrait impossible à utiliser.
+      COULOIR_COOKIE_NON_SECURISE: "1"
 
   # Neutralisée : sans nom de domaine, elle tournerait en boucle sur une
   # demande de certificat qu'elle ne peut pas obtenir, et remplirait le
