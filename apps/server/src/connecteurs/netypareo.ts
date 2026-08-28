@@ -93,6 +93,54 @@ export function versDateIso(brut: string): string | null {
 }
 
 /**
+ * Décode les entités HTML que NetYPareo laisse passer.
+ *
+ * Ses libellés viennent d'un champ de saisie web, et arrivent avec le HTML
+ * dedans : « &nbsp; · Réunion Equipe Campus » s'affichait tel quel sur la
+ * dalle, entité comprise. Personne dans un couloir ne sait lire ça.
+ *
+ * On décode à l'entrée plutôt qu'à l'affichage : la donnée doit être propre
+ * partout où elle passe — l'aperçu de la console, les preuves de diffusion,
+ * et pas seulement l'écran.
+ */
+const ENTITES: Record<string, string> = {
+  nbsp: " ",
+  amp: "&",
+  lt: "<",
+  gt: ">",
+  quot: '"',
+  apos: "'",
+  eacute: "é",
+  egrave: "è",
+  agrave: "à",
+  ccedil: "ç",
+  ugrave: "ù",
+  ocirc: "ô",
+  icirc: "î",
+  ecirc: "ê",
+  acirc: "â",
+  euml: "ë",
+  iuml: "ï",
+  rsquo: "'",
+  hellip: "…",
+  laquo: "«",
+  raquo: "»",
+};
+
+export function decoderEntites(brut: string): string {
+  return brut
+    .replace(/&#(\d+);/g, (_, code: string) => String.fromCodePoint(Number(code)))
+    .replace(/&#[xX]([0-9a-fA-F]+);/g, (_, code: string) => String.fromCodePoint(parseInt(code, 16)))
+    .replace(/&([a-zA-Z]+);/g, (entier, nom: string) => ENTITES[nom.toLowerCase()] ?? entier)
+    // L'espace insécable décodé reste un espace insécable : on le ramène à un
+    // espace ordinaire, sinon la coupure de ligne s'en trouve empêchée au
+    // milieu d'un intitulé long.
+    .replace(/\u00a0/g, " ")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+}
+
+/**
  * Sépare salle et enseignant.
  *
  * NetYPareo rend deux lignes libres. On reconnaît la salle plutôt que de se
@@ -199,12 +247,14 @@ export async function chercherAfficheur(
 
   const seances = analyse.data.elements
     .map((e) => {
-      const { room, teacher } = separerLignes(e.lines);
-      const detail = precision(e.category, e.commentaire);
+      // Décodé à l'entrée, une fois pour toutes : la donnée doit être propre
+      // partout où elle passe, pas seulement sur la dalle.
+      const { room, teacher } = separerLignes(e.lines.map(decoderEntites));
+      const detail = precision(e.category, e.commentaire ? decoderEntites(e.commentaire) : e.commentaire);
       return {
         time: versHeure(e.horaires.debut, e.horaires.minuteDebut),
         endTime: versHeure(e.horaires.fin, e.horaires.minuteFin),
-        subject: e.title.trim(),
+        subject: decoderEntites(e.title),
         ...(detail ? { detail } : {}),
         room,
         ...(teacher ? { teacher } : {}),

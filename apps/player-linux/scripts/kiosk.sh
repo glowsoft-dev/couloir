@@ -64,7 +64,10 @@ exec "$BROWSER" \
   --noerrdialogs \
   --disable-infobars \
   --disable-session-crashed-bubble \
-  --disable-features=TranslateUI \
+  `# Le nom du drapeau a changé : TranslateUI seul ne suffit plus, et la` \
+  `# bannière « French / English » s'affichait en haut de la dalle.` \
+  --disable-features=Translate,TranslateUI \
+  --disable-translate \
   --check-for-update-interval=31536000 \
   --autoplay-policy=no-user-gesture-required \
   --disable-pinch \

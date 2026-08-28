@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { precision, separerLignes, versDateIso, versHeure } from "./netypareo.js";
+import { precision, separerLignes, versDateIso, versHeure, decoderEntites } from "./netypareo.js";
 
 /**
  * L'adaptateur NetYPareo.
@@ -118,5 +118,29 @@ describe("la séparation salle / enseignant", () => {
       room: "A distance",
       teacher: "Mme REGAN O.",
     });
+  });
+});
+
+describe("decoderEntites", () => {
+  it("décode l'espace insécable que NetYPareo laisse passer", () => {
+    // « &nbsp; · Réunion Equipe Campus » s'affichait tel quel sur la dalle,
+    // entité comprise. Personne dans un couloir ne sait lire ça.
+    expect(decoderEntites("&nbsp; · Réunion Equipe Campus")).toBe("· Réunion Equipe Campus");
+  });
+
+  it("décode les entités nommées et numériques", () => {
+    expect(decoderEntites("Fran&ccedil;ais &amp; math&eacute;matiques")).toBe(
+      "Français & mathématiques",
+    );
+    expect(decoderEntites("caf&#233; &#x41;")).toBe("café A");
+  });
+
+  it("laisse intact ce qui n'est pas une entité", () => {
+    expect(decoderEntites("BTS SIO 1 & 2")).toBe("BTS SIO 1 & 2");
+    expect(decoderEntites("R&D")).toBe("R&D");
+  });
+
+  it("réduit les espaces multiples que le décodage laisse", () => {
+    expect(decoderEntites("A&nbsp;&nbsp;&nbsp;B")).toBe("A B");
   });
 });
