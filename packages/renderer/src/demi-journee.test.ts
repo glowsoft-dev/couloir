@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { demiJourneeEnCours, minutesLocales, tailleDesLignes } from "./demi-journee.js";
+import {
+  defilement,
+  demiJourneeEnCours,
+  minutesLocales,
+  tailleDesLignes,
+} from "./demi-journee.js";
 
 const seance = (time: string) => ({ time, subject: `cours de ${time}`, room: "B 104" });
 
@@ -46,12 +51,47 @@ describe("tailleDesLignes", () => {
   it("ne descend jamais sous la taille de base", () => {
     // En dessous, ça ne se lit plus à quatre mètres : mieux vaut déborder
     // que mentir sur la lisibilité.
-    expect(tailleDesLignes(300, 20, 24)).toBe(24);
+    // Le plancher vaut désormais 1,7 fois la base : le commentaire ci-dessus
+    // le réclamait déjà, la valeur ne suivait pas.
+    expect(tailleDesLignes(300, 20, 24)).toBe(Math.round(24 * 1.7));
   });
 
-  it("ne dépasse pas plus du double", () => {
-    // Une seule séance en lettres géantes ressemble à une panne.
-    expect(tailleDesLignes(2000, 1, 24)).toBeLessThanOrEqual(Math.round(24 * 2.2));
+  it("plafonne, pour qu'une séance seule ne remplisse pas la dalle", () => {
+    expect(tailleDesLignes(2000, 1, 24)).toBe(24 * 4);
+  });
+
+  it("rend une demi-journée lisible de loin", () => {
+    // Cinq séances sur une dalle de 1080 : c'est le cas qui a motivé tout
+    // ceci, et 21 px ne se lisent pas à quatre mètres.
+    const base = 21;
+    const taille = tailleDesLignes(1000, 5, base);
+    expect(taille).toBeGreaterThanOrEqual(60);
+  });
+
+  it("ne rapetisse plus pour faire tenir une journée chargée", () => {
+    // Le comportement d'avant : douze séances tassées en petit. On préfère
+    // maintenant déborder — et défiler — plutôt que devenir illisible.
+    expect(tailleDesLignes(1000, 12, 21)).toBe(Math.round(21 * 1.7));
+  });
+});
+
+describe("defilement", () => {
+  it("ne bouge pas quand tout tient", () => {
+    expect(defilement(600, 1000)).toBeNull();
+  });
+
+  it("ignore un débord d'arrondi", () => {
+    expect(defilement(1003, 1000)).toBeNull();
+  });
+
+  it("descend exactement de ce qui dépasse", () => {
+    expect(defilement(1400, 1000)?.coursePx).toBe(400);
+  });
+
+  it("prend le temps de se lire", () => {
+    // 400 px à 28 px/s, aller et retour, plus les arrêts.
+    const d = defilement(1400, 1000);
+    expect(d?.dureeMs).toBeGreaterThan(20000);
   });
 
   it("rend la base sans ligne à placer", () => {

@@ -11,6 +11,13 @@
  */
 
 /** L'heure qui sépare matin et après-midi, en minutes depuis minuit. */
+/**
+ * La taille au-dessous de laquelle on refuse de descendre, en multiple de la
+ * taille de base de la dalle. À 1080p la base vaut 21 px : le plancher tombe
+ * donc à 36 px, ce qui se lit debout à quatre mètres.
+ */
+export const PLANCHER_LISIBLE = 1.7;
+
 export const BASCULE_PAR_DEFAUT = 13 * 60;
 
 function enMinutes(hhmm: string): number {
@@ -75,8 +82,65 @@ export function tailleDesLignes(
   base: number,
 ): number {
   if (nombreDeLignes <= 0) return base;
-  // Chaque ligne occupe environ deux fois et demie sa taille de police :
-  // l'intitulé, la salle en dessous, et l'espace entre les lignes.
-  const disponible = (hauteurZonePx * 0.82) / nombreDeLignes / 2.5;
-  return Math.round(Math.min(Math.max(disponible, base), base * 2.2));
+  /*
+   * Chaque ligne occupe environ deux fois et demie sa taille de police :
+   * l'intitulé, le module en dessous, et l'espace entre les lignes.
+   *
+   * On vise 90 % de la hauteur plutôt que la totalité — il faut de la marge
+   * pour le sur-titre et pour qu'une journée un peu plus chargée que prévu
+   * ne déborde pas hors de l'écran, où personne ne la verra.
+   */
+  const disponible = (hauteurZonePx * 0.9) / nombreDeLignes / 2.5;
+  /*
+   * Le plancher, qui est le vrai sujet.
+   *
+   * La première version rapetissait le texte jusqu'à ce que la journée
+   * entière tienne dans la dalle. C'est le mauvais arbitrage : une liste
+   * complète que personne ne peut lire en passant ne vaut pas mieux qu'une
+   * dalle éteinte. On garde donc une taille lisible à quatre mètres même
+   * quand ça déborde — et ce qui déborde défile, voir defilement().
+   */
+  const plancher = base * PLANCHER_LISIBLE;
+  /*
+   * Le plafond est haut, à quatre fois la base.
+   *
+   * Il ne sert qu'à empêcher qu'une séance unique remplisse la dalle de
+   * lettres géantes, ce qui ressemble à une panne. Trop bas, il annule tout
+   * l'intérêt : cinq séances dans mille pixels ont la place d'être lues à
+   * quatre mètres, et c'est la seule chose qu'on demande à un écran de
+   * couloir.
+   */
+  return Math.round(Math.min(Math.max(disponible, plancher), base * 4));
+}
+
+/**
+ * Le défilement d'une liste trop longue pour sa zone.
+ *
+ * Rendu nécessaire par le plancher ci-dessus : puisqu'on refuse de rapetisser
+ * le texte, une journée chargée dépasse, et les dernières séances de la
+ * journée — celles qu'on affiche le matin pour l'après-midi — tomberaient
+ * hors de l'écran sans que personne le sache.
+ *
+ * Rend `null` quand tout tient : une liste courte qui se met à bouger
+ * attire l'oeil pour rien, et sur un mur ça fatigue.
+ */
+export function defilement(
+  hauteurContenuPx: number,
+  hauteurVisiblePx: number,
+): { coursePx: number; dureeMs: number } | null {
+  const debord = Math.ceil(hauteurContenuPx - hauteurVisiblePx);
+  // Sous quelques pixels, c'est une erreur d'arrondi de mise en page, pas du
+  // contenu caché. Faire défiler pour ça ne montrerait rien de plus.
+  if (debord < 8) return null;
+  /*
+   * Assez lent pour se lire, et le trajet compte double : la liste descend,
+   * puis remonte. Les deux temps d'arrêt laissent le temps de lire le haut
+   * — l'heure qu'il est — et le bas — la fin de la journée.
+   */
+  const VITESSE_PX_PAR_SECONDE = 28;
+  const ARRETS_MS = 6000;
+  return {
+    coursePx: debord,
+    dureeMs: Math.round((debord / VITESSE_PX_PAR_SECONDE) * 2 * 1000) + ARRETS_MS,
+  };
 }

@@ -1,6 +1,6 @@
 import type { RenderedSlide, RenderedZone, ScreenState } from "../director.js";
 import { typeScale } from "../readability.js";
-import { demiJourneeEnCours, minutesLocales, tailleDesLignes } from "../demi-journee.js";
+import { defilement, demiJourneeEnCours, minutesLocales, tailleDesLignes } from "../demi-journee.js";
 import { RENDERER_CSS } from "./styles.js";
 
 /**
@@ -424,6 +424,57 @@ function renderNews(
   if (article.extrait) wrapper.appendChild(el(doc, "p", "couloir-body", article.extrait));
 }
 
+/**
+ * Agrandit la journée jusqu'à la place disponible, et fait défiler le reste.
+ *
+ * Séparée du montage, et surtout DIFFÉRÉE, parce que la mesure ne veut rien
+ * dire avant : `renderSlide` construit la diapositive hors de la page et ne
+ * la rattache qu'ensuite. Mesurée dans la foulée, la hauteur valait zéro, le
+ * calcul était sauté sans bruit, et l'écran gardait un corps de texte de
+ * vingt pixels qu'on ne lit pas depuis le couloir. Le défaut ne se voyait ni
+ * dans les tests, qui portent sur les fonctions pures, ni à la construction.
+ *
+ * Deux images d'attente : la première rattache, la seconde dispose. Et une
+ * troisième passe quand les polices arrivent, car Archivo n'a pas les mêmes
+ * métriques que la police de secours — une liste mesurée trop tôt déborde
+ * ensuite sans que rien ne défile.
+ */
+function ajusterLaJournee(
+  doc: Document,
+  wrapper: HTMLElement,
+  list: HTMLElement,
+  nombreDeLignes: number,
+): void {
+  if (nombreDeLignes <= 0) return;
+  const vue = doc.defaultView;
+
+  const ajuster = (): void => {
+    if (!wrapper.isConnected) return;
+    const hauteur = wrapper.clientHeight;
+    if (hauteur <= 0) return;
+
+    const base =
+      Number.parseFloat(vue?.getComputedStyle(wrapper).fontSize ?? "24") || 24;
+    list.style.fontSize = `${tailleDesLignes(hauteur, nombreDeLignes, base)}px`;
+
+    // Mesuré APRÈS la nouvelle taille : c'est le texte agrandi qui déborde,
+    // pas celui d'avant.
+    const glissement = defilement(wrapper.scrollHeight, hauteur);
+    list.classList.toggle("couloir-defile", glissement !== null);
+    if (glissement) {
+      list.style.setProperty("--defile-course", `-${glissement.coursePx}px`);
+      list.style.setProperty("--defile-duree", `${glissement.dureeMs}ms`);
+    }
+  };
+
+  if (vue?.requestAnimationFrame) {
+    vue.requestAnimationFrame(() => vue.requestAnimationFrame(ajuster));
+  } else {
+    ajuster();
+  }
+  doc.fonts?.ready?.then(ajuster).catch(() => {});
+}
+
 function renderDataView(
   doc: Document,
   wrapper: HTMLElement,
@@ -459,18 +510,6 @@ function renderDataView(
 
     const list = doc.createElement("ul");
     list.className = "couloir-list";
-    /*
-     * La taille suit la place disponible, pas seulement la hauteur de la
-     * dalle. Quatre séances dans une colonne de mille pixels laissaient les
-     * deux tiers vides avec du texte resté petit.
-     */
-    const hauteur = wrapper.clientHeight || wrapper.parentElement?.clientHeight || 0;
-    if (hauteur > 0 && entrees.length > 0) {
-      const base = Number.parseFloat(
-        doc.defaultView?.getComputedStyle(wrapper).fontSize ?? "24",
-      ) || 24;
-      list.style.fontSize = `${tailleDesLignes(hauteur, entrees.length, base)}px`;
-    }
     for (const entry of entrees) {
       const changed = entry.change && entry.change !== "none";
       const row = doc.createElement("li");
@@ -516,6 +555,7 @@ function renderDataView(
       list.appendChild(row);
     }
     wrapper.appendChild(list);
+    ajusterLaJournee(doc, wrapper, list, entrees.length);
     return;
   }
 

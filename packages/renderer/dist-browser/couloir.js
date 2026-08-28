@@ -1,4 +1,4 @@
-const O = {
+const D = {
   Mon: 1,
   Tue: 2,
   Wed: 3,
@@ -7,59 +7,59 @@ const O = {
   Sat: 6,
   Sun: 7
 };
-function D(e, t) {
+function L(e, t) {
   const n = new Intl.DateTimeFormat("en-CA", {
     timeZone: t,
     year: "numeric",
     month: "2-digit",
     day: "2-digit"
-  }).formatToParts(new Date(e)), r = (i) => n.find((a) => a.type === i)?.value ?? "";
-  return `${r("year")}-${r("month")}-${r("day")}`;
+  }).formatToParts(new Date(e)), i = (r) => n.find((o) => o.type === r)?.value ?? "";
+  return `${i("year")}-${i("month")}-${i("day")}`;
 }
-function E(e, t) {
+function C(e, t) {
   const n = new Intl.DateTimeFormat("en-US", {
     timeZone: t,
     weekday: "short",
     hour: "2-digit",
     minute: "2-digit",
     hour12: !1
-  }).formatToParts(new Date(e)), r = (o) => n.find((l) => l.type === o)?.value ?? "", i = Number(r("hour")) % 24, a = Number(r("minute"));
+  }).formatToParts(new Date(e)), i = (s) => n.find((a) => a.type === s)?.value ?? "", r = Number(i("hour")) % 24, o = Number(i("minute"));
   return {
-    dayOfWeek: O[r("weekday")] ?? 1,
-    minutesOfDay: i * 60 + a
+    dayOfWeek: D[i("weekday")] ?? 1,
+    minutesOfDay: r * 60 + o
   };
 }
 function x(e) {
   const [t, n] = e.split(":");
   return Number(t) * 60 + Number(n);
 }
-function z(e, t, n) {
-  const r = x(t), i = x(n);
-  return r === i ? !0 : r < i ? e >= r && e < i : e >= r || e < i;
+function M(e, t, n) {
+  const i = x(t), r = x(n);
+  return i === r ? !0 : i < r ? e >= i && e < r : e >= i || e < r;
 }
-function $(e, t, n) {
+function T(e, t, n) {
   if (!t) return { status: "never-loaded" };
-  const r = Math.max(0, (n - t.fetchedAtMs) / 1e3);
-  if (r <= e.maxStaleSec)
+  const i = Math.max(0, (n - t.fetchedAtMs) / 1e3);
+  if (i <= e.maxStaleSec)
     return {
       status: "usable",
       payload: t.payload,
-      ageSec: r,
-      needsRefresh: r > e.ttlSec
+      ageSec: i,
+      needsRefresh: i > e.ttlSec
     };
   switch (e.stalePolicy) {
     case "keep-with-date":
-      return { status: "stale-shown", payload: t.payload, ageSec: r, fetchedAtMs: t.fetchedAtMs };
+      return { status: "stale-shown", payload: t.payload, ageSec: i, fetchedAtMs: t.fetchedAtMs };
     case "hide":
-      return { status: "hidden", ageSec: r };
+      return { status: "hidden", ageSec: i };
     case "fallback":
-      return { status: "fallback", ageSec: r };
+      return { status: "fallback", ageSec: i };
   }
 }
-function N(e) {
+function O(e) {
   return e.status === "usable" || e.status === "stale-shown";
 }
-function T(e, t = "fr-FR", n = "Europe/Paris") {
+function $(e, t = "fr-FR", n = "Europe/Paris") {
   return e.status !== "stale-shown" ? null : `Mis à jour ${new Intl.DateTimeFormat(t, {
     timeZone: n,
     weekday: "long",
@@ -67,60 +67,60 @@ function T(e, t = "fr-FR", n = "Europe/Paris") {
     minute: "2-digit"
   }).format(new Date(e.fetchedAtMs))}`;
 }
-function L(e, t, n) {
+function q(e, t, n) {
   if (e.startsAt && t < Date.parse(e.startsAt) || e.endsAt && t >= Date.parse(e.endsAt)) return !1;
-  const r = E(t, n);
-  return !(e.daysOfWeek && e.daysOfWeek.length > 0 && !e.daysOfWeek.includes(r.dayOfWeek) || e.dailyStart && e.dailyEnd && !z(r.minutesOfDay, e.dailyStart, e.dailyEnd));
+  const i = C(t, n);
+  return !(e.daysOfWeek && e.daysOfWeek.length > 0 && !e.daysOfWeek.includes(i.dayOfWeek) || e.dailyStart && e.dailyEnd && !M(i.minutesOfDay, e.dailyStart, e.dailyEnd));
+}
+function R(e, t, n) {
+  const i = e.layout.zones.find((a) => a.id === t);
+  if (!i) return null;
+  const r = e.settings.timezone, o = e.schedules.filter((a) => a.zoneId === t).filter((a) => q(a, n, r));
+  if (o.length === 0) return i.playlistId;
+  let s = o[0];
+  for (const a of o.slice(1))
+    a.priority >= s.priority && (s = a);
+  return s.playlistId;
 }
 function W(e, t, n) {
-  const r = e.layout.zones.find((l) => l.id === t);
-  if (!r) return null;
-  const i = e.settings.timezone, a = e.schedules.filter((l) => l.zoneId === t).filter((l) => L(l, n, i));
-  if (a.length === 0) return r.playlistId;
-  let o = a[0];
-  for (const l of a.slice(1))
-    l.priority >= o.priority && (o = l);
-  return o.playlistId;
-}
-function q(e, t, n) {
   if (!e) return !0;
   if (e.startsAt && t < Date.parse(e.startsAt) || e.endsAt && t >= Date.parse(e.endsAt)) return !1;
-  const r = E(t, n);
-  if (e.dailyStart && e.dailyEnd && !z(r.minutesOfDay, e.dailyStart, e.dailyEnd))
+  const i = C(t, n);
+  if (e.dailyStart && e.dailyEnd && !M(i.minutesOfDay, e.dailyStart, e.dailyEnd))
     return !1;
   if (e.daysOfWeek && e.daysOfWeek.length > 0) {
-    const i = (r.dayOfWeek + 5) % 7 + 1, a = !!(e.dailyStart && e.dailyEnd) && x(e.dailyStart) > x(e.dailyEnd) && r.minutesOfDay < x(e.dailyEnd);
-    if (!e.daysOfWeek.includes(a ? i : r.dayOfWeek)) return !1;
+    const r = (i.dayOfWeek + 5) % 7 + 1, o = !!(e.dailyStart && e.dailyEnd) && x(e.dailyStart) > x(e.dailyEnd) && i.minutesOfDay < x(e.dailyEnd);
+    if (!e.daysOfWeek.includes(o ? r : i.dayOfWeek)) return !1;
   }
   return !0;
 }
-function R(e, t) {
-  const n = E(t, e.timezone), r = (n.dayOfWeek + 5) % 7 + 1;
-  return e.displayOff.some((i) => {
-    if (!z(n.minutesOfDay, i.from, i.to)) return !1;
-    if (i.daysOfWeek.length === 0) return !0;
-    const a = x(i.from), o = x(i.to), l = a > o && n.minutesOfDay < o;
-    return i.daysOfWeek.includes(l ? r : n.dayOfWeek);
+function _(e, t) {
+  const n = C(t, e.timezone), i = (n.dayOfWeek + 5) % 7 + 1;
+  return e.displayOff.some((r) => {
+    if (!M(n.minutesOfDay, r.from, r.to)) return !1;
+    if (r.daysOfWeek.length === 0) return !0;
+    const o = x(r.from), s = x(r.to), a = o > s && n.minutesOfDay < s;
+    return r.daysOfWeek.includes(a ? i : n.dayOfWeek);
   });
 }
-const j = 130, _ = 2500, U = 6e4, B = 1.9;
+const j = 130, U = 2500, B = 6e4, H = 1.9;
 function Z(e) {
   const t = e.trim();
   return t === "" ? 0 : t.split(/\s+/).length;
 }
-function H(e) {
-  const t = Z(e);
-  return Math.round(_ + t / j * 6e4);
-}
 function J(e) {
-  return e.kind !== "template" ? "" : Object.values(e.fields).filter((t) => typeof t == "string").join(" ");
+  const t = Z(e);
+  return Math.round(U + t / j * 6e4);
 }
 function X(e) {
-  const t = "durationMs" in e && e.durationMs ? e.durationMs : 0, n = H(J(e)), r = Math.min(Math.max(t, n), U);
-  return { effectiveMs: r, requestedMs: t, extended: r > t };
+  return e.kind !== "template" ? "" : Object.values(e.fields).filter((t) => typeof t == "string").join(" ");
 }
 function V(e) {
-  const t = Math.round(e * B / 100);
+  const t = "durationMs" in e && e.durationMs ? e.durationMs : 0, n = J(X(e)), i = Math.min(Math.max(t, n), B);
+  return { effectiveMs: i, requestedMs: t, extended: i > t };
+}
+function Y(e) {
+  const t = Math.round(e * H / 100);
   return {
     eyebrow: Math.round(t * 0.72),
     title: Math.round(t * 2.4),
@@ -128,212 +128,245 @@ function V(e) {
     caption: Math.round(t * 0.8)
   };
 }
-function P(e, t, n) {
-  for (let r = 1; r <= e.length; r++) {
-    const i = (t + r) % e.length, a = e[i];
-    if (a !== void 0 && n(a)) return i;
+function z(e, t, n) {
+  for (let i = 1; i <= e.length; i++) {
+    const r = (t + i) % e.length, o = e[r];
+    if (o !== void 0 && n(o)) return r;
   }
   return null;
 }
 function G(e, t) {
   for (let n = 0; n < e.length; n++) {
-    const r = e[n];
-    if (r !== void 0 && t(r)) return n;
+    const i = e[n];
+    if (i !== void 0 && t(i)) return n;
   }
   return null;
 }
 function A(e) {
-  const { state: t, playlistId: n, slideIds: r, isEligible: i, durationMsOf: a, nowMs: o } = e, l = t && t.playlistId === n ? r[t.index] ?? null : null, s = (d) => {
+  const { state: t, playlistId: n, slideIds: i, isEligible: r, durationMsOf: o, nowMs: s } = e, a = t && t.playlistId === n ? i[t.index] ?? null : null, l = (d) => {
     if (d === null)
-      return { state: null, currentSlideId: null, changed: l !== null };
-    const m = r[d];
+      return { state: null, currentSlideId: null, changed: a !== null };
+    const m = i[d];
     return {
-      state: { playlistId: n, index: d, slideStartedAtMs: o },
+      state: { playlistId: n, index: d, slideStartedAtMs: s },
       currentSlideId: m,
-      changed: m !== l
+      changed: m !== a
     };
   };
-  if (!t || t.playlistId !== n || t.index >= r.length)
-    return s(G(r, i));
-  const u = r[t.index];
-  if (u === void 0 || !i(u))
-    return s(P(r, t.index, i));
-  const p = a(u), g = o - t.slideStartedAtMs;
-  if (!(p === null ? e.mediaEnded === !0 : g >= p))
+  if (!t || t.playlistId !== n || t.index >= i.length)
+    return l(G(i, r));
+  const u = i[t.index];
+  if (u === void 0 || !r(u))
+    return l(z(i, t.index, r));
+  const p = o(u), h = s - t.slideStartedAtMs;
+  if (!(p === null ? e.mediaEnded === !0 : h >= p))
     return { state: t, currentSlideId: u, changed: !1 };
-  const c = P(r, t.index, i);
-  return s(c === null ? null : c);
+  const c = z(i, t.index, r);
+  return l(c === null ? null : c);
 }
-function Y(e) {
-  const { manifest: t, nowMs: n } = e, r = new Map(t.slides.map((f) => [f.id, f])), i = new Map(t.assets.map((f) => [f.id, f])), a = new Map(t.playlists.map((f) => [f.id, f])), o = new Map(
+function K(e) {
+  const { manifest: t, nowMs: n } = e, i = new Map(t.slides.map((f) => [f.id, f])), r = new Map(t.assets.map((f) => [f.id, f])), o = new Map(t.playlists.map((f) => [f.id, f])), s = new Map(
     t.dataSources.map((f) => [
       f.id,
-      $(f, e.sources.get(f.id), n)
+      T(f, e.sources.get(f.id), n)
     ])
-  ), l = t.settings.showScreenCodeWatermark ? e.screenCode ?? null : null, s = t.settings.branding?.accent ?? null, u = t.emergency;
+  ), a = t.settings.showScreenCodeWatermark ? e.screenCode ?? null : null, l = t.settings.branding?.accent ?? null, u = t.emergency;
   if (u && n < Date.parse(u.validUntil))
     return {
-      screen: { mode: "emergency", zones: [], emergency: u, identify: null, watermark: l, accent: s },
+      screen: { mode: "emergency", zones: [], emergency: u, identify: null, watermark: a, accent: l },
       rotations: new Map(e.rotations),
       transitions: []
     };
   if (e.identify)
     return {
-      screen: { mode: "identify", zones: [], emergency: null, identify: e.identify, watermark: null, accent: s },
+      screen: { mode: "identify", zones: [], emergency: null, identify: e.identify, watermark: null, accent: l },
       rotations: new Map(e.rotations),
       transitions: []
     };
-  if (R(t.settings, n))
+  if (_(t.settings, n))
     return {
-      screen: { mode: "display-off", zones: [], emergency: null, identify: null, watermark: null, accent: s },
+      screen: { mode: "display-off", zones: [], emergency: null, identify: null, watermark: null, accent: l },
       rotations: new Map(e.rotations),
       transitions: []
     };
   const p = (f) => {
-    const w = r.get(f);
-    if (!w || !q(w.visibility, n, t.settings.timezone)) return !1;
-    switch (w.kind) {
+    const v = i.get(f);
+    if (!v || !W(v.visibility, n, t.settings.timezone)) return !1;
+    switch (v.kind) {
       case "media":
-        return e.availableAssetIds.has(w.assetId);
+        return e.availableAssetIds.has(v.assetId);
       case "template":
-        return w.assetIds.every((b) => e.availableAssetIds.has(b));
+        return v.assetIds.every((k) => e.availableAssetIds.has(k));
       case "widget":
         return !0;
       case "data": {
-        const b = o.get(w.sourceId);
-        if (b === void 0 || !N(b)) return !1;
-        if (w.view.startsWith("timetable") && "payload" in b) {
-          const k = K(b.payload, w.params.classId);
-          if (k?.date && k.date !== D(n, t.settings.timezone)) return !1;
+        const k = s.get(v.sourceId);
+        if (k === void 0 || !O(k)) return !1;
+        if (v.view.startsWith("timetable") && "payload" in k) {
+          const I = Q(k.payload, v.params.classId);
+          if (I?.date && I.date !== L(n, t.settings.timezone)) return !1;
         }
         return !0;
       }
     }
-  }, g = (f) => {
-    const w = r.get(f);
-    return w ? w.kind === "media" && w.durationMs === void 0 ? null : X(w).effectiveMs : 0;
-  }, I = e.forceFallback ? "fallback" : "normal", c = /* @__PURE__ */ new Map(), d = [], m = [];
+  }, h = (f) => {
+    const v = i.get(f);
+    return v ? v.kind === "media" && v.durationMs === void 0 ? null : V(v).effectiveMs : 0;
+  }, b = e.forceFallback ? "fallback" : "normal", c = /* @__PURE__ */ new Map(), d = [], m = [];
   for (const f of t.layout.zones) {
-    const w = e.forceFallback ? t.fallbackPlaylistId : W(t, f.id, n) ?? f.playlistId, b = a.get(w), k = e.rotations.get(f.id), C = k && k.playlistId === w ? b?.slideIds[k.index] ?? null : null, S = A({
-      state: k,
-      playlistId: w,
-      slideIds: b?.slideIds ?? [],
+    const v = e.forceFallback ? t.fallbackPlaylistId : R(t, f.id, n) ?? f.playlistId, k = o.get(v), I = e.rotations.get(f.id), E = I && I.playlistId === v ? k?.slideIds[I.index] ?? null : null, S = A({
+      state: I,
+      playlistId: v,
+      slideIds: k?.slideIds ?? [],
       isEligible: p,
-      durationMsOf: g,
+      durationMsOf: h,
       nowMs: n,
       mediaEnded: e.mediaEndedZoneIds?.has(f.id) ?? !1
     });
     S.state && c.set(f.id, S.state), S.changed && d.push({
       zoneId: f.id,
-      fromSlideId: C,
+      fromSlideId: E,
       toSlideId: S.currentSlideId,
       atMs: n
     });
-    const M = S.currentSlideId ? r.get(S.currentSlideId) : void 0;
+    const P = S.currentSlideId ? i.get(S.currentSlideId) : void 0;
     if (m.push({
       zoneId: f.id,
       rect: f.rect,
-      playlistId: w,
-      slide: M ? F(M, i, o, t.settings.timezone) : null
+      playlistId: v,
+      slide: P ? F(P, r, s, t.settings.timezone) : null
     }), e.forceFallback) break;
   }
   if (!e.forceFallback && m.every((f) => f.slide === null)) {
-    const f = t.defaultPlaylistId ?? t.fallbackPlaylistId, w = a.get(f), b = t.layout.zones[0]?.id ?? "principal", k = A({
-      state: e.rotations.get(b),
+    const f = t.defaultPlaylistId ?? t.fallbackPlaylistId, v = o.get(f), k = t.layout.zones[0]?.id ?? "principal", I = A({
+      state: e.rotations.get(k),
       playlistId: f,
-      slideIds: w?.slideIds ?? [],
+      slideIds: v?.slideIds ?? [],
       isEligible: p,
-      durationMsOf: g,
+      durationMsOf: h,
       nowMs: n,
-      mediaEnded: e.mediaEndedZoneIds?.has(b) ?? !1
-    }), C = k.currentSlideId ? r.get(k.currentSlideId) : void 0;
-    if (C)
-      return k.state && c.set(b, k.state), {
+      mediaEnded: e.mediaEndedZoneIds?.has(k) ?? !1
+    }), E = I.currentSlideId ? i.get(I.currentSlideId) : void 0;
+    if (E)
+      return I.state && c.set(k, I.state), {
         screen: {
           mode: "normal",
           zones: [
             {
-              zoneId: b,
+              zoneId: k,
               rect: { xPercent: 0, yPercent: 0, widthPercent: 100, heightPercent: 100 },
               playlistId: f,
-              slide: F(C, i, o, t.settings.timezone)
+              slide: F(E, r, s, t.settings.timezone)
             }
           ],
           emergency: null,
           identify: null,
-          watermark: l,
-          accent: s
+          watermark: a,
+          accent: l
         },
         rotations: c,
         transitions: d
       };
   }
-  const v = e.forceFallback ? m.map((f) => ({ ...f, rect: { xPercent: 0, yPercent: 0, widthPercent: 100, heightPercent: 100 } })) : Q(m);
+  const w = e.forceFallback ? m.map((f) => ({ ...f, rect: { xPercent: 0, yPercent: 0, widthPercent: 100, heightPercent: 100 } })) : ee(m);
   return {
-    screen: { mode: I, zones: v, emergency: null, identify: null, watermark: l, accent: s },
+    screen: { mode: b, zones: w, emergency: null, identify: null, watermark: a, accent: l },
     rotations: c,
     transitions: d
   };
 }
-function F(e, t, n, r) {
+function F(e, t, n, i) {
   switch (e.kind) {
     case "media": {
-      const i = t.get(e.assetId);
-      return i ? { kind: "media", slideId: e.id, asset: i, fit: e.fit ?? "entier" } : null;
+      const r = t.get(e.assetId);
+      return r ? { kind: "media", slideId: e.id, asset: r, fit: e.fit ?? "entier" } : null;
     }
     case "template":
       return { kind: "template", slideId: e.id, templateId: e.templateId, fields: e.fields };
     case "widget":
       return { kind: "widget", slideId: e.id, widget: e.widget, config: e.config };
     case "data": {
-      const i = n.get(e.sourceId);
-      return !i || !N(i) ? null : {
+      const r = n.get(e.sourceId);
+      return !r || !O(r) ? null : {
         kind: "data",
         slideId: e.id,
         sourceId: e.sourceId,
         view: e.view,
-        payload: "payload" in i ? i.payload : null,
+        payload: "payload" in r ? r.payload : null,
         params: e.params,
-        staleLabel: T(i, "fr-FR", r)
+        staleLabel: $(r, "fr-FR", i)
       };
     }
   }
 }
-function K(e, t) {
+function Q(e, t) {
   const n = e?.days;
-  return Array.isArray(n) ? t ? n.find((r) => r.classId === t) ?? null : n[0] ?? null : e ?? null;
+  return Array.isArray(n) ? t ? n.find((i) => i.classId === t) ?? null : n[0] ?? null : e ?? null;
 }
-function Q(e) {
+function ee(e) {
   const t = /* @__PURE__ */ new Map();
-  for (const s of e) {
-    const u = `${s.rect.yPercent}:${s.rect.heightPercent}`, p = t.get(u);
-    p ? p.push(s) : t.set(u, [s]);
+  for (const l of e) {
+    const u = `${l.rect.yPercent}:${l.rect.heightPercent}`, p = t.get(u);
+    p ? p.push(l) : t.set(u, [l]);
   }
   const n = [];
-  for (const s of t.values()) {
-    const u = s.filter((d) => d.slide !== null);
+  for (const l of t.values()) {
+    const u = l.filter((d) => d.slide !== null);
     if (u.length === 0) continue;
-    const p = s.reduce((d, m) => d + m.rect.widthPercent, 0), g = u.reduce((d, m) => d + m.rect.widthPercent, 0), I = g > 0 ? p / g : 1;
-    let c = Math.min(...s.map((d) => d.rect.xPercent));
+    const p = l.reduce((d, m) => d + m.rect.widthPercent, 0), h = u.reduce((d, m) => d + m.rect.widthPercent, 0), b = h > 0 ? p / h : 1;
+    let c = Math.min(...l.map((d) => d.rect.xPercent));
     n.push(
       u.map((d) => {
-        const m = d.rect.widthPercent * I, h = { ...d, rect: { ...d.rect, xPercent: c, widthPercent: m } };
-        return c += m, h;
+        const m = d.rect.widthPercent * b, y = { ...d, rect: { ...d.rect, xPercent: c, widthPercent: m } };
+        return c += m, y;
       })
     );
   }
   if (n.length === 0) return [];
-  const r = [...t.values()].reduce((s, u) => s + (u[0]?.rect.heightPercent ?? 0), 0), i = n.reduce((s, u) => s + (u[0]?.rect.heightPercent ?? 0), 0), a = i > 0 ? r / i : 1, o = [];
-  let l = Math.min(...e.map((s) => s.rect.yPercent));
-  for (const s of n.sort((u, p) => (u[0]?.rect.yPercent ?? 0) - (p[0]?.rect.yPercent ?? 0))) {
-    const u = (s[0]?.rect.heightPercent ?? 0) * a;
-    for (const p of s)
-      o.push({ ...p, rect: { ...p.rect, yPercent: l, heightPercent: u } });
-    l += u;
+  const i = [...t.values()].reduce((l, u) => l + (u[0]?.rect.heightPercent ?? 0), 0), r = n.reduce((l, u) => l + (u[0]?.rect.heightPercent ?? 0), 0), o = r > 0 ? i / r : 1, s = [];
+  let a = Math.min(...e.map((l) => l.rect.yPercent));
+  for (const l of n.sort((u, p) => (u[0]?.rect.yPercent ?? 0) - (p[0]?.rect.yPercent ?? 0))) {
+    const u = (l[0]?.rect.heightPercent ?? 0) * o;
+    for (const p of l)
+      s.push({ ...p, rect: { ...p.rect, yPercent: a, heightPercent: u } });
+    a += u;
   }
-  return o;
+  return s;
 }
-const ee = `
+const te = 1.7, ne = 780;
+function N(e) {
+  const [t, n] = e.split(":").map(Number);
+  return (t ?? 0) * 60 + (n ?? 0);
+}
+function re(e, t) {
+  const n = new Intl.DateTimeFormat("fr-FR", {
+    timeZone: t,
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: !1
+  }), [i, r] = n.format(new Date(e)).split(":").map(Number);
+  return (i ?? 0) * 60 + (r ?? 0);
+}
+function ie(e, t, n = ne) {
+  if (e.length === 0) return [];
+  const i = e.filter((a) => N(a.time) < n), r = e.filter((a) => N(a.time) >= n), o = t < n ? i : r;
+  if (o.length > 0) return o;
+  const s = t < n ? r : i;
+  return s.length > 0 ? s : [...e];
+}
+function oe(e, t, n) {
+  if (t <= 0) return n;
+  const i = e * 0.9 / t / 2.5, r = n * te;
+  return Math.round(Math.min(Math.max(i, r), n * 4));
+}
+function ae(e, t) {
+  const n = Math.ceil(e - t);
+  return n < 8 ? null : {
+    coursePx: n,
+    dureeMs: Math.round(n / 28 * 2 * 1e3) + 6e3
+  };
+}
+const le = `
 :host, .couloir-root {
   --ink: #F4F6F4;
   --ink-soft: #A8B2AC;
@@ -352,6 +385,17 @@ const ee = `
   color: var(--ink);
   font-family: "Archivo", "Helvetica Neue", Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
+  /* Pas de curseur sur une dalle de couloir. On le masque ici plutôt qu'avec
+     un outil du systeme : unclutter ne vaut que pour X, et les boitiers
+     tournent aussi sous Wayland. La page est a nous, elle sait le faire
+     partout. */
+  cursor: none;
+  /* Ni selection ni tirer-deposer : personne ne saisit rien sur un mur, et
+     un texte surligne par un doigt curieux resterait bleu jusqu'au prochain
+     redemarrage. */
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
 }
 
 .couloir-zone {
@@ -386,6 +430,9 @@ const ee = `
 @media (prefers-reduced-motion: reduce) {
   .couloir-slide { animation: none }
   .couloir-zone { transition: none }
+  /* Le defilement de la liste, lui, reste : ce n'est pas un ornement, c'est
+     le seul moyen de voir les seances qui depassent de la dalle. L'eteindre
+     supprimerait de l'information au lieu d'epargner une animation. */
 }
 
 /* L'image tient en entier par défaut. Rogner ferait disparaitre un titre
@@ -487,6 +534,21 @@ const ee = `
   border: 1px solid currentColor; border-radius: 3px; padding: .1em .4em; margin-left: .5em;
 }
 
+/* Le defilement d'une journee trop longue pour la dalle.
+   La course et la duree sont posees en ligne par le rendu, qui seul connait
+   la hauteur reelle du texte. Les paliers sont des temps d'arret : en haut on
+   lit l'heure qu'il est, en bas la fin de la journee.
+   (Fichier ecrit dans un litteral de gabarit : aucun accent grave ici.) */
+.couloir-defile {
+  animation: couloir-defile var(--defile-duree, 30s) ease-in-out infinite;
+  will-change: transform;
+}
+@keyframes couloir-defile {
+  0%, 14%   { transform: translateY(0) }
+  50%, 64%  { transform: translateY(var(--defile-course, 0px)) }
+  100%      { transform: translateY(0) }
+}
+
 .couloir-stale {
   margin-top: auto;
   padding-top: .8em;
@@ -566,72 +628,72 @@ const ee = `
   pointer-events: none;
 }
 `;
-function te(e, t = {}) {
-  const n = e.ownerDocument, r = n.createElement("style");
-  r.textContent = ee, e.appendChild(r);
-  const i = n.createElement("div");
-  i.className = "couloir-root", e.appendChild(i);
-  let a = () => {
+function se(e, t = {}) {
+  const n = e.ownerDocument, i = n.createElement("style");
+  i.textContent = le, e.appendChild(i);
+  const r = n.createElement("div");
+  r.className = "couloir-root", e.appendChild(r);
+  let o = () => {
   };
-  const o = /* @__PURE__ */ new Map();
-  let l = "";
-  const s = () => {
-    const c = i.clientHeight || 1080, d = V(c);
-    i.style.setProperty("--fs-eyebrow", `${d.eyebrow}px`), i.style.setProperty("--fs-title", `${d.title}px`), i.style.setProperty("--fs-body", `${d.body}px`), i.style.setProperty("--fs-caption", `${d.caption}px`), i.style.setProperty("--pad", `${Math.round(c * 0.045)}px`);
-  }, u = new ResizeObserver(s);
-  u.observe(i), s();
+  const s = /* @__PURE__ */ new Map();
+  let a = "";
+  const l = () => {
+    const c = r.clientHeight || 1080, d = Y(c);
+    r.style.setProperty("--fs-eyebrow", `${d.eyebrow}px`), r.style.setProperty("--fs-title", `${d.title}px`), r.style.setProperty("--fs-body", `${d.body}px`), r.style.setProperty("--fs-caption", `${d.caption}px`), r.style.setProperty("--pad", `${Math.round(c * 0.045)}px`);
+  }, u = new ResizeObserver(l);
+  u.observe(r), l();
   function p(c) {
     const d = `${c.mode}:${c.emergency?.id ?? ""}:${c.identify?.screenCode ?? ""}`;
     if (c.mode === "normal" || c.mode === "fallback") return !1;
-    if (d === l) return !0;
-    l = d, i.replaceChildren(), o.clear();
+    if (d === a) return !0;
+    a = d, r.replaceChildren(), s.clear();
     const m = n.createElement("div");
     return c.mode === "emergency" && c.emergency ? (m.className = "couloir-full couloir-full--emergency", m.append(
-      y(n, "p", "couloir-eyebrow", "Message important"),
-      y(n, "h1", "couloir-title", c.emergency.title)
-    ), c.emergency.body && m.append(y(n, "p", "couloir-body", c.emergency.body))) : c.mode === "identify" && c.identify ? (m.className = "couloir-full couloir-full--identify", m.append(
-      y(n, "div", "couloir-code", c.identify.screenCode),
-      y(n, "p", "couloir-body", c.identify.label),
-      y(n, "p", "couloir-body", c.identify.ipAddress)
-    )) : m.className = "couloir-full couloir-full--off", i.appendChild(m), !0;
+      g(n, "p", "couloir-eyebrow", "Message important"),
+      g(n, "h1", "couloir-title", c.emergency.title)
+    ), c.emergency.body && m.append(g(n, "p", "couloir-body", c.emergency.body))) : c.mode === "identify" && c.identify ? (m.className = "couloir-full couloir-full--identify", m.append(
+      g(n, "div", "couloir-code", c.identify.screenCode),
+      g(n, "p", "couloir-body", c.identify.label),
+      g(n, "p", "couloir-body", c.identify.ipAddress)
+    )) : m.className = "couloir-full couloir-full--off", r.appendChild(m), !0;
   }
-  function g(c) {
-    l !== "" && (i.replaceChildren(), o.clear(), l = "");
+  function h(c) {
+    a !== "" && (r.replaceChildren(), s.clear(), a = "");
     const d = /* @__PURE__ */ new Set();
-    for (const h of c.zones) {
-      d.add(h.zoneId);
-      let v = i.querySelector(`[data-zone="${h.zoneId}"]`);
-      v || (v = n.createElement("section"), v.className = "couloir-zone", v.dataset.zone = h.zoneId, i.appendChild(v)), v.style.left = `${h.rect.xPercent}%`, v.style.top = `${h.rect.yPercent}%`, v.style.width = `${h.rect.widthPercent}%`, v.style.height = `${h.rect.heightPercent}%`;
-      const f = h.slide ? ne(h.slide) : null;
-      if (o.get(h.zoneId) !== f) {
-        if (v.replaceChildren(), f === null) {
-          o.delete(h.zoneId);
+    for (const y of c.zones) {
+      d.add(y.zoneId);
+      let w = r.querySelector(`[data-zone="${y.zoneId}"]`);
+      w || (w = n.createElement("section"), w.className = "couloir-zone", w.dataset.zone = y.zoneId, r.appendChild(w)), w.style.left = `${y.rect.xPercent}%`, w.style.top = `${y.rect.yPercent}%`, w.style.width = `${y.rect.widthPercent}%`, w.style.height = `${y.rect.heightPercent}%`;
+      const f = y.slide ? ce(y.slide) : null;
+      if (s.get(y.zoneId) !== f) {
+        if (w.replaceChildren(), f === null) {
+          s.delete(y.zoneId);
           continue;
         }
-        o.set(h.zoneId, f), v.appendChild(re(n, h, h.slide, t, a));
+        s.set(y.zoneId, f), w.appendChild(de(n, y, y.slide, t, o));
       }
     }
-    for (const h of [...i.querySelectorAll("[data-zone]")]) {
-      const v = h.dataset.zone;
-      v && !d.has(v) && (h.remove(), o.delete(v));
+    for (const y of [...r.querySelectorAll("[data-zone]")]) {
+      const w = y.dataset.zone;
+      w && !d.has(w) && (y.remove(), s.delete(w));
     }
-    let m = i.querySelector(".couloir-watermark");
-    c.watermark ? (m || (m = y(n, "div", "couloir-watermark", c.watermark), i.appendChild(m)), m.textContent = c.watermark) : m?.remove();
+    let m = r.querySelector(".couloir-watermark");
+    c.watermark ? (m || (m = g(n, "div", "couloir-watermark", c.watermark), r.appendChild(m)), m.textContent = c.watermark) : m?.remove();
   }
-  let I = null;
+  let b = null;
   return {
     update(c) {
-      c.accent !== I && (I = c.accent, c.accent ? i.style.setProperty("--accent", c.accent) : i.style.removeProperty("--accent")), !p(c) && g(c);
+      c.accent !== b && (b = c.accent, c.accent ? r.style.setProperty("--accent", c.accent) : r.style.removeProperty("--accent")), !p(c) && h(c);
     },
     onMediaEnded(c) {
-      a = c;
+      o = c;
     },
     destroy() {
-      u.disconnect(), i.remove(), r.remove();
+      u.disconnect(), r.remove(), i.remove();
     }
   };
 }
-function ne(e) {
+function ce(e) {
   const t = () => {
     switch (e.kind) {
       case "media":
@@ -646,112 +708,126 @@ function ne(e) {
   };
   return `${e.slideId}|${t()}`;
 }
-function y(e, t, n, r) {
-  const i = e.createElement(t);
-  return i.className = n, r !== void 0 && (i.textContent = r), i;
+function g(e, t, n, i) {
+  const r = e.createElement(t);
+  return r.className = n, i !== void 0 && (r.textContent = i), r;
 }
-function re(e, t, n, r, i) {
-  const a = e.createElement("div");
-  switch (a.className = "couloir-slide", a.dataset.slide = n.slideId, n.kind) {
+function de(e, t, n, i, r) {
+  const o = e.createElement("div");
+  switch (o.className = "couloir-slide", o.dataset.slide = n.slideId, n.kind) {
     case "media": {
-      a.classList.add("couloir-slide--media"), n.fit === "remplir" && a.classList.add("couloir-slide--remplir");
-      const o = r.assetUrl?.(n.asset.id) ?? n.asset.url;
+      o.classList.add("couloir-slide--media"), n.fit === "remplir" && o.classList.add("couloir-slide--remplir");
+      const s = i.assetUrl?.(n.asset.id) ?? n.asset.url;
       if (n.asset.mime.startsWith("video/")) {
-        const l = e.createElement("video");
-        l.className = "couloir-media", l.src = o, l.muted = !0, l.autoplay = !0, l.playsInline = !0, l.addEventListener("ended", () => i(t.zoneId)), l.addEventListener("error", () => i(t.zoneId)), a.appendChild(l);
+        const a = e.createElement("video");
+        a.className = "couloir-media", a.src = s, a.muted = !0, a.autoplay = !0, a.playsInline = !0, a.addEventListener("ended", () => r(t.zoneId)), a.addEventListener("error", () => r(t.zoneId)), o.appendChild(a);
       } else {
-        const l = e.createElement("img");
-        l.className = "couloir-media", l.src = o, l.alt = "", a.appendChild(l);
+        const a = e.createElement("img");
+        a.className = "couloir-media", a.src = s, a.alt = "", o.appendChild(a);
       }
-      return a;
+      return o;
     }
     case "template": {
-      const o = (p) => {
-        const g = n.fields[p];
-        return typeof g == "string" ? g : void 0;
-      }, l = o("eyebrow"), s = o("titre") ?? o("title"), u = o("texte") ?? o("body");
-      return l && a.appendChild(y(e, "p", "couloir-eyebrow", l)), s && a.appendChild(y(e, "h1", "couloir-title", s)), u && a.appendChild(y(e, "p", "couloir-body", u)), a;
+      const s = (p) => {
+        const h = n.fields[p];
+        return typeof h == "string" ? h : void 0;
+      }, a = s("eyebrow"), l = s("titre") ?? s("title"), u = s("texte") ?? s("body");
+      return a && o.appendChild(g(e, "p", "couloir-eyebrow", a)), l && o.appendChild(g(e, "h1", "couloir-title", l)), u && o.appendChild(g(e, "p", "couloir-body", u)), o;
     }
     case "widget": {
       if (n.widget === "ticker") {
-        a.classList.add("couloir-slide--ticker");
-        const o = typeof n.config.text == "string" ? n.config.text : "", l = y(e, "div", "couloir-ticker-viewport");
-        l.appendChild(y(e, "span", "couloir-ticker-text", o)), a.appendChild(l);
-        const s = y(e, "div", "couloir-clock", ""), u = () => {
-          s.textContent = new Intl.DateTimeFormat(r.locale ?? "fr-FR", {
-            timeZone: r.timezone ?? "Europe/Paris",
+        o.classList.add("couloir-slide--ticker");
+        const s = typeof n.config.text == "string" ? n.config.text : "", a = g(e, "div", "couloir-ticker-viewport");
+        a.appendChild(g(e, "span", "couloir-ticker-text", s)), o.appendChild(a);
+        const l = g(e, "div", "couloir-clock", ""), u = () => {
+          l.textContent = new Intl.DateTimeFormat(i.locale ?? "fr-FR", {
+            timeZone: i.timezone ?? "Europe/Paris",
             hour: "2-digit",
             minute: "2-digit"
           }).format(/* @__PURE__ */ new Date());
         };
         u();
         const p = setInterval(u, 1e4);
-        return new MutationObserver((g, I) => {
-          s.isConnected || (clearInterval(p), I.disconnect());
-        }).observe(a.ownerDocument.body, { childList: !0, subtree: !0 }), a.appendChild(s), a;
+        return new MutationObserver((h, b) => {
+          l.isConnected || (clearInterval(p), b.disconnect());
+        }).observe(o.ownerDocument.body, { childList: !0, subtree: !0 }), o.appendChild(l), o;
       }
-      return a.appendChild(y(e, "p", "couloir-eyebrow", n.widget)), a;
+      return o.appendChild(g(e, "p", "couloir-eyebrow", n.widget)), o;
     }
     case "data":
-      return se(e, a, n), n.staleLabel && a.appendChild(y(e, "p", "couloir-stale", n.staleLabel)), a;
+      return he(e, o, n, i.timezone ?? "Europe/Paris"), n.staleLabel && o.appendChild(g(e, "p", "couloir-stale", n.staleLabel)), o;
   }
 }
-const ie = ["heureFin", "module", "salle", "enseignant"];
-function oe(e) {
-  return e === void 0 ? new Set(ie) : new Set(
+const ue = ["heureFin", "module", "salle", "enseignant"];
+function fe(e) {
+  return e === void 0 ? new Set(ue) : new Set(
     e.split(",").map((t) => t.trim()).filter(Boolean)
   );
 }
-function ae(e, t) {
+function me(e, t) {
   const n = e?.days;
   if (Array.isArray(n))
-    return t ? n.find((i) => i.classId === t) ?? null : n[0] ?? null;
-  const r = e;
-  return r && Array.isArray(r.entries) ? r : null;
+    return t ? n.find((r) => r.classId === t) ?? null : n[0] ?? null;
+  const i = e;
+  return i && Array.isArray(i.entries) ? i : null;
 }
-function le(e, t, n) {
-  const r = n.payload, i = Array.isArray(r) ? r : r?.articles ?? [];
-  if (i.length === 0) return;
-  const a = Number(n.params.index ?? 0), o = i[(a % i.length + i.length) % i.length];
-  if (o?.titre) {
-    if (o.image) {
-      const l = e.createElement("img");
-      l.className = "couloir-illustration", l.src = o.image, l.alt = "", l.addEventListener("error", () => l.remove()), t.appendChild(l);
+function pe(e, t, n) {
+  const i = n.payload, r = Array.isArray(i) ? i : i?.articles ?? [];
+  if (r.length === 0) return;
+  const o = Number(n.params.index ?? 0), s = r[(o % r.length + r.length) % r.length];
+  if (s?.titre) {
+    if (s.image) {
+      const a = e.createElement("img");
+      a.className = "couloir-illustration", a.src = s.image, a.alt = "", a.addEventListener("error", () => a.remove()), t.appendChild(a);
     }
-    o.categorie && t.appendChild(y(e, "p", "couloir-eyebrow", o.categorie)), t.appendChild(y(e, "h1", "couloir-title", o.titre)), o.extrait && t.appendChild(y(e, "p", "couloir-body", o.extrait));
+    s.categorie && t.appendChild(g(e, "p", "couloir-eyebrow", s.categorie)), t.appendChild(g(e, "h1", "couloir-title", s.titre)), s.extrait && t.appendChild(g(e, "p", "couloir-body", s.extrait));
   }
 }
-function se(e, t, n) {
+function ge(e, t, n, i) {
+  if (i <= 0) return;
+  const r = e.defaultView, o = () => {
+    if (!t.isConnected) return;
+    const s = t.clientHeight;
+    if (s <= 0) return;
+    const a = Number.parseFloat(r?.getComputedStyle(t).fontSize ?? "24") || 24;
+    n.style.fontSize = `${oe(s, i, a)}px`;
+    const l = ae(t.scrollHeight, s);
+    n.classList.toggle("couloir-defile", l !== null), l && (n.style.setProperty("--defile-course", `-${l.coursePx}px`), n.style.setProperty("--defile-duree", `${l.dureeMs}ms`));
+  };
+  r?.requestAnimationFrame ? r.requestAnimationFrame(() => r.requestAnimationFrame(o)) : o(), e.fonts?.ready?.then(o).catch(() => {
+  });
+}
+function he(e, t, n, i) {
   if (n.view.startsWith("timetable")) {
-    const r = ae(n.payload, n.params.classId);
+    const r = me(n.payload, n.params.classId);
     if (!r) return;
-    const i = oe(n.params.champs);
-    if (t.appendChild(y(e, "p", "couloir-eyebrow", r.classLabel)), r.notice) {
-      t.appendChild(y(e, "p", "couloir-body", r.notice));
+    const o = fe(n.params.champs);
+    if (t.appendChild(g(e, "p", "couloir-eyebrow", r.classLabel)), r.notice) {
+      t.appendChild(g(e, "p", "couloir-body", r.notice));
       return;
     }
-    const a = e.createElement("ul");
+    const s = n.params.demiJournee === "1" ? ie(r.entries, re(Date.now(), i)) : r.entries, a = e.createElement("ul");
     a.className = "couloir-list";
-    for (const o of r.entries) {
-      const l = o.change && o.change !== "none", s = e.createElement("li");
-      s.className = l ? "couloir-row couloir-row--changed" : "couloir-row", o.change === "cancelled" && s.classList.add("couloir-row--cancelled");
-      const u = e.createElement("time");
-      u.appendChild(e.createTextNode(o.time)), i.has("heureFin") && o.endTime && o.endTime !== o.time && u.appendChild(y(e, "span", "couloir-fin", o.endTime));
-      const p = e.createElement("span");
-      p.appendChild(e.createTextNode(o.subject)), o.note && p.appendChild(y(e, "span", "couloir-badge", o.note)), i.has("module") && o.detail && p.appendChild(y(e, "span", "couloir-detail", o.detail));
-      const g = e.createElement("span");
-      g.className = "room", o.change === "cancelled" ? g.appendChild(e.createTextNode("—")) : (i.has("salle") && g.appendChild(e.createTextNode(o.room)), i.has("enseignant") && o.teacher && g.appendChild(y(e, "span", "couloir-prof", o.teacher))), s.append(u, p, g), a.appendChild(s);
+    for (const l of s) {
+      const u = l.change && l.change !== "none", p = e.createElement("li");
+      p.className = u ? "couloir-row couloir-row--changed" : "couloir-row", l.change === "cancelled" && p.classList.add("couloir-row--cancelled");
+      const h = e.createElement("time");
+      h.appendChild(e.createTextNode(l.time)), o.has("heureFin") && l.endTime && l.endTime !== l.time && h.appendChild(g(e, "span", "couloir-fin", l.endTime));
+      const b = e.createElement("span");
+      b.appendChild(e.createTextNode(l.subject)), l.note && b.appendChild(g(e, "span", "couloir-badge", l.note)), o.has("module") && l.detail && b.appendChild(g(e, "span", "couloir-detail", l.detail));
+      const c = e.createElement("span");
+      c.className = "room", l.change === "cancelled" ? c.appendChild(e.createTextNode("—")) : (o.has("salle") && c.appendChild(e.createTextNode(l.room)), o.has("enseignant") && l.teacher && c.appendChild(g(e, "span", "couloir-prof", l.teacher))), p.append(h, b, c), a.appendChild(p);
     }
-    t.appendChild(a);
+    t.appendChild(a), ge(e, t, a, s.length);
     return;
   }
-  n.view.startsWith("news") && le(e, t, n);
+  n.view.startsWith("news") && pe(e, t, n);
 }
-function ue(e, t) {
-  const n = te(e, t), r = t.pollMs ?? 2e3, i = t.tickMs ?? 500;
-  let a = null, o = /* @__PURE__ */ new Map(), l = /* @__PURE__ */ new Set(), s = !1;
+function we(e, t) {
+  const n = se(e, t), i = t.pollMs ?? 2e3, r = t.tickMs ?? 500;
+  let o = null, s = /* @__PURE__ */ new Map(), a = /* @__PURE__ */ new Set(), l = !1;
   n.onMediaEnded((d) => {
-    l.add(d), g();
+    a.add(d), h();
   });
   function u(d) {
     if (typeof document > "u") return;
@@ -759,43 +835,43 @@ function ue(e, t) {
     document.title !== m && (document.title = m);
   }
   async function p() {
-    if (!s)
+    if (!l)
       try {
         const d = await fetch(t.stateUrl, { cache: "no-store" });
         if (d.ok) {
           const m = await d.json();
-          m.manifest?.version !== a?.manifest?.version && (o = /* @__PURE__ */ new Map()), a = m, u(m);
+          m.manifest?.version !== o?.manifest?.version && (s = /* @__PURE__ */ new Map()), o = m, u(m);
         }
       } catch {
       }
   }
-  function g() {
-    if (s) return;
-    if (!a?.manifest) {
-      n.update(ce(a));
+  function h() {
+    if (l) return;
+    if (!o?.manifest) {
+      n.update(ye(o));
       return;
     }
-    const d = Y({
-      manifest: a.manifest,
+    const d = K({
+      manifest: o.manifest,
       nowMs: Date.now(),
-      sources: new Map(Object.entries(a.sources)),
-      availableAssetIds: new Set(a.availableAssetIds),
-      rotations: o,
-      forceFallback: a.forceFallback,
-      identify: a.identify,
-      mediaEndedZoneIds: l,
-      ...a.screenCode !== null ? { screenCode: a.screenCode } : {}
+      sources: new Map(Object.entries(o.sources)),
+      availableAssetIds: new Set(o.availableAssetIds),
+      rotations: s,
+      forceFallback: o.forceFallback,
+      identify: o.identify,
+      mediaEndedZoneIds: a,
+      ...o.screenCode !== null ? { screenCode: o.screenCode } : {}
     });
-    l = /* @__PURE__ */ new Set(), o = d.rotations, n.update(d.screen), d.transitions.length > 0 && t.transitionsUrl && de(t.transitionsUrl, d.transitions);
+    a = /* @__PURE__ */ new Set(), s = d.rotations, n.update(d.screen), d.transitions.length > 0 && t.transitionsUrl && ve(t.transitionsUrl, d.transitions);
   }
-  const I = setInterval(() => void p(), r), c = setInterval(g, i);
-  return p().then(g), {
+  const b = setInterval(() => void p(), i), c = setInterval(h, r);
+  return p().then(h), {
     stop() {
-      s = !0, clearInterval(I), clearInterval(c), n.destroy();
+      l = !0, clearInterval(b), clearInterval(c), n.destroy();
     }
   };
 }
-function ce(e) {
+function ye(e) {
   return e?.pairing ? {
     mode: "identify",
     zones: [],
@@ -829,7 +905,7 @@ function ce(e) {
     watermark: e?.screenCode ?? null
   };
 }
-async function de(e, t) {
+async function ve(e, t) {
   try {
     await fetch(e, {
       method: "POST",
@@ -841,30 +917,30 @@ async function de(e, t) {
   }
 }
 export {
-  _ as GLANCE_TIME_MS,
-  U as MAX_SENSIBLE_DURATION_MS,
-  B as MIN_BODY_TEXT_HEIGHT_PERCENT,
+  U as GLANCE_TIME_MS,
+  B as MAX_SENSIBLE_DURATION_MS,
+  H as MIN_BODY_TEXT_HEIGHT_PERCENT,
   j as READING_WORDS_PER_MINUTE,
-  ee as RENDERER_CSS,
-  W as activePlaylistId,
+  le as RENDERER_CSS,
+  R as activePlaylistId,
   A as advanceRotation,
-  Q as collapseEmptyZones,
+  ee as collapseEmptyZones,
   Z as countWords,
-  D as dateLocale,
-  Y as direct,
-  X as effectiveDuration,
-  R as isDisplayOffPeriod,
-  N as isDisplayable,
-  L as isScheduleActive,
-  q as isVisible,
-  z as isWithinDailyWindow,
-  E as localMoment,
-  H as minReadableDurationMs,
-  te as mountRenderer,
+  L as dateLocale,
+  K as direct,
+  V as effectiveDuration,
+  _ as isDisplayOffPeriod,
+  O as isDisplayable,
+  q as isScheduleActive,
+  W as isVisible,
+  M as isWithinDailyWindow,
+  C as localMoment,
+  J as minReadableDurationMs,
+  se as mountRenderer,
   x as parseClock,
-  $ as resolveSource,
-  J as slideText,
-  T as stalenessLabel,
-  ue as startPlayer,
-  V as typeScale
+  T as resolveSource,
+  X as slideText,
+  $ as stalenessLabel,
+  we as startPlayer,
+  Y as typeScale
 };

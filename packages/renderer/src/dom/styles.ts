@@ -73,6 +73,9 @@ export const RENDERER_CSS = `
 @media (prefers-reduced-motion: reduce) {
   .couloir-slide { animation: none }
   .couloir-zone { transition: none }
+  /* Le defilement de la liste, lui, reste : ce n'est pas un ornement, c'est
+     le seul moyen de voir les seances qui depassent de la dalle. L'eteindre
+     supprimerait de l'information au lieu d'epargner une animation. */
 }
 
 /* L'image tient en entier par défaut. Rogner ferait disparaitre un titre
@@ -172,6 +175,21 @@ export const RENDERER_CSS = `
 .couloir-badge {
   font-size: .7em; letter-spacing: .1em; text-transform: uppercase; font-weight: 700;
   border: 1px solid currentColor; border-radius: 3px; padding: .1em .4em; margin-left: .5em;
+}
+
+/* Le defilement d'une journee trop longue pour la dalle.
+   La course et la duree sont posees en ligne par le rendu, qui seul connait
+   la hauteur reelle du texte. Les paliers sont des temps d'arret : en haut on
+   lit l'heure qu'il est, en bas la fin de la journee.
+   (Fichier ecrit dans un litteral de gabarit : aucun accent grave ici.) */
+.couloir-defile {
+  animation: couloir-defile var(--defile-duree, 30s) ease-in-out infinite;
+  will-change: transform;
+}
+@keyframes couloir-defile {
+  0%, 14%   { transform: translateY(0) }
+  50%, 64%  { transform: translateY(var(--defile-course, 0px)) }
+  100%      { transform: translateY(0) }
 }
 
 .couloir-stale {
