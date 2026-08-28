@@ -616,7 +616,21 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
 
   /** Le lecteur déployable, que l'installateur va chercher. */
   app.get<{ Params: { fichier: string } }>("/telechargements/:fichier", async (request, reply) => {
-    const permis = new Set(["couloir-player.mjs", "couloir.js"]);
+    /*
+     * Tout ce que l'installateur réclame, et pas seulement le lecteur.
+     *
+     * Il allait chercher le lanceur du navigateur et les deux unités systemd
+     * dans un dépôt local — alors que la commande annoncée est
+     * `curl … | sudo bash`, qui n'en a aucun. Le chemin d'installation
+     * officiel échouait donc au premier boîtier posé.
+     */
+    const permis = new Set([
+      "couloir-player.mjs",
+      "couloir.js",
+      "kiosk.sh",
+      "couloir-player.service",
+      "couloir-kiosk.service",
+    ]);
     if (!permis.has(request.params.fichier)) {
       return reply.code(404).send({ code: "inconnu", message: "Fichier inconnu.", retryable: false });
     }
@@ -628,7 +642,15 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
         retryable: false,
       });
     }
-    return reply.type("application/javascript; charset=utf-8").send(contenu);
+    // Un fichier d'unité systemd servi en JavaScript passerait quand même —
+    // `curl` ne regarde pas le type — mais un intermédiaire qui réécrit le
+    // contenu selon son type, lui, le regarde.
+    const type = request.params.fichier.endsWith(".mjs") || request.params.fichier.endsWith(".js")
+      ? "application/javascript; charset=utf-8"
+      : request.params.fichier.endsWith(".sh")
+        ? "text/x-shellscript; charset=utf-8"
+        : "text/plain; charset=utf-8";
+    return reply.type(type).send(contenu);
   });
 
   app.get("/connectors/news", async (request, reply) => {

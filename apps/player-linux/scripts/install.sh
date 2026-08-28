@@ -113,12 +113,35 @@ if curl -fsSL "${SERVER}/telechargements/version.json" -o /tmp/couloir-version.j
   chown couloir:couloir "$LECTEUR"/version
   rm -f /tmp/couloir-version.json
 fi
-install -m 755 scripts/kiosk.sh "$PREFIX"/kiosk.sh
+#
+# Les fichiers d'appoint : le lanceur du navigateur et les deux unités.
+#
+# On les prenait dans le dépôt, alors que la commande annoncée est
+# `curl … | sudo bash`, qui n'en a aucun : l'installation officielle échouait
+# ici, au premier boîtier posé. On les prend donc du dépôt s'il est là, du
+# serveur sinon — c'est lui qui sert déjà le lecteur.
+#
+recuperer() {
+  local nom="$1" chemin_local="$2" destination="$3" droits="$4"
+  if [ -f "$chemin_local" ]; then
+    install -m "$droits" "$chemin_local" "$destination"
+  elif curl -fsSL "${SERVER}/telechargements/${nom}" -o "$TEMPO_APPOINT/$nom"; then
+    install -m "$droits" "$TEMPO_APPOINT/$nom" "$destination"
+  else
+    echo "introuvable : $nom (ni dans le dépôt, ni sur ${SERVER})" >&2
+    exit 1
+  fi
+}
+
+TEMPO_APPOINT="$(mktemp -d)"
+trap 'rm -rf "$TEMPO_APPOINT"' EXIT
+
+recuperer kiosk.sh scripts/kiosk.sh "$PREFIX"/kiosk.sh 755
 chown -R couloir:couloir /opt/couloir
 
 echo "→ services"
-install -m 644 systemd/couloir-player.service /etc/systemd/system/
-install -m 644 systemd/couloir-kiosk.service /etc/systemd/system/
+recuperer couloir-player.service systemd/couloir-player.service /etc/systemd/system/couloir-player.service 644
+recuperer couloir-kiosk.service systemd/couloir-kiosk.service /etc/systemd/system/couloir-kiosk.service 644
 sed -i "s|^Environment=COULOIR_SERVER=.*|Environment=COULOIR_SERVER=${SERVER}|" \
   /etc/systemd/system/couloir-player.service
 # Le chemin de Node dépend de l'installation : on ne le fige pas dans l'unité.

@@ -68,6 +68,9 @@ RUN cp -r apps/console/dist /application/dist/console
 RUN mkdir -p /application/dist/telechargements \
  && cp apps/player-linux/dist-bundle/couloir-player.mjs \
        apps/player-linux/dist-bundle/couloir.js \
+       apps/player-linux/scripts/kiosk.sh \
+       apps/player-linux/systemd/couloir-player.service \
+       apps/player-linux/systemd/couloir-kiosk.service \
        /application/dist/telechargements/ \
  && cp apps/player-linux/scripts/install.sh /application/dist/install.sh
 
