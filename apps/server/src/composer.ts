@@ -70,6 +70,8 @@ export interface PublishSpec {
   timetableClasses?: { id: string; label: string }[];
   /** Plages d'extinction de la dalle, en heure locale de l'école. */
   displayOff?: { daysOfWeek: number[]; from: string; to: string }[];
+  /** Grossissement du texte, propre à cette dalle. */
+  zoom?: number;
   /**
    * Combien d'actualités du site font partie de la rotation. 0 = aucune.
    *
@@ -474,6 +476,7 @@ export function compose(input: ComposeInput): Manifest {
       timezone: "Europe/Paris",
       displayOff: spec.displayOff ?? [],
       showScreenCodeWatermark: true,
+      ...(spec.zoom !== undefined ? { zoom: spec.zoom } : {}),
       ...(spec.identite?.accent || spec.identite?.nom
         ? {
             branding: {

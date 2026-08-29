@@ -31,6 +31,13 @@ export interface LocalServerOptions {
   sources: () => Record<string, { fetchedAtMs: number; payload: unknown }>;
   identify: () => { screenCode: string; label: string; ipAddress: string } | null;
   forceFallback: () => boolean;
+  /**
+   * Ce que la dalle mesure, tel que le navigateur le voit.
+   *
+   * Seule la page peut le savoir : l'agent tourne dans Node, sans accès à
+   * l'écran. Il l'apprend donc par cette porte, et le joint à sa télémétrie.
+   */
+  onResolution?: (resolution: unknown) => void;
 }
 
 const PAGE = `<!doctype html>
@@ -54,6 +61,18 @@ const PAGE = `<!doctype html>
         stateUrl: "/state",
         transitionsUrl: "/transitions",
         assetUrl: (id) => "/media/" + id,
+        // La dalle se présente à l'agent. On garde la requete en vie pour
+        // que le dernier releve parte meme si la page se ferme dans la
+        // foulee. (Cette page est un litteral de gabarit : pas d'accent
+        // grave ici, il terminerait la chaine.)
+        onResolution: (resolution) => {
+          fetch("/resolution", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify(resolution),
+            keepalive: true,
+          }).catch(() => {});
+        },
       });
     </script>
   </body>
@@ -115,6 +134,17 @@ export function createLocalServer(options: LocalServerOptions): Server {
       });
       response.writeHead(200, { "content-type": "application/json", "cache-control": "no-store" });
       response.end(body);
+      return;
+    }
+
+    if (url.pathname === "/resolution" && request.method === "POST") {
+      void collectJson(request)
+        .then((payload) => options.onResolution?.(payload))
+        .catch(() => {})
+        .finally(() => {
+          response.writeHead(204);
+          response.end();
+        });
       return;
     }
 

@@ -73,6 +73,36 @@ export function PageBibliotheque() {
     }
   }
 
+  /**
+   * Retirer un média.
+   *
+   * On demande confirmation même quand le média ne passe nulle part : le
+   * fichier d'origine n'est pas forcément ailleurs, et une affiche déposée
+   * l'an dernier par quelqu'un qui a quitté l'établissement ne se retrouve
+   * pas. La confirmation dit aussi ce que la liste des écrans ne dit pas :
+   * les versions précédentes qui s'en servaient ne pourront plus être
+   * remises en ligne complètes.
+   */
+  async function supprimer(m: Media) {
+    const nom = m.filename ?? m.id;
+    if (
+      !globalThis.confirm(
+        `Supprimer « ${nom} » ?\n\n` +
+          "Le fichier est retiré du serveur. Les versions déjà publiées qui " +
+          "s'en servaient ne pourront plus être remises en ligne telles quelles.",
+      )
+    ) {
+      return;
+    }
+    setErreur(null);
+    try {
+      await api.supprimerMedia(m.id);
+      await recharger();
+    } catch (cause) {
+      setErreur(cause instanceof Error ? cause.message : String(cause));
+    }
+  }
+
   const visibles = media.filter((m) =>
     (m.filename ?? m.id).toLowerCase().includes(filtre.trim().toLowerCase()),
   );
@@ -164,6 +194,26 @@ export function PageBibliotheque() {
                   {phraseDUsage(écrans.length)}
                 </span>
               </div>
+              {/*
+                Le bouton reste visible quand le média est en service, mais
+                inerte, et dit pourquoi. Le masquer laisserait chercher une
+                action qui n'apparaît nulle part ; l'activer ferait retirer
+                une affiche d'un mur sur un clic.
+              */}
+              <button
+                type="button"
+                className="media-carte-retirer"
+                disabled={écrans.length > 0}
+                title={
+                  écrans.length > 0
+                    ? `Affiché sur ${écrans.map((s) => s.code).join(", ")}. Retirez-le de la composition avant de le supprimer.`
+                    : `Supprimer ${m.filename ?? m.id}`
+                }
+                aria-label={`Supprimer ${m.filename ?? m.id}`}
+                onClick={() => void supprimer(m)}
+              >
+                ×
+              </button>
             </div>
           );
         })}

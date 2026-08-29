@@ -82,6 +82,23 @@ export type PlayEvent = z.infer<typeof PlayEvent>;
 export const AgentLogLevel = z.enum(["info", "warn", "error"]);
 export type AgentLogLevel = z.infer<typeof AgentLogLevel>;
 
+/**
+ * Ce que la dalle mesure, tel que la page de rendu le voit.
+ *
+ * Décrit ici parce que la valeur traverse une frontière : elle est produite
+ * dans le navigateur, postée à l'agent, puis remontée au serveur. Une forme
+ * commune évite que chacun des trois en devine une.
+ */
+export const ResolutionEcran = z.object({
+  largeurPx: z.number().int().nonnegative(),
+  hauteurPx: z.number().int().nonnegative(),
+  largeurDallePx: z.number().int().nonnegative(),
+  hauteurDallePx: z.number().int().nonnegative(),
+  densite: z.number().positive(),
+  pleinEcran: z.boolean(),
+});
+export type ResolutionEcran = z.infer<typeof ResolutionEcran>;
+
 export const AgentLog = z.object({
   eventId: z.string().uuid(),
   at: IsoDateTime,

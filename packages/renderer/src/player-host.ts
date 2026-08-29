@@ -160,6 +160,7 @@ function pendingScreen(state: PlayerState | null): Parameters<ReturnType<typeof 
         ipAddress: "",
       },
       accent: null,
+    zoom: null,
       watermark: null,
     };
   }
@@ -167,6 +168,7 @@ function pendingScreen(state: PlayerState | null): Parameters<ReturnType<typeof 
     mode: "normal",
     // L'écran d'attente précède tout manifeste : aucune identité connue.
     accent: null,
+    zoom: null,
     zones: [
       {
         zoneId: "attente",

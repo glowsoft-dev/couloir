@@ -227,6 +227,18 @@ export const ScreenSettings = z.object({
       nom: z.string().max(80).optional(),
     })
     .optional(),
+  /**
+   * Le grossissement du texte sur cette dalle.
+   *
+   * Les tailles se déduisent déjà de la hauteur de l'écran, ce qui couvre le
+   * cas ordinaire. Reste la distance de lecture, que la machine ne peut pas
+   * mesurer : la même dalle 55 pouces se lit de trois mètres dans un couloir
+   * et de dix au fond d'un hall. Une valeur par écran, donc, et pas un
+   * réglage global.
+   *
+   * Absent, on ne grossit rien.
+   */
+  zoom: z.number().min(0.6).max(2.5).optional(),
 });
 export type ScreenSettings = z.infer<typeof ScreenSettings>;
 

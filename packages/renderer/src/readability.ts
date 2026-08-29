@@ -81,8 +81,18 @@ export interface TypeScale {
  * doit tenir en 1080p sur un écran de couloir et en 4K sur un totem, sans
  * qu'on ait à la refaire.
  */
-export function typeScale(screenHeightPx: number): TypeScale {
-  const body = Math.round((screenHeightPx * MIN_BODY_TEXT_HEIGHT_PERCENT) / 100);
+export function typeScale(screenHeightPx: number, zoom = 1): TypeScale {
+  /*
+   * Le zoom multiplie l'échelle entière, jamais un seul de ses étages.
+   *
+   * Grossir le corps du texte sans grossir le titre inverserait la
+   * hiérarchie : c'est le titre qu'on lit de loin, et il se retrouverait
+   * plus petit que le détail qu'il annonce. Le réglage déplace la distance
+   * de lecture, il ne redessine pas la mise en page.
+   */
+  const body = Math.round(
+    (screenHeightPx * MIN_BODY_TEXT_HEIGHT_PERCENT * zoom) / 100,
+  );
   return {
     eyebrow: Math.round(body * 0.72),
     title: Math.round(body * 2.4),

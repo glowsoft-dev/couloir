@@ -1783,6 +1783,10 @@ button.ghost.danger:hover:not(:disabled) {
 /* Une note qui précède ce qu'elle explique : elle pose la règle avant qu'on
    clique, au lieu de la corriger après. */
 .reglage-note--avant { margin: -8px 0 12px; }
+/* Une case a cocher posee dans un reglage, hors de la grille des champs :
+   sans cette ligne elle herite de la largeur pleine des saisies et occupe
+   toute la colonne. */
+.reglage label.inline input[type="checkbox"] { width: auto; margin: 0; }
 
 /* Trois schémas au format de la dalle, dans les proportions du composeur.
    Ce ne sont pas des aperçus : c'est le découpage qu'ils montrent. */
@@ -2025,6 +2029,36 @@ button.ghost.danger:hover:not(:disabled) {
 .media-carte {
   background: var(--surface); border: 1px solid var(--rule);
   border-radius: var(--r-apercu); overflow: hidden;
+  position: relative;
+}
+/* Retirer un media : discret au repos, franc au survol.
+   Un bouton de suppression toujours vif sur chaque vignette transforme la
+   bibliotheque en champ de mines ; invisible tant qu'on ne s'en approche
+   pas, il ne se trouve plus. Il apparait donc au survol de la carte, et
+   reste visible des qu'il a le focus — sinon il serait inatteignable au
+   clavier. */
+.media-carte-retirer {
+  position: absolute; top: 8px; right: 8px;
+  width: 26px; height: 26px; padding: 0;
+  display: grid; place-items: center;
+  font-size: 17px; line-height: 1;
+  color: #FFFFFF;
+  background: rgba(14, 18, 17, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 50%;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity .12s ease, background .12s ease;
+}
+.media-carte:hover .media-carte-retirer,
+.media-carte-retirer:focus-visible { opacity: 1; }
+.media-carte-retirer:hover:not(:disabled) { background: var(--signal, #B3261E); }
+/* En service : montre qu'il existe, refuse d'agir, et le titre dit sur quel
+   ecran l'affiche passe. */
+.media-carte-retirer:disabled { cursor: not-allowed; opacity: .32; }
+.media-carte:hover .media-carte-retirer:disabled { opacity: .38; }
+@media (prefers-reduced-motion: reduce) {
+  .media-carte-retirer { transition: none; }
 }
 .media-carte-vignette {
   aspect-ratio: 16 / 9; background: #0E1211;

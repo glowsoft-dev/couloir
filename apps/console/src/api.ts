@@ -109,6 +109,8 @@ export interface PublishSpec {
   timetableChamps?: ChampEdt[];
   /** Ne montrer que la demi-journée en cours, en plus grand. */
   timetableDemiJournee?: boolean;
+  /** Grossissement du texte, propre à cette dalle. Absent = échelle d'origine. */
+  zoom?: number;
   /** Ce que l'écran montre quand rien n'est programmé pour maintenant. */
   parDefaut?: { assetId?: string; emploiDuTemps?: boolean };
   /** Plages d'extinction de la dalle. Un message d'urgence la rallume. */
@@ -462,6 +464,15 @@ export const api = {
     form.append("file", file);
     return call<{ media: Media }>("/media", { method: "POST", body: form });
   },
+  /**
+   * Retire un média de la bibliothèque.
+   *
+   * Le serveur refuse — 409 — si le média passe encore sur un écran, et son
+   * message nomme lequel. On laisse donc remonter l'erreur telle quelle
+   * plutôt que d'inventer un texte ici : c'est le serveur qui sait, lui, ce
+   * qui est en ligne à cette seconde.
+   */
+  supprimerMedia: (id: string) => call<void>(`/media/${id}`, { method: "DELETE" }),
 
   pair: (input: {
     pairingCode: string;
@@ -482,10 +493,18 @@ export const api = {
    * extinction. Un écran qui refuse n'empêche pas les autres : le détail
    * revient écran par écran.
    */
-  publierGroupe: (screenIds: string[], spec: PublishSpec) =>
+  /**
+   * Publie une composition sur un écran, et éventuellement sur d'autres.
+   *
+   * `ecranPrincipal` dit lequel des écrans la composition décrit vraiment :
+   * lui prend les réglages tels qu'on vient de les régler, les autres gardent
+   * les leurs. Sans cette précision, l'écran qu'on édite se voyait réappliquer
+   * ses anciens réglages, et on ne pouvait plus en changer.
+   */
+  publierGroupe: (screenIds: string[], spec: PublishSpec, ecranPrincipal?: string) =>
     call<{ resultats: { screenId: string; code?: string; version?: number; erreur?: string }[] }>(
       "/publications",
-      json("POST", { screenIds, spec }),
+      json("POST", { screenIds, spec, ...(ecranPrincipal ? { ecranPrincipal } : {}) }),
     ),
 
   /** Compose sans enregistrer : le même chemin que la publication. */

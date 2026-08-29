@@ -62,6 +62,16 @@ export interface ScreenState {
    * dessine. `null` = la couleur par défaut du rendu.
    */
   accent: string | null;
+  /**
+   * Le grossissement demandé pour cet écran.
+   *
+   * Toutes les tailles se déduisent déjà de la hauteur de la dalle, ce qui
+   * suffit tant que la distance de lecture est ordinaire. Un écran au fond
+   * d'un hall se lit de dix mètres, un autre au-dessus d'un comptoir se lit
+   * de deux : c'est cette distance-là que le réglage rattrape, et elle ne se
+   * déduit d'aucune mesure faite par la machine.
+   */
+  zoom: number | null;
 }
 
 /** Un changement de diapositive, qui deviendra une preuve de diffusion. */
@@ -110,13 +120,14 @@ export function direct(input: DirectorInput): DirectorOutput {
   const watermark = manifest.settings.showScreenCodeWatermark ? (input.screenCode ?? null) : null;
   /** L'identité de l'établissement. `null` = la couleur par défaut du rendu. */
   const accent = manifest.settings.branding?.accent ?? null;
+  const zoom = manifest.settings.zoom ?? null;
 
   // L'urgence passe avant tout, y compris l'extinction programmée : elle
   // rallume l'écran.
   const emergency = manifest.emergency;
   if (emergency && nowMs < Date.parse(emergency.validUntil)) {
     return {
-      screen: { mode: "emergency", zones: [], emergency, identify: null, watermark, accent },
+      screen: { mode: "emergency", zones: [], emergency, identify: null, watermark, accent, zoom },
       rotations: new Map(input.rotations),
       transitions: [],
     };
@@ -124,7 +135,7 @@ export function direct(input: DirectorInput): DirectorOutput {
 
   if (input.identify) {
     return {
-      screen: { mode: "identify", zones: [], emergency: null, identify: input.identify, watermark: null, accent },
+      screen: { mode: "identify", zones: [], emergency: null, identify: input.identify, watermark: null, accent, zoom },
       rotations: new Map(input.rotations),
       transitions: [],
     };
@@ -132,7 +143,7 @@ export function direct(input: DirectorInput): DirectorOutput {
 
   if (isDisplayOffPeriod(manifest.settings, nowMs)) {
     return {
-      screen: { mode: "display-off", zones: [], emergency: null, identify: null, watermark: null, accent },
+      screen: { mode: "display-off", zones: [], emergency: null, identify: null, watermark: null, accent, zoom },
       rotations: new Map(input.rotations),
       transitions: [],
     };
@@ -295,6 +306,7 @@ export function direct(input: DirectorInput): DirectorOutput {
           identify: null,
           watermark,
           accent,
+          zoom,
         },
         rotations,
         transitions,
@@ -307,7 +319,15 @@ export function direct(input: DirectorInput): DirectorOutput {
     : collapseEmptyZones(zones);
 
   return {
-    screen: { mode, zones: finalZones, emergency: null, identify: null, watermark, accent },
+    screen: {
+      mode,
+      zones: finalZones,
+      emergency: null,
+      identify: null,
+      watermark,
+      accent,
+      zoom,
+    },
     rotations,
     transitions,
   };

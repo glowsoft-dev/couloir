@@ -1,5 +1,11 @@
 import type { RenderedSlide, RenderedZone, ScreenState } from "../director.js";
 import { typeScale } from "../readability.js";
+import {
+  facteurDeZoom,
+  lireResolution,
+  resolutionChangee,
+  type Resolution,
+} from "../resolution.js";
 import { defilement, demiJourneeEnCours, minutesLocales, tailleDesLignes } from "../demi-journee.js";
 import { RENDERER_CSS } from "./styles.js";
 
@@ -15,11 +21,33 @@ import { RENDERER_CSS } from "./styles.js";
  * chaque seconde chauffe pour rien.
  */
 
+/**
+ * L'ajusteur qu'une liste garde sous le coude pour se remesurer.
+ *
+ * Rangé sur le noeud plutôt que dans un registre tenu par le montage : une
+ * diapositive remplacée emporte le sien, et il n'y a donc rien à désinscrire
+ * ni à oublier de désinscrire. Sur un écran qui tourne des mois et change de
+ * diapositive toutes les vingt secondes, un registre qu'on nettoie mal est
+ * une fuite lente.
+ */
+const AJUSTEUR = Symbol.for("couloir.ajusteur");
+interface PorteAjusteur extends HTMLElement {
+  [AJUSTEUR]?: () => void;
+}
+
 export interface MountOptions {
   /** Résout l'identifiant d'un média vers une URL locale servie par l'agent. */
   assetUrl?: (assetId: string) => string;
   locale?: string;
   timezone?: string;
+  /**
+   * Ce que la dalle mesure vraiment, remonté à chaque changement.
+   *
+   * Le boîtier le joint à sa télémétrie : c'est ainsi qu'on apprend depuis
+   * la console qu'un kiosque tourne en fenêtre, sans monter sur une échelle
+   * pour regarder l'écran.
+   */
+  onResolution?: (resolution: Resolution) => void;
 }
 
 export interface RendererHandle {
@@ -45,14 +73,44 @@ export function mountRenderer(container: HTMLElement, options: MountOptions = {}
   const mountedSlides = new Map<string, string>();
   let lastSignature = "";
 
+  /** Le zoom demandé par la console, appliqué à toute l'échelle. */
+  let zoomCourant = 1;
+  let derniereResolution: Resolution | null = null;
+
   const applyTypeScale = () => {
     const height = root.clientHeight || 1080;
-    const scale = typeScale(height);
+    const scale = typeScale(height, zoomCourant);
     root.style.setProperty("--fs-eyebrow", `${scale.eyebrow}px`);
     root.style.setProperty("--fs-title", `${scale.title}px`);
     root.style.setProperty("--fs-body", `${scale.body}px`);
     root.style.setProperty("--fs-caption", `${scale.caption}px`);
     root.style.setProperty("--pad", `${Math.round(height * 0.045)}px`);
+
+    /*
+     * Les listes déjà posées se remesurent.
+     *
+     * Sans ceci, une journée dimensionnée pour la fenêtre du démarrage
+     * gardait cette taille après un passage en plein écran, un changement de
+     * dalle ou une rotation : le reste de la page suivait, elle non. Chaque
+     * liste porte son propre ajusteur — pas de registre à tenir, et un noeud
+     * retiré de la page emporte le sien.
+     */
+    for (const noeud of root.querySelectorAll<HTMLElement>(".couloir-list")) {
+      (noeud as PorteAjusteur)[AJUSTEUR]?.();
+    }
+
+    const vue = doc.defaultView;
+    if (options.onResolution && vue) {
+      const resolution = lireResolution(root.clientWidth, height, {
+        largeur: vue.screen?.width ?? 0,
+        hauteur: vue.screen?.height ?? 0,
+        densite: vue.devicePixelRatio ?? 1,
+      });
+      if (resolutionChangee(derniereResolution, resolution)) {
+        derniereResolution = resolution;
+        options.onResolution(resolution);
+      }
+    }
   };
 
   const resizeObserver = new ResizeObserver(applyTypeScale);
@@ -158,6 +216,13 @@ export function mountRenderer(container: HTMLElement, options: MountOptions = {}
       // reste de la feuille s'y réfère déjà. Le fond, lui, ne change pas —
       // une dalle claire éblouit le soir et perd en contraste à quatre
       // mètres.
+      // Le zoom avant tout le reste : il change l'échelle entière, et une
+      // diapositive posée juste après doit être mesurée à la bonne taille.
+      const zoomVoulu = facteurDeZoom(screen.zoom);
+      if (zoomVoulu !== zoomCourant) {
+        zoomCourant = zoomVoulu;
+        applyTypeScale();
+      }
       if (screen.accent !== accentPosé) {
         accentPosé = screen.accent;
         if (screen.accent) root.style.setProperty("--accent", screen.accent);
@@ -453,19 +518,40 @@ function ajusterLaJournee(
     const hauteur = wrapper.clientHeight;
     if (hauteur <= 0) return;
 
+    /*
+     * La base vient de la racine, pas de l'enveloppe.
+     *
+     * L'enveloppe porte déjà la taille qu'on lui a posée au passage
+     * précédent : la relire ferait grossir la liste un peu plus à chaque
+     * appel, et un simple changement de fenêtre suffirait à faire enfler le
+     * texte jusqu'à ce qu'une seule ligne remplisse la dalle.
+     */
     const base =
-      Number.parseFloat(vue?.getComputedStyle(wrapper).fontSize ?? "24") || 24;
-    list.style.fontSize = `${tailleDesLignes(hauteur, nombreDeLignes, base)}px`;
+      Number.parseFloat(
+        vue?.getComputedStyle(wrapper).getPropertyValue("--fs-body") ?? "",
+      ) || 24;
+
+    const taille = `${tailleDesLignes(hauteur, nombreDeLignes, base)}px`;
+    // Réassigner la même valeur relancerait une mise en page, que
+    // l'observateur de taille reprendrait pour un changement : la boucle ne
+    // s'arrêterait jamais.
+    if (list.style.fontSize !== taille) list.style.fontSize = taille;
 
     // Mesuré APRÈS la nouvelle taille : c'est le texte agrandi qui déborde,
     // pas celui d'avant.
     const glissement = defilement(wrapper.scrollHeight, hauteur);
     list.classList.toggle("couloir-defile", glissement !== null);
     if (glissement) {
-      list.style.setProperty("--defile-course", `-${glissement.coursePx}px`);
-      list.style.setProperty("--defile-duree", `${glissement.dureeMs}ms`);
+      const course = `-${glissement.coursePx}px`;
+      const duree = `${glissement.dureeMs}ms`;
+      if (list.style.getPropertyValue("--defile-course") !== course) {
+        list.style.setProperty("--defile-course", course);
+        list.style.setProperty("--defile-duree", duree);
+      }
     }
   };
+
+  (list as PorteAjusteur)[AJUSTEUR] = ajuster;
 
   if (vue?.requestAnimationFrame) {
     vue.requestAnimationFrame(() => vue.requestAnimationFrame(ajuster));

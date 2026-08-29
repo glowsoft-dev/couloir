@@ -103,6 +103,15 @@ export function PublishPanel({
   const [champsEdt, setChampsEdt] = useState<ChampEdt[] | null>(null);
   /** Ne montrer que la demi-journée en cours, en plus grand. */
   const [demiJournee, setDemiJournee] = useState(false);
+  /**
+   * Le grossissement du texte sur cet écran.
+   *
+   * `undefined` = jamais réglé, donc l'échelle déduite de la dalle. On ne
+   * pose pas 1 par défaut : le manifeste porterait alors un réglage que
+   * personne n'a choisi, et on ne saurait plus distinguer « laissé tel quel »
+   * de « réglé à normal ».
+   */
+  const [zoom, setZoom] = useState<number | undefined>(undefined);
   /** Ce que l'écran montre quand rien n'est programmé pour maintenant. */
   const [parDefaut, setParDefaut] = useState<{ assetId?: string; emploiDuTemps?: boolean }>({});
   /** L'onglet ouvert dans l'éditeur. */
@@ -166,6 +175,7 @@ export function PublishPanel({
         setAfficheursChoisis(spec.timetableAfficheurs ?? []);
         setChampsEdt(spec.timetableChamps ?? null);
         setDemiJournee(spec.timetableDemiJournee ?? false);
+        setZoom(spec.zoom);
         setParDefaut(spec.parDefaut ?? {});
       } else {
         setLayout("plein-ecran");
@@ -202,6 +212,7 @@ export function PublishPanel({
       ...(afficheursChoisis.length > 0 ? { timetableAfficheurs: afficheursChoisis } : {}),
       ...(champsEdt !== null ? { timetableChamps: champsEdt } : {}),
       ...(demiJournee ? { timetableDemiJournee: true } : {}),
+      ...(zoom !== undefined ? { zoom } : {}),
       ...(parDefaut.assetId || parDefaut.emploiDuTemps ? { parDefaut } : {}),
     };
   }
@@ -314,7 +325,7 @@ export function PublishPanel({
       if (aussi.length > 0) {
         // Publication groupée : chaque écran garde ses propres réglages, et
         // un refus n'empêche pas les autres.
-        const { resultats } = await api.publierGroupe([screen.id, ...aussi], currentSpec());
+        const { resultats } = await api.publierGroupe([screen.id, ...aussi], currentSpec(), screen.id);
         const publies = resultats.filter((r) => r.version !== undefined);
         const refuses = resultats.filter((r) => r.erreur);
         setDirty(false);
@@ -562,6 +573,8 @@ export function PublishPanel({
               champsEdt={champsEdt}
               setChampsEdt={setChampsEdt}
               demiJournee={demiJournee}
+              zoom={zoom}
+              setZoom={setZoom}
               setDemiJournee={setDemiJournee}
               classIds={classIds}
               setClassIds={setClassIds}

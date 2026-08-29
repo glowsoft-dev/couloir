@@ -998,6 +998,85 @@ describe("parcours de la console", () => {
     ]);
   });
 
+  it("laisse l'écran édité changer ses propres réglages", async () => {
+    /*
+     * Le revers du test précédent, et un défaut réel : les réglages étant
+     * reportés sur TOUS les écrans, celui qu'on venait d'éditer se voyait
+     * réappliquer les anciens. Une fois une extinction posée, plus moyen de
+     * la modifier depuis la console — qui publie toujours par cette route.
+     * La publication réussissait, la version montait, et l'écran gardait le
+     * réglage d'avant.
+     */
+    const { app, store, auth } = await ready();
+    const device = await store.startEnrollment("z".repeat(44), { platform: "linux" } as never);
+    const { screen } = await store.claimNew(device.deviceId, {
+      code: "Z·0·01", label: "Hall", building: "Z", floor: 0, area: "hall", orientation: "landscape",
+    });
+
+    await app.inject({
+      method: "POST",
+      url: `${CONSOLE_PREFIX}/publications`,
+      headers: auth,
+      payload: {
+        screenIds: [screen.id],
+        ecranPrincipal: screen.id,
+        spec: { layout: "plein-ecran", items: [{ assetId: poster.id }], zoom: 1.7 },
+      },
+    });
+    expect((await store.getManifest(screen.id))?.settings.zoom).toBe(1.7);
+
+    await app.inject({
+      method: "POST",
+      url: `${CONSOLE_PREFIX}/publications`,
+      headers: auth,
+      payload: {
+        screenIds: [screen.id],
+        ecranPrincipal: screen.id,
+        spec: { layout: "plein-ecran", items: [{ assetId: poster.id }], zoom: 0.85 },
+      },
+    });
+    expect((await store.getManifest(screen.id))?.settings.zoom).toBe(0.85);
+  });
+
+  it("garde leurs réglages aux écrans qui reçoivent la composition en plus", async () => {
+    // L'autre moitié de la règle : le zoom du hall ne part pas sur le
+    // couloir du premier étage parce qu'on y a envoyé la même affiche.
+    const { app, store, auth } = await ready();
+    const premier = await store.startEnrollment("y".repeat(44), { platform: "linux" } as never);
+    const { screen: edite } = await store.claimNew(premier.deviceId, {
+      code: "Y·0·01", label: "Hall", building: "Y", floor: 0, area: "hall", orientation: "landscape",
+    });
+    const second = await store.startEnrollment("x".repeat(44), { platform: "linux" } as never);
+    const { screen: voisin } = await store.claimNew(second.deviceId, {
+      code: "X·1·01", label: "Couloir", building: "X", floor: 1, area: "couloir", orientation: "landscape",
+    });
+
+    await app.inject({
+      method: "POST",
+      url: `${CONSOLE_PREFIX}/publications`,
+      headers: auth,
+      payload: {
+        screenIds: [voisin.id],
+        ecranPrincipal: voisin.id,
+        spec: { layout: "plein-ecran", items: [{ assetId: poster.id }], zoom: 0.85 },
+      },
+    });
+
+    await app.inject({
+      method: "POST",
+      url: `${CONSOLE_PREFIX}/publications`,
+      headers: auth,
+      payload: {
+        screenIds: [edite.id, voisin.id],
+        ecranPrincipal: edite.id,
+        spec: { layout: "plein-ecran", items: [{ assetId: video.id }], zoom: 1.7 },
+      },
+    });
+
+    expect((await store.getManifest(edite.id))?.settings.zoom).toBe(1.7);
+    expect((await store.getManifest(voisin.id))?.settings.zoom).toBe(0.85);
+  });
+
   it("publie sur les écrans qui acceptent, et dit lesquels refusent", async () => {
     // Tout annuler pour un seul écran en défaut serait pire : on publie ce
     // qu'on peut, et on rend le détail.

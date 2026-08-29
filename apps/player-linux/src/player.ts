@@ -3,8 +3,10 @@ import type { Server } from "node:http";
 import { networkInterfaces } from "node:os";
 import { AgentRuntime, SourcePoller, mettreAJourLeLecteur } from "@couloir/agent";
 import type { Heartbeat } from "@couloir/protocol";
+import { ResolutionEcran } from "@couloir/protocol";
 import { type Identity, IdentityFile, type Pairing, enroll } from "./identity.js";
 import { createLocalServer } from "./local-server.js";
+import { journalDeResolution } from "./resolution.js";
 import { ManifestFile } from "./ports/manifest-file.js";
 import { HttpNet } from "./ports/net.js";
 import { FileQueue } from "./ports/queue.js";
@@ -59,6 +61,8 @@ export class Player {
   private queue: FileQueue | null = null;
   private server: Server | null = null;
   private heartbeatTimer: ReturnType<typeof setInterval> | null = null;
+  /** Le dernier relevé de dalle accepté, pour ne pas rejournaliser à l'identique. */
+  private resolutionConnue: string | null = null;
   private readonly abort = new AbortController();
   private startedAtMs = Date.now();
 
@@ -102,6 +106,7 @@ export class Player {
       pairing: () => this.pairing,
       sources: () => this.poller?.snapshotsBySourceId() ?? {},
       identify: () => this.identify,
+      onResolution: (charge) => this.noterLaResolution(charge),
       forceFallback: () => this.runtime?.getContext().state === "fallback",
     });
     await new Promise<void>((resolve) => this.server!.listen(this.options.localPort, "127.0.0.1", resolve));
@@ -214,6 +219,43 @@ export class Player {
    * il s'accumule sur le disque avec son heure réelle, et le serveur pourra
    * reconstituer l'historique exact au retour.
    */
+  /**
+   * Ce que la page vient de mesurer sur la dalle.
+   *
+   * Validé plutôt que cru sur parole : la charge arrive d'un navigateur, par
+   * une porte HTTP locale. Une charge illisible est ignorée sans bruit —
+   * elle ne vaut pas d'éteindre un écran, ni de remplir le journal.
+   *
+   * On ne journalise qu'au changement. Un écran allumé six mois écrirait
+   * sinon la même ligne des milliers de fois, et la seule qui compte — le
+   * jour où le kiosque a démarré en fenêtre — serait introuvable.
+   */
+  private noterLaResolution(charge: unknown): void {
+    const lu = ResolutionEcran.safeParse(charge);
+    if (!lu.success) return;
+
+    const empreinte = JSON.stringify(lu.data);
+    if (empreinte === this.resolutionConnue) return;
+    this.resolutionConnue = empreinte;
+
+    const journal = journalDeResolution(lu.data);
+    this.log(journal.level, journal.message, journal.context);
+    void this.runtime?.record({
+      heartbeats: [],
+      playEvents: [],
+      logs: [
+        {
+          eventId: randomUUID(),
+          at: new Date().toISOString().replace(/\.\d+Z$/, "Z"),
+          level: journal.level,
+          code: journal.code,
+          message: journal.message,
+          context: journal.context,
+        },
+      ],
+    });
+  }
+
   private startHeartbeat(): void {
     const intervalMs = this.options.heartbeatIntervalMs ?? 60_000;
     const beat = async () => {

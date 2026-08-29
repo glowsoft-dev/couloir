@@ -16,6 +16,21 @@ import { Schedule } from "./Schedule.js";
  * Les propriétés sont donc nombreuses, et c'est ce qui les rend lisibles :
  * on voit d'un coup ce que ce volet touche.
  */
+/**
+ * Le zoom, nommé par ce qui le décide.
+ *
+ * Un pourcentage ne se choisit pas : personne ne sait si son écran veut
+ * 130 % ou 160 %. La distance, elle, se mesure du regard depuis l'endroit
+ * où passent les gens — et c'est la seule chose que le rendu ne peut pas
+ * déduire tout seul de la dalle.
+ */
+const DISTANCES = [
+  { libelle: "Tout près", zoom: 0.85, aide: "Un comptoir, un guichet : moins de deux mètres." },
+  { libelle: "Couloir", zoom: 1, aide: "Le cas ordinaire : trois à cinq mètres." },
+  { libelle: "Loin", zoom: 1.3, aide: "Une salle traversante, six à huit mètres." },
+  { libelle: "Hall", zoom: 1.7, aide: "Un grand volume : dix mètres et plus." },
+] as const;
+
 export function ReglagesDeLEcran({
   screen,
   media,
@@ -29,6 +44,8 @@ export function ReglagesDeLEcran({
   setChampsEdt,
   demiJournee,
   setDemiJournee,
+  zoom,
+  setZoom,
   classIds,
   setClassIds,
   displayOff,
@@ -49,6 +66,9 @@ export function ReglagesDeLEcran({
   setChampsEdt: (f: (c: ChampEdt[] | null) => ChampEdt[]) => void;
   demiJournee: boolean;
   setDemiJournee: (v: boolean) => void;
+  /** Grossissement du texte. `undefined` = celui d'origine. */
+  zoom: number | undefined;
+  setZoom: (v: number | undefined) => void;
   classIds: string[];
   setClassIds: (f: (c: string[]) => string[]) => void;
   displayOff: DisplayOffWindow[];
@@ -140,6 +160,56 @@ export function ReglagesDeLEcran({
     </p>
   </div>
 )}
+
+{avecCours && (
+  <div className="reglage">
+    <div className="reglage-titre">Journée entière ou demi-journée</div>
+    <label className="inline">
+      <input
+        type="checkbox"
+        checked={demiJournee}
+        onChange={(e) => touch(() => setDemiJournee(e.target.checked))}
+      />
+      <span>Ne montrer que la demi-journée en cours</span>
+    </label>
+    <p className="reglage-note">
+      Le matin, les cours du matin ; l'après-midi, ceux de l'après-midi. Moitié moins de
+      lignes, donc des lignes deux fois plus grandes. Ce qui dépasse encore défile
+      lentement, rien n'est perdu.
+    </p>
+  </div>
+)}
+
+<div className="reglage">
+  <div className="reglage-titre">Distance de lecture</div>
+  <p className="reglage-note reglage-note--avant">
+    Les tailles se calculent déjà d'après la dalle. Ce réglage-ci ne corrige que ce que
+    la machine ne peut pas deviner : à quelle distance on se tient de cet écran-là.
+  </p>
+  <div className="day-picker">
+    {DISTANCES.map((d) => (
+      <button
+        key={d.libelle}
+        type="button"
+        className="day-chip"
+        aria-pressed={(zoom ?? 1) === d.zoom}
+        title={d.aide}
+        /*
+         * Toujours une valeur explicite, y compris pour « Couloir ».
+         *
+         * Le zoom est un réglage d'écran : le serveur le reporte d'une
+         * publication à la suivante, pour qu'une modification de contenu
+         * n'efface pas la configuration de la dalle. Envoyer « rien » en
+         * choisissant Couloir laissait donc l'ancien zoom en place, et on
+         * ne pouvait plus jamais revenir à la taille normale.
+         */
+        onClick={() => touch(() => setZoom(d.zoom))}
+      >
+        {d.libelle}
+      </button>
+    ))}
+  </div>
+</div>
 
 {avecCours && afficheurs.length === 0 && (
   <div className="reglage">

@@ -4,6 +4,7 @@ import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { API_PREFIX, CommandKind } from "@couloir/protocol";
 import { CompositionError, type PublishSpec, compose } from "./composer.js";
+import { ecransQuiUtilisent } from "./usage-des-medias.js";
 import type { MediaStore } from "./media.js";
 import type { Store } from "./store.js";
 import type { CommandBus } from "./commands.js";
@@ -125,6 +126,14 @@ const PublishBody = z.object({
    * et personne à neuf heures ne cherche la salle du cours de seize heures.
    */
   timetableDemiJournee: z.boolean().optional(),
+  /**
+   * Le grossissement du texte sur cet écran.
+   *
+   * Borné ici comme dans le manifeste : une valeur hors bornes est refusée à
+   * la publication plutôt que corrigée en silence à l'affichage, sinon la
+   * console montrerait un réglage que l'écran n'applique pas.
+   */
+  zoom: z.number().min(0.6).max(2.5).optional(),
   /** Combien d'actualités du site tournent avec le reste. 0 = aucune. */
   actualites: z.number().int().min(0).max(10).optional(),
   /** Ce que l'écran montre quand rien n'est programmé pour maintenant. */
@@ -410,6 +419,55 @@ export function registerConsoleApi(app: FastifyInstance, options: ConsoleApiOpti
     const stored = await media.put(randomUUID(), buffer, file.mimetype, file.filename);
     return reply.code(201).send({ media: stored });
   });
+
+  /**
+   * Retirer un média de la bibliothèque.
+   *
+   * Le contrôle d'usage est refait ici, et pas seulement dans la console.
+   * Entre l'affichage de la bibliothèque et le clic, quelqu'un a pu publier
+   * cette affiche sur un écran : sans ce refus, elle disparaîtrait d'un mur
+   * pendant qu'on la regarde, et le boîtier n'aurait plus rien à servir.
+   *
+   * Le refus nomme les écrans. « Média utilisé » obligerait à ouvrir les
+   * compositions une par une pour trouver lesquels.
+   */
+  app.delete<{ Params: { mediaId: string } }>(
+    `${CONSOLE_PREFIX}/media/:mediaId`,
+    async (request, reply) => {
+      const { mediaId } = request.params;
+      if (!media.get(mediaId)) {
+        return reply.code(404).send({
+          code: "media-inconnu",
+          message: "Ce média n'existe plus dans la bibliothèque.",
+          retryable: false,
+        });
+      }
+
+      const screens = await store.listScreens();
+      const compositions = await Promise.all(
+        screens.map(async (screen) => ({
+          ecran: { id: screen.id, code: screen.code, label: screen.label },
+          spec: await store.getSpec(screen.id),
+        })),
+      );
+
+      const concernes = ecransQuiUtilisent(compositions, mediaId);
+      if (concernes.length > 0) {
+        return reply.code(409).send({
+          code: "media-en-service",
+          message:
+            concernes.length === 1
+              ? `Ce média est affiché sur l'écran ${concernes[0]!.code}. Retirez-le de sa composition avant de le supprimer.`
+              : `Ce média est affiché sur ${concernes.length} écrans. Retirez-le de leurs compositions avant de le supprimer.`,
+          retryable: false,
+          details: { ecrans: concernes },
+        });
+      }
+
+      await media.delete(mediaId);
+      return reply.code(204).send();
+    },
+  );
 
   /**
    * La composition actuellement en ligne.
@@ -927,6 +985,7 @@ export function registerConsoleApi(app: FastifyInstance, options: ConsoleApiOpti
     "timetableAfficheurs",
     "timetableChamps",
     "timetableDemiJournee",
+    "zoom",
     "timetableClassIds",
     "displayOff",
     "parDefaut",
@@ -935,6 +994,20 @@ export function registerConsoleApi(app: FastifyInstance, options: ConsoleApiOpti
   const PublicationGroupee = z.object({
     screenIds: z.array(z.string()).min(1),
     spec: PublishBody,
+    /**
+     * L'écran dont la composition décrit AUSSI les réglages.
+     *
+     * Sans lui, les réglages ci-dessus étaient reportés sur tous les écrans,
+     * y compris celui qu'on venait d'éditer : une fois posé, un réglage
+     * d'écran ne pouvait donc plus jamais changer depuis la console, qui
+     * publie toujours par cette route. On changeait la mise en page, la
+     * publication réussissait, et l'écran gardait l'ancienne.
+     *
+     * Facultatif : sans lui on garde le comportement d'avant, où chaque
+     * écran conserve les siens. C'est le bon défaut pour un appel qui ne dit
+     * pas quel écran la composition décrit.
+     */
+    ecranPrincipal: z.string().optional(),
   });
 
   app.post(`${CONSOLE_PREFIX}/publications`, async (request, reply) => {
@@ -963,11 +1036,18 @@ export function registerConsoleApi(app: FastifyInstance, options: ConsoleApiOpti
         continue;
       }
 
-      // Le réglage propre de l'écran l'emporte sur celui de la composition.
-      const ancienne = (await store.getSpec(screenId)) as Record<string, unknown> | null;
+      /*
+       * Sur les écrans qui reçoivent la composition en plus, le réglage
+       * propre de l'écran l'emporte. Sur celui qu'on édite, c'est l'inverse :
+       * la composition EST ses réglages, et les écraser par les anciens les
+       * rendrait impossibles à modifier.
+       */
       const corps = { ...parsed.data.spec } as Record<string, unknown>;
-      for (const clef of REGLAGES_DE_L_ECRAN) {
-        if (ancienne?.[clef] !== undefined) corps[clef] = ancienne[clef];
+      if (screenId !== parsed.data.ecranPrincipal) {
+        const ancienne = (await store.getSpec(screenId)) as Record<string, unknown> | null;
+        for (const clef of REGLAGES_DE_L_ECRAN) {
+          if (ancienne?.[clef] !== undefined) corps[clef] = ancienne[clef];
+        }
       }
 
       const relu = PublishBody.safeParse(corps);

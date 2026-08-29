@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { createReadStream } from "node:fs";
-import { mkdir, readFile, readdir, stat, writeFile } from "node:fs/promises";
+import { mkdir, readFile, readdir, rm, stat, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
 /**
@@ -112,6 +112,33 @@ export class MediaStore {
     this.entries.set(id, media);
     await this.persistIndex();
     return media;
+  }
+
+  /**
+   * Retire un média de la bibliothèque, fichier compris.
+   *
+   * Rend faux si l'identifiant est inconnu, plutôt que de lever : l'appelant
+   * a déjà répondu 404 dans ce cas, et un double clic sur « supprimer » ne
+   * doit pas produire une erreur serveur.
+   *
+   * Le fichier part avant l'entrée d'index. Dans l'autre sens, une panne
+   * entre les deux laisserait un fichier orphelin que `load()` remettrait
+   * dans la bibliothèque au prochain démarrage — l'image supprimée
+   * réapparaîtrait toute seule.
+   */
+  async delete(id: string): Promise<boolean> {
+    const media = this.entries.get(id);
+    if (!media) return false;
+    try {
+      await rm(media.path, { force: true });
+    } catch {
+      // Fichier déjà disparu, disque en lecture seule : on retire quand même
+      // l'entrée. Laisser un média que l'on ne peut plus servir dans la
+      // bibliothèque serait pire que l'oublier.
+    }
+    this.entries.delete(id);
+    await this.persistIndex();
+    return true;
   }
 
   get(id: string): StoredMedia | undefined {
