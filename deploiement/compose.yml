@@ -56,6 +56,8 @@ services:
       OVH_APPLICATION_KEY: ${OVH_APPLICATION_KEY:?définissez OVH_APPLICATION_KEY dans .env}
       OVH_APPLICATION_SECRET: ${OVH_APPLICATION_SECRET:?définissez OVH_APPLICATION_SECRET dans .env}
       OVH_CONSUMER_KEY: ${OVH_CONSUMER_KEY:?définissez OVH_CONSUMER_KEY dans .env}
+      # Le nom vers lequel l'établissement délègue son défi ACME.
+      COULOIR_DEFI_DELEGUE: ${COULOIR_DEFI_DELEGUE:?définissez COULOIR_DEFI_DELEGUE dans .env}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy-donnees:/data

@@ -6,7 +6,7 @@
 #
 # COULOIR_DOMAINE est lu depuis le fichier .env voisin.
 
-{
+{$COULOIR_DOMAINE} {
 	# Le certificat s'obtient par vérification DNS, jamais par HTTP.
 	#
 	# La vérification HTTP suppose le serveur joignable depuis Internet. Ici
@@ -16,17 +16,35 @@
 	# obtient donc un vrai certificat, reconnu par les écrans sans rien
 	# installer sur eux.
 	#
-	# Les identifiants OVH viennent du .env. Ils n'ont besoin que du droit
-	# d'écrire dans la zone : ni facturation, ni serveurs, ni domaines.
-	acme_dns ovh {
-		endpoint {$OVH_ENDPOINT}
-		application_key {$OVH_APPLICATION_KEY}
-		application_secret {$OVH_APPLICATION_SECRET}
-		consumer_key {$OVH_CONSUMER_KEY}
-	}
-}
+	# Configuré ici et non en option globale : `dns_challenge_override_domain`
+	# n'existe pas au niveau global, et c'est elle qui porte tout l'intérêt du
+	# montage.
+	tls {
+		dns ovh {
+			endpoint {$OVH_ENDPOINT}
+			application_key {$OVH_APPLICATION_KEY}
+			application_secret {$OVH_APPLICATION_SECRET}
+			consumer_key {$OVH_CONSUMER_KEY}
+		}
 
-{$COULOIR_DOMAINE} {
+		# La délégation du défi, et la raison d'être de tout ceci.
+		#
+		# L'établissement pose un CNAME une fois pour toutes, de
+		# `_acme-challenge.<son-nom>` vers la valeur ci-dessous. Le
+		# renouvellement écrit alors son enregistrement temporaire dans NOTRE
+		# zone, et pas dans la sienne.
+		#
+		# Ce qu'on y gagne : aucun identifiant d'API sur la zone de
+		# l'établissement n'a jamais à exister. Un jeton de zone, même
+		# restreint, permet de réécrire les MX du courrier et le site public —
+		# c'est beaucoup demander pour renouveler le certificat d'un écran de
+		# couloir, et un service informatique a raison de le refuser.
+		#
+		# La valeur est le nom canonique COMPLET visé par le CNAME : Caddy ne
+		# préfixe pas `_acme-challenge` tout seul.
+		dns_challenge_override_domain {$COULOIR_DEFI_DELEGUE}
+	}
+
 	# Compression : la console fait 265 ko de JavaScript, servis à chaque
 	# ouverture depuis un poste de l'école.
 	encode zstd gzip
