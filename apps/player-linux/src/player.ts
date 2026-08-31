@@ -150,7 +150,12 @@ export class Player {
       { net, store, queue, display, system, clock, update },
       {
         settings: { offlineGraceDays: 7, pollIntervalSec: 60 },
-        persistence: new ManifestFile(`${this.options.dataDirectory}/manifest.json`),
+        // L'écran attendu est passé au cache : un manifeste laissé par un
+        // rattachement précédent ne doit pas revenir à l'écran.
+        persistence: new ManifestFile(
+          `${this.options.dataDirectory}/manifest.json`,
+          this.identity.screenId,
+        ),
         onManifestApplied: (manifest) => {
           this.poller?.setManifest(manifest);
           this.log("info", `manifeste v${manifest.version} à l'écran`);

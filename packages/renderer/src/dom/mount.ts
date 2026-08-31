@@ -506,7 +506,7 @@ function renderNews(
  */
 function ajusterLaJournee(
   doc: Document,
-  wrapper: HTMLElement,
+  fenetre: HTMLElement,
   list: HTMLElement,
   nombreDeLignes: number,
 ): void {
@@ -514,8 +514,8 @@ function ajusterLaJournee(
   const vue = doc.defaultView;
 
   const ajuster = (): void => {
-    if (!wrapper.isConnected) return;
-    const hauteur = wrapper.clientHeight;
+    if (!fenetre.isConnected) return;
+    const hauteur = fenetre.clientHeight;
     if (hauteur <= 0) return;
 
     /*
@@ -528,7 +528,7 @@ function ajusterLaJournee(
      */
     const base =
       Number.parseFloat(
-        vue?.getComputedStyle(wrapper).getPropertyValue("--fs-body") ?? "",
+        vue?.getComputedStyle(fenetre).getPropertyValue("--fs-body") ?? "",
       ) || 24;
 
     const taille = `${tailleDesLignes(hauteur, nombreDeLignes, base)}px`;
@@ -539,7 +539,10 @@ function ajusterLaJournee(
 
     // Mesuré APRÈS la nouvelle taille : c'est le texte agrandi qui déborde,
     // pas celui d'avant.
-    const glissement = defilement(wrapper.scrollHeight, hauteur);
+    // Le contenu de la liste contre la hauteur de sa fenêtre : c'est bien ce
+    // qui dépasse du cadre qu'il faut faire défiler, pas ce qui dépasse de la
+    // diapositive.
+    const glissement = defilement(list.scrollHeight, hauteur);
     list.classList.toggle("couloir-defile", glissement !== null);
     if (glissement) {
       const course = `-${glissement.coursePx}px`;
@@ -640,8 +643,20 @@ function renderDataView(
       row.append(time, label, lieu);
       list.appendChild(row);
     }
-    wrapper.appendChild(list);
-    ajusterLaJournee(doc, wrapper, list, entrees.length);
+    /*
+     * La liste défile DANS sa propre fenêtre, pas dans la diapositive.
+     *
+     * Sans ce cadre, le défilement faisait remonter les lignes par-dessus le
+     * sur-titre, qui lui ne bouge pas : on lisait « M 2.12 » écrit sur le nom
+     * de l'établissement. Le cadre coupe ce qui sort, et le nom du groupe
+     * reste lisible en permanence — c'est lui qui dit à qui la liste
+     * s'adresse.
+     */
+    const fenetre = doc.createElement("div");
+    fenetre.className = "couloir-liste-vue";
+    fenetre.appendChild(list);
+    wrapper.appendChild(fenetre);
+    ajusterLaJournee(doc, fenetre, list, entrees.length);
     return;
   }
 

@@ -133,10 +133,28 @@ export const RENDERER_CSS = `
 /* Une journée se lit du haut. Centrée verticalement, elle laisse deux
    grandes bandes vides sur une dalle entière — et l'oeil cherche où
    commencer. */
-.couloir-slide:has(> .couloir-list),
-.couloir-slide:has(> .couloir-eyebrow + .couloir-list) { justify-content: flex-start; }
+.couloir-slide:has(> .couloir-liste-vue),
+.couloir-slide:has(> .couloir-eyebrow + .couloir-liste-vue) { justify-content: flex-start; }
 
-.couloir-list { display: flex; flex-direction: column; gap: .5em; margin: 0; padding: 0; list-style: none }
+/* La fenetre dans laquelle la journee defile.
+   La hauteur minimale nulle n'est pas decorative : sans elle, un enfant de
+   conteneur flex refuse de retrecir sous la hauteur de son contenu, le
+   debordement n'est donc jamais coupe, et la liste ressort par-dessus le
+   sur-titre en defilant.
+   (Pas d'accent grave dans ce fichier : il terminerait le litteral.) */
+.couloir-liste-vue { flex: 1; min-height: 0; overflow: hidden; }
+
+/* La taille du texte se pose ICI, sur la liste, et nulle part ailleurs.
+   Le rendu la recalcule d'apres la place disponible et l'ecrit en style en
+   ligne ; les lignes en heritent. Chaque ligne la redeclarait auparavant a
+   partir de --fs-body, ce qui annulait le calcul juste apres l'avoir fait :
+   le texte restait a sa taille de base sur une dalle aux deux tiers vide, et
+   rien dans le code ne montrait le conflit. */
+.couloir-list {
+  display: flex; flex-direction: column; gap: .5em; margin: 0; padding: 0;
+  list-style: none;
+  font-size: var(--fs-body);
+}
 .couloir-row {
   display: grid;
   grid-template-columns: auto 1fr auto;
@@ -146,7 +164,8 @@ export const RENDERER_CSS = `
      (Pas d'accent grave dans ce fichier : il est écrit dans un littéral de
      gabarit, et un seul y terminerait la chaîne.) */
   align-items: start;
-  font-size: var(--fs-body);
+  /* Herite de la liste : voir le commentaire ci-dessus. */
+  font-size: inherit;
   padding-bottom: .45em;
   border-bottom: 1px solid var(--rule);
 }

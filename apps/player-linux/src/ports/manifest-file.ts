@@ -14,7 +14,14 @@ import type { ManifestPersistence, PersistedState } from "@couloir/agent";
  * une coupure en pleine écriture est ignoré plutôt que d'empoisonner le rendu.
  */
 export class ManifestFile implements ManifestPersistence {
-  constructor(private readonly path: string) {}
+  /**
+   * @param ecranAttendu L'écran auquel le boîtier est actuellement rattaché.
+   *   Omis, on relit sans vérifier — le comportement d'avant.
+   */
+  constructor(
+    private readonly path: string,
+    private readonly ecranAttendu?: string | null,
+  ) {}
 
   async load(): Promise<PersistedState | null> {
     try {
@@ -23,8 +30,25 @@ export class ManifestFile implements ManifestPersistence {
         etag: string | null;
         lastContactMs: number | null;
       };
+      const manifest = Manifest.parse(raw.manifest);
+
+      /*
+       * Un manifeste appartient à UN écran, sur UN serveur.
+       *
+       * Rattacher un boîtier à un autre serveur ne suffisait pas à lui faire
+       * oublier son contenu : l'identité était refaite, le cache restait, et
+       * la dalle rejouait la composition de l'ancien serveur — dont les
+       * sources de données pointent vers une machine qui n'existe plus. Vu
+       * sur un écran en service : un emploi du temps de trois jours plus tôt,
+       * et « source inaccessible » toutes les trente secondes.
+       *
+       * Le pire est que ça ressemble à un fonctionnement normal : l'écran
+       * affiche quelque chose.
+       */
+      if (this.ecranAttendu && manifest.screenId !== this.ecranAttendu) return null;
+
       return {
-        manifest: Manifest.parse(raw.manifest),
+        manifest,
         etag: raw.etag ?? null,
         lastContactMs: typeof raw.lastContactMs === "number" ? raw.lastContactMs : null,
       };
