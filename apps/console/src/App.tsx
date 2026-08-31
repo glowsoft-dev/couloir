@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { Manifest } from "@couloir/protocol";
 import { ScreenActions } from "./Actions.js";
 import { EmergencyBar, UrgenceEnCours } from "./Emergency.js";
@@ -144,13 +144,25 @@ export function App() {
   }, []);
 
   /**
-   * Un seul écran rattaché : on le sélectionne. Faire cliquer quelqu'un sur
-   * l'unique élément d'une liste pour accéder à la seule chose qu'il peut
-   * faire n'apprend rien à personne.
+   * Un seul écran rattaché : on le sélectionne, mais UNE SEULE FOIS.
+   *
+   * Faire cliquer quelqu'un sur l'unique élément d'une liste pour accéder à
+   * la seule chose qu'il peut faire n'apprend rien à personne. Seulement,
+   * tant que la condition était réévaluée à chaque changement, l'écran se
+   * resélectionnait à l'instant même où l'on demandait la liste : « Tous les
+   * écrans » ne pouvait pas fonctionner, sans erreur ni message, et le bouton
+   * paraissait mort. Le défaut ne se voyait qu'à partir d'un seul écran
+   * rattaché — donc au pire moment, sur une installation neuve.
+   *
+   * On rend donc la main dès que le choix a été posé une fois : la commodité
+   * au premier affichage, et plus jamais contre l'utilisateur ensuite.
    */
+  const choixInitialFait = useRef(false);
   useEffect(() => {
-    if (selectedId === null && screens.length === 1) setSelectedId(screens[0]!.id);
-  }, [screens, selectedId]);
+    if (choixInitialFait.current || screens.length === 0) return;
+    choixInitialFait.current = true;
+    if (screens.length === 1) setSelectedId(screens[0]!.id);
+  }, [screens]);
 
   useEffect(() => {
     void api
