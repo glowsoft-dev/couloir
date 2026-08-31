@@ -3,7 +3,7 @@
 # sur la machine.
 [Unit]
 Description=Couloir — affichage kiosque
-After=couloir-player.service graphical.target
+After=couloir-player.service
 Requires=couloir-player.service
 
 # Le terminal, qu'il faut prendre à qui l'occupe.
@@ -39,4 +39,16 @@ Restart=always
 RestartSec=3
 
 [Install]
-WantedBy=graphical.target
+# multi-user.target, et surtout PAS graphical.target.
+#
+# graphical.target signifie « un gestionnaire de session a démarré un bureau ».
+# Or ce kiosque lance son propre serveur X — c'est tout l'objet de kiosk.sh —
+# précisément pour qu'un écran de couloir n'ait pas de bureau à faire tourner.
+# Accroché à graphical.target, il ne démarrait donc jamais sur la machine pour
+# laquelle il est fait : la cible n'est pas atteinte, systemd n'a rien à lancer,
+# et le journal reste vide. Aucune erreur nulle part, une dalle noire au
+# redémarrage, et rien pour dire pourquoi.
+#
+# Ça ne fonctionnait qu'accidentellement, sur une image avec bureau — celle
+# qu'on recommande justement de ne pas utiliser.
+WantedBy=multi-user.target

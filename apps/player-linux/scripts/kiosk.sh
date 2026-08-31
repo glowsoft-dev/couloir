@@ -51,24 +51,68 @@ fi
 xset s off -dpms s noblank 2>/dev/null || true
 command -v unclutter >/dev/null && unclutter -idle 0 -root &
 
-exec "$BROWSER" \
-  --kiosk \
-  --app="http://127.0.0.1:${PORT}/" \
-  `# Sans ça, Chromium réclame un mot de passe pour créer un trousseau de` \
-  `# clés au premier lancement, et attend. La dalle affiche alors une boîte` \
-  `# de dialogue à la place du contenu — sur chaque écran, le jour de la` \
-  `# pose. Il n'a de toute façon aucun secret à ranger : il ouvre une page` \
-  `# locale, sans compte ni mot de passe.` \
-  --password-store=basic \
-  --use-mock-keychain \
-  --noerrdialogs \
-  --disable-infobars \
-  --disable-session-crashed-bubble \
-  `# Le nom du drapeau a changé : TranslateUI seul ne suffit plus, et la` \
-  `# bannière « French / English » s'affichait en haut de la dalle.` \
-  --disable-features=Translate,TranslateUI \
-  --disable-translate \
-  --check-for-update-interval=31536000 \
-  --autoplay-policy=no-user-gesture-required \
-  --disable-pinch \
+#
+# La géométrie, faute de gestionnaire de fenêtres.
+#
+# `--kiosk` ne met pas la fenêtre en plein écran tout seul : il demande au
+# gestionnaire de fenêtres de le faire. Sur un boîtier d'affichage il n'y en a
+# aucun — c'est voulu, il n'y a rien à gérer — et Chromium garde alors sa
+# taille par défaut. La dalle montre une vignette entourée de noir, ce qui
+# ressemble à un problème de contenu et se cherche longtemps.
+#
+# On lui donne donc les dimensions de l'écran, lues du serveur X.
+#
+# Trois façons de lire la taille, parce qu'aucune n'est garantie : `xdpyinfo`
+# vient de x11-utils, absent d'une installation minimale ; `xrandr` accompagne
+# `xset`, donc presque toujours là ; et le tampon d'image répond même sans
+# aucun outil X. La première version n'essayait que la première, et repartait
+# donc les mains vides sur ce boîtier-ci.
+taille_de_la_dalle() {
+  local t
+  t="$(xdpyinfo 2>/dev/null | awk '/dimensions:/{print $2; exit}')"
+  [ -n "$t" ] && { echo "$t"; return; }
+  t="$(xrandr 2>/dev/null | awk '/\*/{print $1; exit}')"
+  [ -n "$t" ] && { echo "$t"; return; }
+  t="$(tr ',' 'x' < /sys/class/graphics/fb0/virtual_size 2>/dev/null)"
+  [ -n "$t" ] && echo "$t"
+}
+
+GEOMETRIE=()
+TAILLE="$(taille_de_la_dalle)"
+if [ -n "$TAILLE" ]; then
+  GEOMETRIE=(--window-position=0,0 "--window-size=${TAILLE%%x*},${TAILLE##*x}")
+  echo "dalle detectee : $TAILLE" >&2
+else
+  # On le dit plutôt que de laisser une fenêtre trop petite sans explication.
+  echo "taille de dalle indeterminee : la fenetre gardera sa taille par defaut" >&2
+fi
+
+DRAPEAUX=(
+  --kiosk
+  --app="http://127.0.0.1:${PORT}/"
+
+  # Sans ça, Chromium réclame un mot de passe pour créer un trousseau de clés
+  # au premier lancement, et attend. La dalle affiche une boîte de dialogue à
+  # la place du contenu — sur chaque écran, le jour de la pose. Il n'a de toute
+  # façon aucun secret à ranger : il ouvre une page locale, sans compte.
+  --password-store=basic
+  --use-mock-keychain
+
+  --noerrdialogs
+  --disable-infobars
+  --disable-session-crashed-bubble
+
+  # La bannière « French / English » ne se ferme PAS par ces drapeaux : les
+  # versions récentes de Chromium les ignorent. On les garde pour les anciennes,
+  # mais ce qui la supprime vraiment est la politique système posée par
+  # l'installateur, dans /etc/chromium/policies/managed.
+  --disable-features=Translate,TranslateUI
+  --disable-translate
+
+  --check-for-update-interval=31536000
+  --autoplay-policy=no-user-gesture-required
+  --disable-pinch
   --overscroll-history-navigation=0
+)
+
+exec "$BROWSER" "${DRAPEAUX[@]}" "${GEOMETRIE[@]}"

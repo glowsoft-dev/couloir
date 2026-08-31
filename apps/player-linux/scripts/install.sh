@@ -161,6 +161,30 @@ allowed_users=anybody
 needs_root_rights=yes
 XWRAPPER
 
+#
+# La bannière de traduction, coupée par politique et non par drapeau.
+#
+# `--disable-features=Translate` ne suffit plus : Chromium l'ignore, et la
+# barre « French / English » se pose en haut de la dalle, par-dessus le
+# contenu. Constaté sur un écran en service, drapeaux pourtant présents.
+#
+# Une politique système, elle, fait autorité. Le chemin dépend du paquet —
+# `chromium` sur Debian, `chromium-browser` sur d'autres — on pose les deux
+# plutôt que de deviner.
+#
+for dossier in /etc/chromium/policies/managed /etc/chromium-browser/policies/managed; do
+  install -d "$dossier"
+  cat > "$dossier"/couloir.json <<'POLITIQUE'
+{
+  "TranslateEnabled": false,
+  "DefaultNotificationsSetting": 2,
+  "PasswordManagerEnabled": false,
+  "BackgroundModeEnabled": false
+}
+POLITIQUE
+  chmod 644 "$dossier"/couloir.json
+done
+
 echo "→ services"
 recuperer couloir-player.service systemd/couloir-player.service /etc/systemd/system/couloir-player.service 644
 recuperer couloir-kiosk.service systemd/couloir-kiosk.service /etc/systemd/system/couloir-kiosk.service 644
@@ -204,11 +228,31 @@ chmod 644 /etc/polkit-1/rules.d/50-couloir.rules
 
 systemctl daemon-reload
 systemctl enable --now couloir-player
-# Le kiosque n'est activé que s'il y a de quoi afficher : un boîtier sans
-# serveur graphique reste utile pour tester l'agent seul.
-if systemctl list-unit-files graphical.target >/dev/null 2>&1; then
-  systemctl enable couloir-kiosk || true
+
+#
+# Pas de bureau sur un écran de couloir.
+#
+# Deux raisons, et la seconde est une panne constatée.
+#
+# La première tient au bon sens : un bureau consomme mémoire et processeur
+# pour une session que personne n'ouvrira jamais, sur une machine dont le seul
+# travail est d'afficher une page.
+#
+# La seconde est que le kiosque démarre SON PROPRE serveur X. Si un
+# compositeur occupe déjà la dalle, X ne peut pas s'ouvrir de socket, et le
+# service tourne en boucle sur « Cannot establish any listening sockets » —
+# un message qui ne dit rien de sa cause. On a cherché longtemps.
+#
+# Réversible d'une commande : systemctl set-default graphical.target
+#
+if [ "$(systemctl get-default)" != "multi-user.target" ]; then
+  echo "→ désactivation du bureau au démarrage (un écran de couloir n'en a pas besoin)"
+  systemctl set-default multi-user.target
 fi
+
+# Le kiosque s'accroche à multi-user.target — voir l'unité, qui explique
+# pourquoi ce n'est PAS graphical.target.
+systemctl enable couloir-kiosk || true
 
 cat <<'MSG'
 
