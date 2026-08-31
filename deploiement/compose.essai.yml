@@ -1,6 +1,12 @@
 # Un serveur d'essai, sans terminaison TLS.
 #
-#   docker compose --env-file .env -f compose.yml -f compose.essai.yml up -d
+#   docker compose --env-file .env --env-file essai.env \
+#     -f compose.yml -f compose.essai.yml up -d
+#
+# Les deux fichiers d'environnement sont nécessaires. `essai.env` ne contient
+# aucun secret : il remplit les quatre variables du service TLS, que Compose
+# exige d'interpoler même quand le service est hors profil et ne sera jamais
+# créé. Sans lui, le mode d'essai refuse de démarrer.
 #
 # Sert à éprouver l'installation avant que le nom de domaine ne résolve : sur
 # place, l'adresse fixe du serveur n'est parfois connue qu'au dernier moment,
