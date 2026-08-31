@@ -9,8 +9,9 @@ Wants=network-online.target
 
 [Service]
 Type=oneshot
-# À adapter si le dépôt est ailleurs.
-WorkingDirectory=/opt/couloir/deploiement
-ExecStart=/opt/couloir/deploiement/mise-a-jour.sh
+# Le dossier où vivent compose.yml et .env. À adapter si vous les posez
+# ailleurs — l'installation sur place les met dans /opt/couloir.
+WorkingDirectory=/opt/couloir
+ExecStart=/opt/couloir/mise-a-jour.sh
 # Pas de Restart : une mise à jour qui échoue ne se rattrape pas en la
 # relançant en boucle. Le minuteur repassera, et le journal garde la trace.

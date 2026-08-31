@@ -51,19 +51,41 @@ empreintes_courantes() {
 # Caddy cassée passerait inaperçue — le serveur répondrait parfaitement, et
 # la console resterait injoignable pour tout le monde.
 #
+# Interrogée PAR SON NOM, résolu de force vers la machine locale.
+#
+# La première version demandait https://127.0.0.1/health. Caddy sert par nom :
+# il n'a aucun certificat pour une adresse IP, la connexion échoue avant même
+# la requête, et le contrôle ne réussissait jamais. La tâche de nuit aurait
+# donc annulé chaque bonne mise à jour puis déclaré la panne — deux bascules
+# de conteneurs par nuit pour rien, et un journal alarmant sans motif.
+#
+DOMAINE="$(sed -n 's/^COULOIR_DOMAINE=//p' .env 2>/dev/null | tr -d '"'"'"' \r' | head -1)"
+
 en_bonne_sante() {
   local reste=$DELAI_SANTE
   while [ "$reste" -gt 0 ]; do
     if "${COMPOSE[@]}" exec -T serveur node -e \
         'fetch("http://127.0.0.1:3000/health").then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))' \
         >/dev/null 2>&1 \
-       && curl -fsS -k -o /dev/null --max-time 5 https://127.0.0.1/health 2>/dev/null; then
+       && tls_repond; then
       return 0
     fi
     sleep 3
     reste=$((reste - 3))
   done
   return 1
+}
+
+# `-k` malgré le bon nom : un certificat en cours de renouvellement ne doit
+# pas faire passer une image saine pour une panne. Ce qu'on vérifie ici est
+# que Caddy écoute et route, pas l'état de la chaîne de confiance.
+tls_repond() {
+  if [ -z "$DOMAINE" ]; then
+    # Déploiement sans TLS — mode d'essai. Rien à vérifier de ce côté.
+    return 0
+  fi
+  curl -fsS -k -o /dev/null --max-time 5 \
+    --resolve "${DOMAINE}:443:127.0.0.1" "https://${DOMAINE}/health" 2>/dev/null
 }
 
 AVANT="$(empreintes_courantes)"
