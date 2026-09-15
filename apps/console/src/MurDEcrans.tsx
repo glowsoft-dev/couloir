@@ -108,7 +108,7 @@ function CarteDEcran({
           <span className="carte-voile">
             <span className="carte-voile-pastille">Ne répond pas</span>
             <span className="carte-voile-note">
-              dernière image reçue {relativeTime(screen.lastHeartbeatAtMs)}
+              dernier contact {relativeTime(screen.lastContactAtMs ?? screen.lastHeartbeatAtMs)}
             </span>
           </span>
         )}
@@ -124,7 +124,7 @@ function CarteDEcran({
         <span className={`carte-etat ${screen.online ? "ok" : "muet"}`}>
           <span className={`dot ${screen.online ? "online" : "offline"}`} />
           {screen.online
-            ? relativeTime(screen.lastHeartbeatAtMs)
+            ? relativeTime(screen.lastContactAtMs ?? screen.lastHeartbeatAtMs)
             : "hors ligne"}
         </span>
       </span>

@@ -48,10 +48,10 @@ export function EcranEnLecture({
                 « ne répond plus depuis jamais vu » ferait chercher une
                 panne qui n'existe pas. */}
             {screen.online
-              ? `en ligne, vu ${relativeTime(screen.lastHeartbeatAtMs)}`
-              : screen.lastHeartbeatAtMs === null
+              ? `en ligne, vu ${relativeTime(screen.lastContactAtMs ?? screen.lastHeartbeatAtMs)}`
+              : (screen.lastContactAtMs ?? screen.lastHeartbeatAtMs) === null
                 ? "ne s'est pas encore annoncé"
-                : `ne répond plus depuis ${relativeTime(screen.lastHeartbeatAtMs)}`}
+                : `ne répond plus depuis ${relativeTime(screen.lastContactAtMs ?? screen.lastHeartbeatAtMs)}`}
           </dd>
         </div>
         <div>

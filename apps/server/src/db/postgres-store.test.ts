@@ -280,6 +280,31 @@ describe("télémétrie", () => {
 
     expect(accepted.sort()).toEqual([...ids].sort());
   });
+  dbIt("reste en ligne pendant qu'il rattrape une longue coupure", async () => {
+    // Huit jours de battements renvoyés du plus ancien au plus récent : le
+    // dernier battement reçu date d'une semaine, l'écran répond à l'instant.
+    const { claim } = await enroll();
+    const ilYaUneSemaine = new Date(Date.now() - 7 * 24 * 60 * 60_000).toISOString();
+    await store.recordTelemetry(claim.screen.id, {
+      heartbeats: [
+        {
+          eventId: randomUUID(),
+          at: ilYaUneSemaine,
+          state: "degraded",
+          manifestVersion: 1,
+          wasOffline: true,
+          metrics: { uptimeSec: 1, freeDiskBytes: 1, freeMemoryBytes: 1, cacheBytes: 1, displayOn: true },
+        },
+      ],
+      playEvents: [],
+      logs: [],
+    });
+
+    const statut = (await store.listScreenStatuses()).find((s) => s.id === claim.screen.id)!;
+    expect(statut.online).toBe(true);
+    expect(statut.lastHeartbeatAtMs).toBe(Date.parse(ilYaUneSemaine));
+    expect(statut.lastContactAtMs).not.toBeNull();
+  });
 });
 
 describe("migrations", () => {

@@ -60,13 +60,24 @@ export interface ClaimResult {
 /**
  * Un écran tel que la console le présente.
  *
- * L'état est déduit du dernier battement de cœur, pas déclaré : un écran
- * débranché n'a aucun moyen de dire qu'il est parti.
+ * L'état est déduit, pas déclaré : un écran débranché n'a aucun moyen de dire
+ * qu'il est parti. Il se déduit du dernier ÉCHANGE, pas du dernier battement
+ * — voir `lastContactAtMs`.
  */
 export interface ScreenStatus extends ScreenRecord {
   deviceId: string | null;
   platform: string | null;
   lastHeartbeatAtMs: number | null;
+  /**
+   * Le dernier échange réel avec le serveur, à l'heure du serveur.
+   *
+   * C'est lui, et non l'heure inscrite dans un battement, qui dit si un écran
+   * est joignable. Après une coupure de plusieurs jours, l'écran renvoie sa
+   * file du plus ancien au plus récent, par lots : le dernier battement reçu
+   * date alors, pendant près d'une heure, de la veille de la panne. La console
+   * montrait hors ligne trois écrans qui fonctionnaient parfaitement.
+   */
+  lastContactAtMs: number | null;
   agentState: string | null;
   online: boolean;
 }
@@ -188,6 +199,7 @@ export class MemoryStore implements Store {
   private readonly auteurs = new Map<string, string>();
   private readonly seenEventIds = new Set<string>();
   private readonly lastBeat = new Map<ScreenId, { atMs: number; state: string }>();
+  private readonly lastContact = new Map<ScreenId, number>();
 
   constructor(private readonly now: () => number = Date.now) {}
 
@@ -266,13 +278,15 @@ export class MemoryStore implements Store {
     return [...this.screens.values()].map((screen) => {
       const device = [...this.devices.values()].find((d) => d.screenId === screen.id);
       const beat = this.lastBeat.get(screen.id);
+      const contact = this.lastContact.get(screen.id) ?? null;
       return {
         ...screen,
         deviceId: device?.deviceId ?? null,
         platform: device?.capabilities?.platform ?? null,
         lastHeartbeatAtMs: beat?.atMs ?? null,
+        lastContactAtMs: contact,
         agentState: beat?.state ?? null,
-        online: beat !== undefined && nowMs - beat.atMs < OFFLINE_AFTER_MS,
+        online: contact !== null && nowMs - contact < OFFLINE_AFTER_MS,
       };
     });
   }
@@ -329,6 +343,9 @@ export class MemoryStore implements Store {
   }
 
   async recordTelemetry(screenId: ScreenId, batch: TelemetryBatch): Promise<string[]> {
+    // L'échange lui-même prouve que l'écran est joignable, quel que soit l'âge
+    // des événements qu'il rattrape.
+    this.lastContact.set(screenId, this.now());
     for (const beat of batch.heartbeats) {
       const atMs = Date.parse(beat.at);
       const previous = this.lastBeat.get(screenId);

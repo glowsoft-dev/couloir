@@ -417,7 +417,7 @@ export function App() {
                   {/* Un boîtier rattaché à l'instant n'est pas en panne : il
                       n'a pas encore appelé. « Ne répond plus depuis jamais
                       vu » faisait chercher une panne qui n'existe pas. */}
-                  {ecran.lastHeartbeatAtMs === null ? (
+                  {(ecran.lastContactAtMs ?? ecran.lastHeartbeatAtMs) === null ? (
                     <>
                       <b>{ecran.label}</b> ne s'est pas encore annoncé. Il appellera à son
                       premier démarrage.
@@ -425,7 +425,7 @@ export function App() {
                   ) : (
                     <>
                       <b>{ecran.label}</b> ne répond plus depuis{" "}
-                      {relativeTime(ecran.lastHeartbeatAtMs)}.{" "}
+                      {relativeTime(ecran.lastContactAtMs ?? ecran.lastHeartbeatAtMs)}.{" "}
                       {ecran.manifestVersion > 0
                         ? "Il affiche encore son dernier contenu."
                         : "Il n'avait rien reçu."}

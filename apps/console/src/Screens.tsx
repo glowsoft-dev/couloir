@@ -79,7 +79,7 @@ export function ScreenList({
                 <span className="screen-label">{screen.label}</span>
               </span>
               <span className="screen-meta">
-                {screen.online ? relativeTime(screen.lastHeartbeatAtMs) : "hors ligne"}
+                {screen.online ? relativeTime(screen.lastContactAtMs ?? screen.lastHeartbeatAtMs) : "hors ligne"}
                 <br />
                 {/* « v0 » ne veut rien dire pour personne : on nomme l'état. */}
                 {screen.manifestVersion === 0 ? (

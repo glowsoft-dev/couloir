@@ -18,6 +18,12 @@ export interface ScreenStatus {
   deviceId: string | null;
   platform: string | null;
   lastHeartbeatAtMs: number | null;
+  /**
+   * Le dernier échange réel, à l'heure du serveur. C'est lui qui dit depuis
+   * quand un écran se tait : après une longue coupure, le dernier battement
+   * reçu est vieux de plusieurs jours alors que l'écran répond déjà.
+   */
+  lastContactAtMs: number | null;
   agentState: string | null;
   online: boolean;
 }

@@ -159,6 +159,7 @@ export class PostgresStore implements Store {
       SELECT s.*,
              d.id AS device_id,
              d.capabilities ->> 'platform' AS platform,
+             d.last_seen_at AS last_contact_at,
              b.at AS last_heartbeat_at,
              b.state AS agent_state
       FROM screens s
@@ -174,13 +175,18 @@ export class PostgresStore implements Store {
 
     return rows.map((row) => {
       const lastHeartbeatAtMs = row.last_heartbeat_at?.getTime() ?? null;
+      // Joignable d'après le dernier échange, pas d'après l'heure du dernier
+      // battement : un écran qui rattrape huit jours de coupure envoie d'abord
+      // ses plus vieux battements. Voir `ScreenStatus.lastContactAtMs`.
+      const lastContactAtMs = row.last_contact_at?.getTime() ?? null;
       return {
         ...toScreen(row),
         deviceId: row.device_id,
         platform: row.platform,
         lastHeartbeatAtMs,
+        lastContactAtMs,
         agentState: row.agent_state,
-        online: lastHeartbeatAtMs !== null && nowMs - lastHeartbeatAtMs < OFFLINE_AFTER_MS,
+        online: lastContactAtMs !== null && nowMs - lastContactAtMs < OFFLINE_AFTER_MS,
       };
     });
   }
@@ -336,6 +342,7 @@ interface DeviceRow {
 interface StatusRow extends ScreenRow {
   device_id: string | null;
   platform: string | null;
+  last_contact_at: Date | null;
   last_heartbeat_at: Date | null;
   agent_state: string | null;
 }

@@ -49,10 +49,10 @@ export function OuCaPart({
               <span className="cible-note">
                 {e.code} ·{" "}
                 {!e.online
-                  ? e.lastHeartbeatAtMs === null
+                  ? (e.lastContactAtMs ?? e.lastHeartbeatAtMs) === null
                     ? // Jamais vu : « muet depuis jamais vu » ne veut rien dire.
                       "ne s'est jamais annoncé, recevra à sa première connexion"
-                    : `muet depuis ${relativeTime(e.lastHeartbeatAtMs)}, recevra à son retour`
+                    : `muet depuis ${relativeTime(e.lastContactAtMs ?? e.lastHeartbeatAtMs)}, recevra à son retour`
                   : coche
                     ? "garde sa mise en page"
                     : "ne changera pas"}
