@@ -215,7 +215,7 @@ export function Netypareo() {
             </div>
             <p className="hint">
               Un écran affiche l'afficheur de son bâtiment. Sans correspondance, il prend celui qui
-              n'a pas de bâtiment — mieux vaut l'établissement entier que pas d'emploi du temps.
+              n'a pas de bâtiment — mieux vaut le campus entier que pas d'emploi du temps.
             </p>
           </div>
 

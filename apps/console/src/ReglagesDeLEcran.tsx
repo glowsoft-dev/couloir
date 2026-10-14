@@ -97,7 +97,7 @@ export function ReglagesDeLEcran({
             type="button"
             className="day-chip"
             aria-pressed={choisi}
-            title={a.batiment ? `Bâtiment ${a.batiment}` : "Tout l'établissement"}
+            title={a.batiment ? `Bâtiment ${a.batiment}` : "Tout le campus"}
             onClick={() =>
               touch(() =>
                 setAfficheursChoisis((c) =>

@@ -1113,3 +1113,42 @@ describe("parcours de la console", () => {
     expect(response.statusCode).toBe(404);
   });
 });
+
+describe("nom du campus", () => {
+  it("parvient aux écrans déjà publiés, sans toucher à leur contenu", async () => {
+    // Renseigné après coup, il restait « Établissement » sur la carte
+    // d'accueil des écrans publiés avant : deux halls sur trois.
+    let enregistre = { nom: "Établissement", accent: null as string | null };
+    const identite = {
+      lire: async () => enregistre,
+      enregistrer: async (i: { nom: string; accent?: string | null }) =>
+        (enregistre = { nom: i.nom, accent: i.accent ?? null }),
+    };
+    const store = new MemoryStore();
+    const app = buildApp({ store, media, consoleToken: TOKEN, identite: identite as never });
+    const auth = { authorization: `Bearer ${TOKEN}` };
+
+    const device = await store.startEnrollment("x".repeat(44), { platform: "linux" } as never);
+    const { screen } = await store.claimNew(device.deviceId, {
+      code: "C·1·1", label: "Hall", building: "C", floor: 1, area: "hall", orientation: "landscape",
+    });
+    await app.inject({
+      method: "POST", url: `${CONSOLE_PREFIX}/screens/${screen.id}/publish`, headers: auth,
+      payload: { layout: "plein-ecran", items: [{ assetId: poster.id }] },
+    });
+    const avant = await store.getManifest(screen.id);
+
+    const reponse = await app.inject({
+      method: "PUT", url: `${CONSOLE_PREFIX}/identite`, headers: auth,
+      payload: { nom: "Campus by CCI Nièvre" },
+    });
+
+    expect(reponse.json().ecrans).toBe(1);
+    const apres = await store.getManifest(screen.id);
+    expect(apres!.version).toBe(avant!.version + 1);
+    const carte = apres!.slides.find((s) => s.id === "repli-identite");
+    expect(carte).toMatchObject({ fields: { titre: "Campus by CCI Nièvre" } });
+    // Le reste de la composition est celui qu'on avait publié.
+    expect(apres!.assets.map((a) => a.id)).toEqual(avant!.assets.map((a) => a.id));
+  });
+});

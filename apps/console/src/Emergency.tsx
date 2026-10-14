@@ -25,7 +25,7 @@ const TEMPLATES = [
   },
   {
     title: "Fermeture exceptionnelle",
-    body: "L'établissement ferme ses portes. Rejoignez la sortie principale.",
+    body: "Le campus ferme ses portes. Rejoignez la sortie principale.",
   },
 ] as const;
 

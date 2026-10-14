@@ -549,9 +549,46 @@ export function registerConsoleApi(app: FastifyInstance, options: ConsoleApiOpti
     if (options.comptes) {
       await journaliserAction(request, options.comptes, "changement d'identité", identite.nom);
     }
-    // Les manifestes déjà publiés portent l'ancienne identité : on ne les
-    // réécrit pas dans le dos de qui a publié. Le prochain envoi la portera.
-    return { identite };
+    /*
+     * Le nom paraît sur la carte d'accueil de chaque écran.
+     *
+     * On ne le réservait d'abord qu'aux prochaines publications, pour ne
+     * rien réécrire dans le dos de qui avait publié. Mais le nom n'est pas un
+     * contenu choisi pour un écran : c'est un réglage du campus. Deux halls
+     * sur trois ont ainsi gardé « Établissement » une semaine après qu'on
+     * l'eut renseigné, sans que rien dans la console ne le laisse voir. On
+     * republie donc chaque écran avec sa propre composition, inchangée.
+     */
+    const baseUrl = resolvePublicUrl(options.publicUrl, request.headers.host);
+    let ecrans = 0;
+    for (const screen of await store.listScreens()) {
+      const relu = PublishBody.safeParse(await store.getSpec(screen.id));
+      if (!relu.success) continue;
+      try {
+        const spec = await resolveSpec(relu.data, options, baseUrl, screen.building);
+        const existing = await store.getManifest(screen.id);
+        const manifest = compose({
+          screenId: screen.id,
+          version: (existing?.version ?? 0) + 1,
+          issuedAt: iso(new Date()),
+          spec,
+          media: media.index(),
+          baseUrl,
+        });
+        await store.putManifest(
+          reporterUrgence(manifest, existing),
+          relu.data,
+          request.identité?.auteur,
+        );
+        options.commands?.issue(screen.id, "sync-now");
+        ecrans += 1;
+      } catch (error) {
+        // Un écran dont la composition ne passe plus garde l'ancien nom, et
+        // ne bloque pas les autres.
+        request.log.warn({ ecran: screen.code, err: error }, "republication du nom impossible");
+      }
+    }
+    return { identite, ecrans };
   });
 
   // --- NetYPareo -----------------------------------------------------------
