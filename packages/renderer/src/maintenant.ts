@@ -96,6 +96,18 @@ export function lieuLisible(libelle: string): string {
 }
 
 /**
+ * Le campus, tiré du même libellé quand le serveur ne l'a pas transmis.
+ *
+ * « Campus by CCI Nievre Bat A » donne « Campus by CCI Nievre ». Le nom
+ * enregistré dans la console, accentué, est préféré quand il est connu : le
+ * libellé de NetYPareo est écrit sans accents.
+ */
+export function campusDe(libelle: string): string {
+  const reste = libelle.trim().replace(/\s*\bb[aâ]t(?:iment)?\.?\s+[A-Z0-9]+\s*$/i, "").trim();
+  return reste === libelle.trim() ? "" : reste;
+}
+
+/**
  * Une heure « 08:30 » écrite comme on la dit : « 8 h 30 », « 14 h ».
  *
  * Les deux-points sont une écriture d'ordinateur ; un panneau de couloir

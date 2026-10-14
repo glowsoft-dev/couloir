@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  campusDe,
   heureLisible,
   lieuLisible,
   repartirAutourDeMaintenant,
@@ -92,6 +93,16 @@ describe("lieuLisible", () => {
 
   it("garde un libellé qui ne nomme pas de bâtiment", () => {
     expect(lieuLisible("Hall d'accueil")).toBe("Hall d'accueil");
+  });
+});
+
+describe("campusDe", () => {
+  it("garde ce qui précède le bâtiment", () => {
+    expect(campusDe("Campus by CCI Nievre Bat A")).toBe("Campus by CCI Nievre");
+  });
+
+  it("ne devine rien quand le libellé ne nomme pas de bâtiment", () => {
+    expect(campusDe("Hall d'accueil")).toBe("");
   });
 });
 

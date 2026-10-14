@@ -363,6 +363,9 @@ export function compose(input: ComposeInput): Manifest {
   // Ne montrer que la demi-journée en cours, et grossir d'autant. Douze
   // séances sur une dalle ne se lisent pas à quatre mètres.
   if (spec.timetableDemiJournee) paramsEdt["demiJournee"] = "1";
+  // Le nom du campus, pour l'en-tête de la vue. Celui de NetYPareo est écrit
+  // sans accents ; celui de la console est celui qu'on a choisi d'afficher.
+  if (spec.identite?.nom?.trim()) paramsEdt["campus"] = spec.identite.nom.trim();
 
   /**
    * L'emploi du temps comme contenu par défaut.

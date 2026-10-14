@@ -8,6 +8,7 @@ import {
 } from "../resolution.js";
 import { defilement, demiJourneeEnCours, minutesLocales, tailleDesLignes } from "../demi-journee.js";
 import {
+  campusDe,
   heureLisible,
   lieuLisible,
   repartirAutourDeMaintenant,
@@ -571,29 +572,38 @@ function ajusterLaJournee(
 }
 
 /**
- * La vue « maintenant et ensuite ».
+ * La vue « maintenant et ensuite », réglée pour un hall.
  *
- * Elle se reconstruit d'elle-même à chaque changement de minute : un cours
- * qui commence doit passer de « À suivre » à « En ce moment » sans attendre
- * que la source de données se rafraîchisse.
+ * Les écrans du campus sont des téléviseurs de 60 cm de large, dans des halls
+ * où l'on passe à huit ou dix mètres. À cette distance, une lettre doit
+ * mesurer plusieurs centimètres : la dalle n'en contient que quelques lignes.
+ * On ne montre donc que deux cours à la fois, et l'on tourne les pages, plutôt
+ * que d'en serrer six qu'on ne lirait qu'en s'approchant.
  *
- * Le module et l'enseignant ne s'affichent que si l'écran les a demandés
- * explicitement. Par défaut, une ligne dit l'horaire, le groupe et la salle,
- * et rien d'autre : c'est ce qui oriente quelqu'un qui passe.
+ * La salle est la réponse que l'on cherche : elle occupe un bloc plein, comme
+ * un numéro de quai, lisible de l'autre bout du hall. Le groupe, plus long,
+ * se lit en approchant. L'état du cours (en cours, à venir, annulé) est porté
+ * par la forme du bloc, pas seulement par un mot.
+ *
+ * Le module et l'enseignant ne s'affichent que si l'écran les a demandés.
  */
 function renderMaintenant(
   doc: Document,
   wrapper: HTMLElement,
   day: TimetableDay,
-  champsBruts: string | undefined,
+  params: Readonly<Record<string, string>>,
   timezone: string,
 ): void {
+  const champsBruts = params["champs"];
   const champs = champsBruts === undefined ? new Set<string>() : champsAffichés(champsBruts);
+  const lignesParPage = Math.min(4, Math.max(1, Number.parseInt(params["lignes"] ?? "", 10) || 2));
+  const campus = params["campus"]?.trim() || campusDe(day.classLabel);
   wrapper.classList.add("couloir-slide--maintenant");
   const racine = el(doc, "div", "mx");
+  racine.style.setProperty("--mx-bascule", `${BASCULE_MS}ms`);
   wrapper.appendChild(racine);
-
   const vue = doc.defaultView;
+
   let minuteAffichee = -1;
   let pages: HTMLElement[][] = [];
   let page = 0;
@@ -603,96 +613,98 @@ function renderMaintenant(
 
   const ligne = (seance: TimetableEntry, enCours: boolean): HTMLElement => {
     const li = el(doc, "li", "mx-ligne");
-    if (enCours) li.classList.add("mx-ligne--en-cours");
-    if (seance.change === "cancelled") li.classList.add("mx-ligne--annulee");
+    li.classList.add(enCours ? "mx-ligne--en-cours" : "mx-ligne--a-suivre");
+    const annule = seance.change === "cancelled";
+    if (annule) li.classList.add("mx-ligne--annulee");
     else if (seance.change && seance.change !== "none") li.classList.add("mx-ligne--changee");
 
-    const horaire = enCours
-      ? seance.endTime
-        ? `jusqu'à ${heureLisible(seance.endTime)}`
-        : "en cours"
-      : heureLisible(seance.time);
-    li.appendChild(el(doc, "span", "mx-horaire", horaire));
-
-    const groupe = el(doc, "span", "mx-groupe");
-    groupe.appendChild(el(doc, "span", "mx-groupe-nom", seance.subject));
-    if (seance.note) groupe.appendChild(el(doc, "span", "mx-note", seance.note));
-    if (champs.has("module") && seance.detail) {
-      groupe.appendChild(el(doc, "span", "mx-detail", seance.detail));
-    }
-    li.appendChild(groupe);
-
-    const salle = el(doc, "span", "mx-salle");
-    if (seance.change === "cancelled") {
-      // Un cours annulé n'a plus de salle : l'annoncer enverrait quelqu'un
-      // devant une porte fermée.
-      salle.appendChild(el(doc, "span", "mx-salle-nom", "Annulé"));
+    const texte = el(doc, "div", "mx-texte");
+    const horaire = el(doc, "p", "mx-horaire");
+    if (enCours) {
+      horaire.appendChild(el(doc, "b", "mx-etat", "En cours"));
+      if (seance.endTime) horaire.append(` jusqu’à ${heureLisible(seance.endTime)}`);
     } else {
-      salle.appendChild(el(doc, "span", "mx-salle-nom", salleCourte(seance.room)));
-      if (champs.has("enseignant") && seance.teacher) {
-        salle.appendChild(el(doc, "span", "mx-prof", seance.teacher));
-      }
+      horaire.appendChild(el(doc, "b", "mx-etat", `À ${heureLisible(seance.time)}`));
     }
+    texte.appendChild(horaire);
+
+    const groupe = el(doc, "div", "mx-groupe");
+    groupe.appendChild(el(doc, "p", "mx-groupe-nom", seance.subject));
+    if (seance.note) groupe.appendChild(el(doc, "p", "mx-note", seance.note));
+    if (champs.has("module") && seance.detail) {
+      groupe.appendChild(el(doc, "p", "mx-detail", seance.detail));
+    }
+    if (!annule && champs.has("enseignant") && seance.teacher) {
+      groupe.appendChild(el(doc, "p", "mx-prof", seance.teacher));
+    }
+    texte.appendChild(groupe);
+    li.appendChild(texte);
+
+    // Un cours annulé n'a plus de salle : l'annoncer enverrait quelqu'un
+    // devant une porte fermée.
+    const salle = el(doc, "div", "mx-salle");
+    salle.appendChild(
+      el(doc, "span", "mx-salle-nom", annule ? "Annulé" : salleCourte(seance.room)),
+    );
     li.appendChild(salle);
     return li;
-  };
-
-  const bloc = (titre: string, seances: TimetableEntry[], enCours: boolean): HTMLElement => {
-    const section = el(doc, "section", enCours ? "mx-bloc mx-bloc--en-cours" : "mx-bloc");
-    section.appendChild(el(doc, "h2", "mx-titre", titre));
-    const liste = el(doc, "ul", "mx-liste");
-    for (const seance of seances) liste.appendChild(ligne(seance, enCours));
-    section.appendChild(liste);
-    return section;
   };
 
   const montrerPage = (): void => {
     pages.forEach((lignes, i) => {
       for (const li of lignes) li.hidden = i !== page;
     });
-    // Un titre de section sans ligne visible ne dit rien : on le masque.
-    for (const section of racine.querySelectorAll<HTMLElement>(".mx-bloc")) {
-      section.hidden = ![...section.querySelectorAll<HTMLElement>(".mx-ligne")].some(
-        (li) => !li.hidden,
-      );
-    }
-    const indicateur = racine.querySelector<HTMLElement>(".mx-pages");
-    if (indicateur) {
-      indicateur.textContent = pages.length > 1 ? `${page + 1} / ${pages.length}` : "";
-    }
+    // Une barre par page, la courante se remplit pendant qu'elle s'affiche :
+    // de loin, on voit qu'il y a une suite, et quand elle arrive. Un « 2 / 3 »
+    // en petits chiffres ne se lisait qu'à un mètre.
+    const barre = racine.querySelector<HTMLElement>(".mx-pages");
+    if (!barre) return;
+    barre.replaceChildren();
+    if (pages.length < 2) return;
+    pages.forEach((_, i) => {
+      const segment = el(doc, "span", "mx-page");
+      if (i < page) segment.classList.add("mx-page--vue");
+      if (i === page) segment.classList.add("mx-page--courante");
+      barre.appendChild(segment);
+    });
   };
 
   /*
-   * La taille la plus grande qui laisse tout tenir.
+   * Des tailles tirées de la hauteur d'une ligne, pas du nombre de cours.
    *
-   * On part du grand et on réduit tant que ça déborde, plutôt que d'estimer :
-   * un nom de groupe sur deux lignes prend deux fois la place, et seule la
-   * mesure le sait. En dessous du plancher, on ne réduit plus — on pagine.
+   * Une ligne vaut toujours la même fraction de la dalle : la salle garde la
+   * même taille à 9 h, avec un cours, et à 10 h, avec six. Ce qui ne tient
+   * pas passe à la page suivante. Deux ajustements seulement, mesurés : un
+   * nom de groupe trop long pour deux lignes passe sur trois, un peu plus
+   * petit, et une salle trop longue (« A distance ») se resserre pour ne pas
+   * manger le groupe.
    */
-  const dimensionner = (corps: HTMLElement): void => {
-    const corpsDeTexte = vue?.getComputedStyle(racine).getPropertyValue("--fs-body") ?? "";
-    const base = Number.parseFloat(corpsDeTexte) || 21;
-    const plafond = base * 3.2;
-    const plancher = base * 1.8;
-    let taille = plafond;
-    corps.style.fontSize = `${taille}px`;
-    while (corps.scrollHeight > corps.clientHeight + 1 && taille > plancher) {
-      taille = Math.max(plancher, taille * 0.92);
-      corps.style.fontSize = `${Math.round(taille)}px`;
+  const dimensionner = (corps: HTMLElement, liste: HTMLElement): void => {
+    const hauteur = Math.floor(corps.clientHeight / lignesParPage);
+    if (hauteur > 0) corps.style.setProperty("--mx-h", `${hauteur}px`);
+
+    const lignes = [...liste.querySelectorAll<HTMLElement>(".mx-ligne")];
+    for (const li of lignes) {
+      const nom = li.querySelector<HTMLElement>(".mx-groupe-nom");
+      if (nom && nom.scrollHeight > nom.clientHeight + 1) li.classList.add("mx-ligne--longue");
+
+      const salle = li.querySelector<HTMLElement>(".mx-salle-nom");
+      const largeurMax = li.clientWidth * 0.42;
+      if (salle && largeurMax > 0) {
+        let taille = Number.parseFloat(vue?.getComputedStyle(salle).fontSize ?? "") || 0;
+        const plancher = taille * 0.35;
+        while (salle.offsetWidth > largeurMax && taille > plancher) {
+          taille *= 0.9;
+          salle.style.fontSize = `${Math.round(taille)}px`;
+        }
+      }
     }
 
-    const lignes = [...corps.querySelectorAll<HTMLElement>(".mx-ligne")];
-    pages = [lignes];
-    if (corps.scrollHeight > corps.clientHeight + 1 && lignes.length > 1) {
-      // Trop de cours pour une seule page lisible : on découpe selon la
-      // place que prend réellement chaque ligne, titres compris.
-      const hauteurLigne = Math.max(...lignes.map((li) => li.offsetHeight));
-      const titre = corps.querySelector<HTMLElement>(".mx-titre")?.offsetHeight ?? 0;
-      const parPage = Math.max(1, Math.floor((corps.clientHeight - 2 * titre) / hauteurLigne));
-      pages = [];
-      for (let i = 0; i < lignes.length; i += parPage) pages.push(lignes.slice(i, i + parPage));
+    pages = [];
+    for (let i = 0; i < lignes.length; i += lignesParPage) {
+      pages.push(lignes.slice(i, i + lignesParPage));
     }
-    page = Math.min(page, pages.length - 1);
+    page = Math.min(page, Math.max(0, pages.length - 1));
     montrerPage();
   };
 
@@ -703,30 +715,27 @@ function renderMaintenant(
     racine.replaceChildren();
 
     const tete = el(doc, "header", "mx-tete");
-    tete.appendChild(el(doc, "p", "mx-lieu", lieuLisible(day.classLabel)));
+    const lieu = el(doc, "p", "mx-lieu");
+    lieu.appendChild(el(doc, "span", "mx-batiment", lieuLisible(day.classLabel)));
+    if (campus) lieu.appendChild(el(doc, "span", "mx-campus", campus));
+    tete.appendChild(lieu);
     const horloge = el(doc, "p", "mx-horloge");
     horloge.appendChild(
       el(doc, "span", "mx-heure", heureLisible(`${Math.floor(minutes / 60)}:${minutes % 60}`)),
     );
-    horloge.appendChild(
-      el(
-        doc,
-        "span",
-        "mx-date",
-        new Intl.DateTimeFormat("fr-FR", {
-          timeZone: timezone,
-          weekday: "long",
-          day: "numeric",
-          month: "long",
-        }).format(new Date(maintenant)),
-      ),
-    );
+    const date = new Intl.DateTimeFormat("fr-FR", {
+      timeZone: timezone,
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+    }).format(new Date(maintenant));
+    horloge.appendChild(el(doc, "span", "mx-date", date));
     tete.appendChild(horloge);
     racine.appendChild(tete);
 
     const corps = el(doc, "div", "mx-corps");
     racine.appendChild(corps);
-    racine.appendChild(el(doc, "p", "mx-pages"));
+    racine.appendChild(el(doc, "div", "mx-pages"));
 
     if (day.notice) {
       corps.appendChild(el(doc, "p", "mx-vide", day.notice));
@@ -734,8 +743,6 @@ function renderMaintenant(
     }
 
     const r = repartirAutourDeMaintenant(day.entries, minutes);
-    if (r.enCours.length > 0) corps.appendChild(bloc("En ce moment", r.enCours, true));
-    if (r.aSuivre.length > 0) corps.appendChild(bloc("À suivre", r.aSuivre, false));
     if (r.enCours.length === 0 && r.aSuivre.length === 0) {
       // Une dalle vide ressemble à une panne : on dit pourquoi elle l'est.
       const message =
@@ -746,7 +753,12 @@ function renderMaintenant(
       corps.appendChild(el(doc, "p", "mx-vide", message));
       return;
     }
-    dimensionner(corps);
+
+    const liste = el(doc, "ul", "mx-liste");
+    for (const seance of r.enCours) liste.appendChild(ligne(seance, true));
+    for (const seance of r.aSuivre) liste.appendChild(ligne(seance, false));
+    corps.appendChild(liste);
+    dimensionner(corps, liste);
   };
 
   /*
@@ -757,8 +769,6 @@ function renderMaintenant(
    * tourne les pages quand il y en a plusieurs. Elle s'arrête d'elle-même
    * quand la diapositive est retirée : rien à désinscrire.
    */
-  const PAS_MS = 2000;
-  const BASCULE_MS = 10_000;
   const tic = (): void => {
     // Retirée de la page, ou remplacée avant même d'y entrer — deux mises à
     // jour coup sur coup : dans les deux cas, plus personne ne la verra.
@@ -783,15 +793,23 @@ function renderMaintenant(
   };
   const minuterie = setInterval(tic, PAS_MS);
   // Premier remplissage sans attendre deux secondes, dès que la page a posé
-  // la diapositive ; puis à nouveau quand les polices sont là, car elles
-  // changent la place que prend le texte.
+  // la diapositive ; puis à nouveau quand une police arrive, car elle change
+  // la place que prend le texte. « ready » seul ne suffit pas : une police
+  // qu'aucun texte n'a encore demandée n'est pas en chargement, et la
+  // promesse se résout avant elle — la salle était alors mesurée dans la
+  // police de secours, plus étroite, et débordait ensuite sur le groupe.
   setTimeout(tic, 0);
-  doc.fonts?.ready
-    ?.then(() => {
-      if (racine.isConnected) remplir();
-    })
-    .catch(() => {});
+  const auChargement = (): void => {
+    if (racine.isConnected) remplir();
+    else doc.fonts?.removeEventListener?.("loadingdone", auChargement);
+  };
+  doc.fonts?.ready?.then(auChargement).catch(() => {});
+  doc.fonts?.addEventListener?.("loadingdone", auChargement);
 }
+
+/** Le pas de l'horloge de la vue, et la durée d'une page. */
+const PAS_MS = 2000;
+const BASCULE_MS = 8_000;
 
 function renderDataView(
   doc: Document,
@@ -814,7 +832,7 @@ function renderDataView(
       slide.params["affichage"] ??
       (slide.params["demiJournee"] === "1" ? "demi-journee" : "maintenant");
     if (affichage === "maintenant") {
-      renderMaintenant(doc, wrapper, day, slide.params["champs"], timezone);
+      renderMaintenant(doc, wrapper, day, slide.params, timezone);
       return;
     }
 

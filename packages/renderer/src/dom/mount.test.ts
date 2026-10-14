@@ -552,16 +552,18 @@ describe("maintenant et ensuite", () => {
     mountRenderer(container).update(ecran(JOURNEE));
     vi.advanceTimersByTime(0);
 
-    const enCours = container.querySelectorAll(".mx-bloc--en-cours .mx-ligne");
+    const enCours = container.querySelectorAll(".mx-ligne--en-cours");
     expect(enCours).toHaveLength(1);
-    expect(texteDe(enCours[0] as HTMLElement)).toContain("jusqu'à 12 h");
+    expect(texteDe(enCours[0] as HTMLElement)).toContain("jusqu’à 12 h");
     expect(lignes().map((li) => li.querySelector(".mx-salle-nom")?.textContent)).toEqual([
       "A14",
       "A03",
     ]);
     // 13 h 30 est à plus de deux heures : il n'oriente personne à 9 h 15.
     expect(container.textContent).not.toContain("BTS MCO 2");
-    expect(container.querySelector(".mx-lieu")?.textContent).toBe("Bâtiment A");
+    expect(container.querySelector(".mx-batiment")?.textContent).toBe("Bâtiment A");
+    // Sans nom transmis par le serveur, on le tire du libellé de l'afficheur.
+    expect(container.querySelector(".mx-campus")?.textContent).toBe("Campus by CCI Nievre");
     expect(container.querySelector(".mx-heure")?.textContent).toBe("9 h 15");
   });
 
@@ -597,10 +599,10 @@ describe("maintenant et ensuite", () => {
   it("fait passer un cours dans « En ce moment » à son heure, sans nouvelles données", () => {
     mountRenderer(container).update(ecran(JOURNEE));
     vi.advanceTimersByTime(0);
-    expect(container.querySelectorAll(".mx-bloc--en-cours .mx-ligne")).toHaveLength(1);
+    expect(container.querySelectorAll(".mx-ligne--en-cours")).toHaveLength(1);
 
     vi.advanceTimersByTime(45 * 60_000); // 10 h
-    expect(container.querySelectorAll(".mx-bloc--en-cours .mx-ligne")).toHaveLength(2);
+    expect(container.querySelectorAll(".mx-ligne--en-cours")).toHaveLength(2);
     expect(container.querySelector(".mx-heure")?.textContent).toBe("10 h");
   });
 
@@ -626,6 +628,36 @@ describe("maintenant et ensuite", () => {
     mountRenderer(container).update(ecran([], {}, "Vacances de la Toussaint"));
     vi.advanceTimersByTime(0);
     expect(container.querySelector(".mx-vide")?.textContent).toBe("Vacances de la Toussaint");
+  });
+
+  it("ne montre que deux cours à la fois, et le dit par une barre par page", () => {
+    // Vus de l'autre bout d'un hall, deux cours lisibles valent mieux que six
+    // qu'il faut venir déchiffrer de près.
+    const cinq = ["A01", "A02", "A03", "A04", "A05"].map((salle) => ({
+      time: "09:00",
+      endTime: "12:00",
+      subject: `Groupe ${salle}`,
+      room: `CCI SALLE ${salle}`,
+    }));
+    mountRenderer(container).update(ecran(cinq));
+    vi.advanceTimersByTime(0);
+    expect(lignes().map((li) => li.querySelector(".mx-salle-nom")?.textContent)).toEqual([
+      "A01",
+      "A02",
+    ]);
+    expect(container.querySelectorAll(".mx-page")).toHaveLength(3);
+
+    vi.advanceTimersByTime(8_000);
+    expect(lignes().map((li) => li.querySelector(".mx-salle-nom")?.textContent)).toEqual([
+      "A03",
+      "A04",
+    ]);
+  });
+
+  it("prend le nom du campus tel que la console l'écrit", () => {
+    mountRenderer(container).update(ecran(JOURNEE, { campus: "Campus by CCI Nièvre" }));
+    vi.advanceTimersByTime(0);
+    expect(container.querySelector(".mx-campus")?.textContent).toBe("Campus by CCI Nièvre");
   });
 
   it("garde la journée complète pour qui la demande", () => {

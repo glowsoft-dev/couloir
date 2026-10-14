@@ -231,149 +231,180 @@ export const RENDERER_CSS = `
 }
 
 /* --- maintenant et ensuite --- */
-/* Ce qu'un ecran de couloir montre par defaut : les cours en cours et ceux
-   des deux prochaines heures. Toutes les tailles internes sont en em, et le
-   rendu fixe celle du corps a la plus grande qui laisse tout tenir. */
+/* Un tableau de hall, pas une liste d'application : pas de cartes, pas de
+   coins arrondis, pas de pastilles. Des bandes separees par un filet franc,
+   et la salle dans un bloc plein, comme un numero de quai. Les tailles
+   derivent toutes de --mx-h, la hauteur d'une ligne, que le rendu pose a une
+   fraction fixe de la dalle.
+
+   La police est la DejaVu Sans Condensed, presente sur tous les boitiers :
+   grand oeil, chiffres nets, 1 l I bien distincts, et assez etroite pour
+   loger un nom de groupe a grande taille. */
 .couloir-slide--maintenant {
   justify-content: flex-start;
-  padding: calc(var(--pad) * 0.75) var(--pad);
+  padding: calc(var(--pad) * 0.6) var(--pad) calc(var(--pad) * 0.45);
 }
 .mx {
+  --mx-encre: #0B0D0E;
+  --mx-doux: #4A5055;
+  --mx-filet: rgba(11, 13, 14, 0.16);
+  /* Le bleu du campus, assombri pour porter du blanc a 7:1. Moins lourd
+     qu'un bloc noir sur un fond clair. */
+  --mx-bloc: #0A5C70;
+  --mx-vert: #0A7A3D;
+  --mx-rouge: #C3122F;
+  --mx-h: 400px;
   flex: 1;
   min-height: 0;
   display: flex;
   flex-direction: column;
   container-type: inline-size;
+  font-family: "DejaVu Sans Condensed", "DejaVu Sans", "Arial Narrow", Arial, sans-serif;
+  color: var(--mx-encre);
 }
+.mx p { margin: 0 }
+.mx [hidden] { display: none !important }
 .mx-tete {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
   gap: 1em;
-  font-size: calc(var(--fs-body) * 1.9);
-  padding-bottom: .4em;
-  margin-bottom: .45em;
-  border-bottom: 2px solid var(--rule);
+  font-size: calc(var(--fs-body) * 2.4);
+  line-height: 1.1;
+  padding-bottom: .3em;
+  border-bottom: .12em solid var(--mx-encre);
 }
-.mx-lieu { margin: 0; font-weight: 700; letter-spacing: -.01em; color: var(--ink) }
-.mx-horloge { margin: 0; display: flex; align-items: baseline; gap: .55em; color: var(--ink-soft) }
-.mx-heure { font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums }
-.mx-date { font-size: .7em }
+.mx-lieu { display: flex; align-items: baseline; gap: .6em; min-width: 0 }
+.mx-batiment { font-weight: 700; white-space: nowrap }
+.mx-campus { font-size: .62em; color: var(--mx-doux); white-space: nowrap }
+.mx-horloge { display: flex; align-items: baseline; gap: .5em; white-space: nowrap }
+.mx-heure { font-weight: 700; font-variant-numeric: tabular-nums }
+.mx-date { font-size: .62em; color: var(--mx-doux) }
 .mx-corps {
   flex: 1;
   min-height: 0;
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  gap: .3em;
-}
-.mx-titre {
-  display: flex;
-  align-items: center;
-  gap: .5em;
-  margin: .15em 0 .1em;
-  font-size: .5em;
-  font-weight: 600;
-  color: var(--ink-soft);
-}
-.mx-bloc--en-cours .mx-titre::before {
-  content: "";
-  width: .65em;
-  height: .65em;
-  border-radius: 50%;
-  background: var(--accent-vif);
 }
 .mx-liste { list-style: none; margin: 0; padding: 0 }
-/* La pagination masque des lignes et des sections par l'attribut hidden. Sans
-   cette regle, le display: grid des lignes l'emporte sur celui du navigateur,
-   et rien ne disparait : l'indicateur tournait sur des pages identiques. */
-.mx [hidden] { display: none !important }
 .mx-ligne {
+  box-sizing: border-box;
+  height: var(--mx-h);
   display: grid;
-  grid-template-columns: 4.4em 1fr auto;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  gap: .7em;
-  padding: .26em .45em;
-  border-bottom: 1px solid var(--rule);
+  column-gap: calc(var(--mx-h) * 0.09);
+  padding: calc(var(--mx-h) * 0.07) 0;
+  border-bottom: 3px solid var(--mx-filet);
+  overflow: hidden;
 }
-/* En cours : la ligne se detache sur une carte blanche marquee d'un filet
-   bleu, pour qu'on la repere avant meme de la lire. */
-.mx-ligne--en-cours {
-  background: var(--surface);
-  box-shadow: inset .13em 0 0 var(--accent-vif);
-  border-radius: .1em;
-}
+.mx-texte { display: flex; flex-direction: column; gap: calc(var(--mx-h) * 0.035); min-width: 0 }
 .mx-horaire {
-  font-size: .55em;
-  line-height: 1.2;
-  color: var(--ink-soft);
+  font-size: calc(var(--mx-h) * 0.115);
+  line-height: 1.1;
+  color: var(--mx-doux);
   font-variant-numeric: tabular-nums;
 }
+.mx-etat { font-weight: 700; color: var(--mx-encre) }
+.mx-ligne--en-cours .mx-etat { color: var(--mx-vert) }
 .mx-groupe { display: flex; flex-direction: column; min-width: 0 }
 .mx-groupe-nom {
-  font-weight: 600;
-  line-height: 1.15;
+  font-size: calc(var(--mx-h) * 0.235);
+  font-weight: 700;
+  line-height: 1.06;
+  text-wrap: balance;
+  letter-spacing: -.005em;
   overflow: hidden;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
+  overflow-wrap: anywhere;
 }
-.mx-detail { font-size: .55em; color: var(--ink-soft); margin-top: .15em }
+/* Un nom trop long pour deux lignes passe sur trois, un peu plus petit,
+   plutot que d'etre coupe : deux groupes ne different souvent que par la fin. */
+.mx-ligne--longue .mx-groupe-nom { font-size: calc(var(--mx-h) * 0.175); -webkit-line-clamp: 3 }
+.mx-detail, .mx-prof {
+  margin-top: .3em;
+  font-size: calc(var(--mx-h) * 0.1);
+  color: var(--mx-doux);
+}
 .mx-note {
-  align-self: flex-start;
-  margin-top: .25em;
-  padding: .05em .45em;
-  font-size: .45em;
+  margin-top: .3em;
+  font-size: calc(var(--mx-h) * 0.1);
   font-weight: 700;
-  color: var(--signal);
-  border: 1px solid currentColor;
-  border-radius: .35em;
+  color: var(--mx-rouge);
 }
+/* Le bloc de la salle. Plein quand le cours a lieu, cercle d'un trait
+   epais quand il est a venir : la difference se voit avant de se lire. */
 .mx-salle {
+  box-sizing: border-box;
+  align-self: stretch;
+  min-width: calc(var(--mx-h) * 1.15);
   display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  text-align: right;
-  min-width: 2.4em;
+  align-items: center;
+  justify-content: center;
+  padding: 0 calc(var(--mx-h) * 0.08);
+  background: var(--mx-bloc);
+  color: #FFFFFF;
 }
-/* La salle est ce qu'on cherche : c'est le plus grand texte de la ligne. */
+.mx-ligne--a-suivre .mx-salle {
+  background: transparent;
+  color: var(--mx-bloc);
+  border: calc(var(--mx-h) * 0.025) solid var(--mx-bloc);
+}
 .mx-salle-nom {
-  font-size: 1.3em;
-  font-weight: 800;
+  font-size: calc(var(--mx-h) * 0.5);
+  font-weight: 700;
   line-height: 1;
-  letter-spacing: -.01em;
-  color: var(--ink);
+  letter-spacing: -.02em;
+  white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
-.mx-prof { font-size: .5em; color: var(--ink-soft); margin-top: .25em }
-.mx-ligne--annulee .mx-groupe-nom { color: var(--ink-soft); text-decoration: line-through }
-.mx-ligne--annulee .mx-salle-nom { font-size: .75em; color: var(--signal) }
-.mx-ligne--changee .mx-salle-nom { color: var(--signal) }
+.mx-ligne--annulee .mx-salle { background: var(--mx-rouge); border-color: var(--mx-rouge); color: #FFFFFF }
+.mx-ligne--annulee .mx-salle-nom { font-size: calc(var(--mx-h) * 0.22); letter-spacing: 0 }
+.mx-ligne--annulee .mx-groupe-nom { color: var(--mx-doux); text-decoration: line-through }
+.mx-ligne--changee .mx-salle { outline: calc(var(--mx-h) * 0.025) solid var(--mx-rouge); outline-offset: -1px }
 .mx-vide {
   margin: auto 0;
-  max-width: 24ch;
-  font-size: calc(var(--fs-body) * 2);
-  font-weight: 600;
-  line-height: 1.25;
-  color: var(--ink-soft);
+  max-width: 20ch;
+  font-size: calc(var(--fs-body) * 3.4);
+  font-weight: 700;
+  line-height: 1.15;
 }
+/* Les pages : une barre par page, la courante se remplit pendant qu'elle est
+   affichee. Visible de loin, et elle dit quand vient la suite. */
 .mx-pages {
-  min-height: 1.2em;
-  margin: .3em 0 0;
-  text-align: right;
-  font-size: var(--fs-caption);
-  color: var(--ink-faint);
-  font-variant-numeric: tabular-nums;
+  display: flex;
+  gap: .6em;
+  height: calc(var(--fs-body) * 0.55);
+  margin-top: calc(var(--fs-body) * 0.6);
 }
-/* Dans une colonne etroite, a cote d'une affiche, l'horaire passe sous le
-   groupe et l'en-tete s'empile : la salle garde sa place a droite. */
+.mx-pages:empty { visibility: hidden }
+.mx-page { flex: 1; position: relative; background: var(--mx-filet); overflow: hidden }
+.mx-page--vue { background: var(--mx-bloc) }
+.mx-page--courante::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--mx-bloc);
+  transform-origin: left center;
+  animation: mx-remplir var(--mx-bascule, 10s) linear forwards;
+}
+@keyframes mx-remplir { from { transform: scaleX(0) } to { transform: scaleX(1) } }
+@media (prefers-reduced-motion: reduce) {
+  .mx-page--courante::after { animation: none; transform: none }
+}
+/* Dans une colonne etroite, a cote d'une affiche : la salle passe sous le
+   groupe, alignee a gauche, et l'en-tete s'empile. */
 @container (max-width: 900px) {
-  .mx-tete { flex-direction: column; gap: .1em; font-size: calc(var(--fs-body) * 1.3) }
-  .mx-ligne { grid-template-columns: 1fr auto; row-gap: .1em }
-  .mx-horaire { grid-column: 1 / -1 }
-  /* Trois lignes : sur deux, des groupes qui ne different que par leur fin
-     devenaient indiscernables. */
-  .mx-groupe-nom { -webkit-line-clamp: 3 }
+  .mx-tete { flex-direction: column; gap: .15em; font-size: calc(var(--fs-body) * 1.5) }
+  .mx-ligne { grid-template-columns: minmax(0, 1fr); row-gap: calc(var(--mx-h) * 0.05) }
+  .mx-salle { justify-self: start; align-self: start; min-width: 0; padding: .04em .3em }
+  .mx-salle-nom { font-size: calc(var(--mx-h) * 0.26) }
+  .mx-horaire { font-size: calc(var(--mx-h) * 0.085) }
+  .mx-groupe-nom { font-size: calc(var(--mx-h) * 0.12); -webkit-line-clamp: 3 }
+  .mx-ligne--longue .mx-groupe-nom { font-size: calc(var(--mx-h) * 0.1); -webkit-line-clamp: 4 }
 }
 
 /* --- bandeau --- */
