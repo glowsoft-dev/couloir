@@ -139,6 +139,14 @@ export interface UpdatePort {
   /** La version installée, telle que le boîtier la connaît. */
   versionInstallee(): Promise<string | null>;
   /**
+   * Les empreintes des fichiers réellement en place.
+   *
+   * Facultative pour les plateformes qui ne savent pas les calculer ; en son
+   * absence, on s'en tient à l'étiquette. Là où elle existe, c'est elle qui
+   * tranche : une étiquette peut mentir, un contenu non.
+   */
+  empreintesInstallees?(): Promise<{ nom: string; sha256: string }[]>;
+  /**
    * Installe les fichiers déjà téléchargés et vérifiés, en gardant les
    * précédents. Ne relance rien : c'est l'agent qui décide du moment.
    */

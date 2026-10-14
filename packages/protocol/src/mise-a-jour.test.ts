@@ -4,6 +4,7 @@ import {
   delaiDeBascule,
   doitRevenirEnArriere,
   doitSeMettreAJour,
+  fichiersConformes,
 } from "./mise-a-jour.js";
 
 describe("doitSeMettreAJour", () => {
@@ -72,5 +73,41 @@ describe("doitRevenirEnArriere", () => {
     // Le premier boîtier posé n'a rien où retomber : mieux vaut un écran qui
     // redémarre en boucle et qu'on voit, qu'un retour vers du vide.
     expect(doitRevenirEnArriere(5, false)).toBe(false);
+  });
+});
+
+describe("fichiersConformes", () => {
+  const A = "a".repeat(64);
+  const B = "b".repeat(64);
+  const servis = [
+    { nom: "couloir-player.mjs", sha256: A },
+    { nom: "couloir.js", sha256: B },
+  ];
+
+  it("reconnaît des fichiers identiques", () => {
+    expect(fichiersConformes([...servis], servis)).toBe(true);
+  });
+
+  it("refuse un fichier au contenu différent, même sous la bonne étiquette", () => {
+    // Le cas réel : un vieux paquet de test installé à la place du bon, avec
+    // l'étiquette de la version servie. L'écran ne se mettait plus jamais à
+    // jour.
+    expect(
+      fichiersConformes(
+        [
+          { nom: "couloir-player.mjs", sha256: A },
+          { nom: "couloir.js", sha256: "c".repeat(64) },
+        ],
+        servis,
+      ),
+    ).toBe(false);
+  });
+
+  it("refuse un fichier manquant", () => {
+    expect(fichiersConformes([{ nom: "couloir-player.mjs", sha256: A }], servis)).toBe(false);
+  });
+
+  it("ignore les fichiers en trop", () => {
+    expect(fichiersConformes([...servis, { nom: "notes.txt", sha256: A }], servis)).toBe(true);
   });
 });

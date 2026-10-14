@@ -28,6 +28,49 @@ export interface PlayerState {
   screenCode: string | null;
   /** Affiché tant que l'écran n'est pas rattaché à un emplacement. */
   pairing: { code: string; expiresAt: string } | null;
+  /** L'empreinte du moteur de rendu que l'agent sert en ce moment. */
+  rendu?: string;
+}
+
+/**
+ * La page doit-elle se recharger pour prendre un nouveau moteur de rendu ?
+ *
+ * Le lecteur se met à jour tout seul, mais il ne relançait que son propre
+ * service : le navigateur gardait en mémoire l'ancien affichage, et la
+ * nouvelle version restait sur le disque, invisible, jusqu'au prochain
+ * redémarrage de la machine — sur un écran qui tourne des semaines.
+ *
+ * `dejaTente` empêche la boucle : si un rechargement pour cette version a
+ * déjà eu lieu et n'a rien changé, on n'insiste pas. Une version suivante,
+ * elle, redéclenche un rechargement.
+ */
+export function doitRecharger(
+  chargee: string | undefined,
+  servie: string | undefined,
+  dejaTente: string | null,
+): boolean {
+  if (!chargee || !servie) return false;
+  if (chargee === servie) return false;
+  return dejaTente !== servie;
+}
+
+const CLEF_RECHARGEMENT = "couloir-rechargement";
+
+function lireTentative(): string | null {
+  try {
+    return globalThis.sessionStorage?.getItem(CLEF_RECHARGEMENT) ?? null;
+  } catch {
+    return null;
+  }
+}
+
+function noterTentative(version: string): void {
+  try {
+    globalThis.sessionStorage?.setItem(CLEF_RECHARGEMENT, version);
+  } catch {
+    // Sans stockage, le garde-fou ne tient pas — mais un rechargement par
+    // version, au pire, reste préférable à un affichage jamais mis à jour.
+  }
 }
 
 export interface PlayerHostOptions extends MountOptions {
@@ -38,6 +81,8 @@ export interface PlayerHostOptions extends MountOptions {
   pollMs?: number;
   /** Cadence de réévaluation du rendu. */
   tickMs?: number;
+  /** L'empreinte du moteur de rendu que cette page a chargé. */
+  rendu?: string;
 }
 
 export interface PlayerHostHandle {
@@ -86,6 +131,11 @@ export function startPlayer(container: HTMLElement, options: PlayerHostOptions):
       const response = await fetch(options.stateUrl, { cache: "no-store" });
       if (response.ok) {
         const next = (await response.json()) as PlayerState;
+        if (doitRecharger(options.rendu, next.rendu, lireTentative())) {
+          noterTentative(next.rendu!);
+          globalThis.location?.reload();
+          return;
+        }
         // Un changement de manifeste remet les tourniquets à zéro : les
         // identifiants de diapositives ne survivent pas forcément.
         if (next.manifest?.version !== state?.manifest?.version) rotations = new Map();

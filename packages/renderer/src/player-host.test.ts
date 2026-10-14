@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { startPlayer } from "./player-host.js";
+import { doitRecharger, startPlayer } from "./player-host.js";
 
 /**
  * Le nom de l'onglet.
@@ -79,5 +79,40 @@ describe("le nom de l'onglet", () => {
   it("retombe sur « Couloir » quand l'écran ne sait encore rien de lui-même", async () => {
     await lecteurAvec(ÉTAT_VIDE);
     expect(document.title).toBe("Couloir");
+  });
+});
+
+/**
+ * Le rechargement de la page après une mise à jour de l'affichage.
+ *
+ * Sans lui, le lecteur posait le nouveau moteur de rendu sur le disque et le
+ * navigateur continuait d'afficher l'ancien, jusqu'au prochain redémarrage de
+ * la machine. Un correctif de lisibilité pouvait ainsi attendre des semaines
+ * avant d'atteindre la dalle.
+ */
+describe("doitRecharger", () => {
+  it("recharge quand l'agent sert une autre version que celle chargée", () => {
+    expect(doitRecharger("ancienne", "nouvelle", null)).toBe(true);
+  });
+
+  it("ne recharge pas quand la page porte déjà la version servie", () => {
+    expect(doitRecharger("nouvelle", "nouvelle", null)).toBe(false);
+  });
+
+  it("n'insiste pas après un rechargement resté sans effet", () => {
+    // Sans ce garde-fou, une empreinte qui ne concorde jamais ferait
+    // recharger la page toutes les deux secondes, indéfiniment.
+    expect(doitRecharger("ancienne", "nouvelle", "nouvelle")).toBe(false);
+  });
+
+  it("recharge de nouveau pour une version suivante", () => {
+    expect(doitRecharger("ancienne", "suivante", "nouvelle")).toBe(true);
+  });
+
+  it("ne fait rien tant qu'une des deux empreintes manque", () => {
+    // Une page d'avant ce mécanisme, ou un agent qui ne publie pas encore
+    // l'empreinte : on ne recharge pas à l'aveugle.
+    expect(doitRecharger(undefined, "nouvelle", null)).toBe(false);
+    expect(doitRecharger("ancienne", undefined, null)).toBe(false);
   });
 });

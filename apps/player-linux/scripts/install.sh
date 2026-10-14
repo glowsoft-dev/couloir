@@ -73,27 +73,68 @@ echo "→ application"
 # Deux fichiers autonomes, produits par `pnpm --filter @couloir/player-linux
 # build:bundle`. Surtout PAS `node_modules` : dans un monorepo pnpm c'est un
 # maillage de liens symboliques, incopiable sur un boîtier.
-# L'artefact vient du serveur quand il n'est pas déjà là.
 #
-# C'est ce qui permet de poser un boîtier sans rien copier à la main : le
-# serveur qui pilote les écrans sert aussi le logiciel qu'ils exécutent, et
-# les deux ne peuvent donc pas se désynchroniser.
-if [ ! -f dist-bundle/couloir-player.mjs ]; then
-  echo "→ téléchargement du lecteur depuis ${SERVER}"
-  TEMPO="$(mktemp -d)"
-  trap 'rm -rf "$TEMPO"' EXIT
-  if curl -fsSL "${SERVER}/telechargements/couloir-player.mjs" -o "$TEMPO/couloir-player.mjs" \
-     && curl -fsSL "${SERVER}/telechargements/couloir.js" -o "$TEMPO/couloir.js"; then
-    mkdir -p dist-bundle
-    mv "$TEMPO/couloir-player.mjs" "$TEMPO/couloir.js" dist-bundle/
+# Le serveur qui pilote les écrans sert aussi le logiciel qu'ils exécutent :
+# un boîtier se pose sans rien copier à la main.
+#
+# Toujours téléchargé, toujours vérifié — et jamais posé dans le dossier
+# courant.
+#
+# L'installateur téléchargeait autrefois dans `dist-bundle/`, dans le dossier
+# d'où on le lançait, et réutilisait ce dossier s'il le trouvait. Chaque
+# installation laissait donc derrière elle le paquet que la suivante
+# reprendrait sans rien dire. C'est ce qui est arrivé : relancé le 31 août
+# depuis le dossier personnel d'un écran, il y a trouvé le paquet du 28 et l'a
+# installé sous l'étiquette de la version servie. L'écran est resté sept
+# semaines sur un affichage d'avant tous les correctifs, en se croyant à jour.
+#
+# Le paquet du dépôt n'est donc pris que sur demande explicite, pour le
+# développement : COULOIR_DEPUIS_LE_DEPOT=1.
+#
+TEMPO="$(mktemp -d)"
+TEMPO_APPOINT="$(mktemp -d)"
+trap 'rm -rf "$TEMPO" "$TEMPO_APPOINT"' EXIT
+
+if [ "${COULOIR_DEPUIS_LE_DEPOT:-}" = "1" ]; then
+  if [ ! -f dist-bundle/couloir-player.mjs ] || [ ! -f dist-bundle/couloir.js ]; then
+    echo "COULOIR_DEPUIS_LE_DEPOT=1, mais dist-bundle/ est incomplet." >&2
+    echo "Construisez-le : pnpm --filter @couloir/player-linux build:bundle" >&2
+    exit 1
   fi
+  echo "  lecteur pris dans le dépôt (COULOIR_DEPUIS_LE_DEPOT=1)"
+  cp dist-bundle/couloir-player.mjs dist-bundle/couloir.js "$TEMPO"/
+  # Une étiquette qui ne peut pas être confondue avec une version servie :
+  # le boîtier ira chercher la vraie au premier contact.
+  VERSION="depot-local"
+else
+  if [ -d dist-bundle ]; then
+    echo "  (un dossier dist-bundle/ est présent ici ; il est ignoré)"
+  fi
+  echo "→ téléchargement du lecteur depuis ${SERVER}"
+  if ! curl -fsSL "${SERVER}/telechargements/version.json" -o "$TEMPO/version.json"; then
+    echo "le serveur ${SERVER} n'annonce pas de lecteur (telechargements/version.json)." >&2
+    exit 1
+  fi
+  # Node vient d'être installé : il lit le JSON mieux qu'une expression sed.
+  VERSION="$(node -e 'console.log(require(process.argv[1]).version)' "$TEMPO/version.json")"
+  node -e '
+    for (const f of require(process.argv[1]).fichiers) console.log(f.nom + " " + f.sha256);
+  ' "$TEMPO/version.json" > "$TEMPO/attendus"
+
+  while read -r nom attendu; do
+    case "$nom" in */*|*..*) echo "nom de fichier refusé : $nom" >&2; exit 1 ;; esac
+    curl -fsSL "${SERVER}/telechargements/${nom}" -o "$TEMPO/${nom}"
+    obtenu="$(sha256sum "$TEMPO/${nom}" | cut -d' ' -f1)"
+    # Un portail captif répond 200 avec une page de connexion : bonne
+    # apparence, mauvais contenu. Seule l'empreinte tranche.
+    if [ "$obtenu" != "$attendu" ]; then
+      echo "empreinte incorrecte pour ${nom} : le fichier reçu n'est pas celui que" >&2
+      echo "le serveur annonce. Rien n'a été installé." >&2
+      exit 1
+    fi
+  done < "$TEMPO/attendus"
 fi
 
-if [ ! -f dist-bundle/couloir-player.mjs ]; then
-  echo "artefact introuvable, et le serveur ${SERVER} ne le sert pas." >&2
-  echo "Construisez-le : pnpm --filter @couloir/player-linux build:bundle" >&2
-  exit 1
-fi
 # Le lecteur va dans « courant », que le boîtier saura basculer tout seul.
 #
 # Un chemin figé aurait obligé à se brancher sur chaque Raspberry pour poser
@@ -102,28 +143,23 @@ fi
 # pas debout.
 LECTEUR=/var/lib/couloir/lecteur/courant
 install -d -o couloir -g couloir /var/lib/couloir/lecteur "$LECTEUR"
-install -m 644 -o couloir -g couloir dist-bundle/couloir-player.mjs "$LECTEUR"/couloir-player.mjs
-install -m 644 -o couloir -g couloir dist-bundle/couloir.js "$LECTEUR"/couloir.js
-# La version posée, pour que le boîtier sache s'il est à jour. Elle est
-# demandée au serveur : la déduire ici, c'est risquer qu'elle diverge de ce
-# que le serveur annonce, et le boîtier retéléchargerait à chaque démarrage.
-if curl -fsSL "${SERVER}/telechargements/version.json" -o /tmp/couloir-version.json 2>/dev/null; then
-  sed -n 's/.*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' /tmp/couloir-version.json \
-    | head -1 > "$LECTEUR"/version
-  chown couloir:couloir "$LECTEUR"/version
-  rm -f /tmp/couloir-version.json
-fi
+install -m 644 -o couloir -g couloir "$TEMPO"/couloir-player.mjs "$LECTEUR"/couloir-player.mjs
+install -m 644 -o couloir -g couloir "$TEMPO"/couloir.js "$LECTEUR"/couloir.js
+# L'étiquette correspond désormais aux fichiers qu'on vient de vérifier — et
+# le boîtier recontrôle de toute façon les empreintes à chaque passage.
+echo "$VERSION" > "$LECTEUR"/version
+chown couloir:couloir "$LECTEUR"/version
 #
 # Les fichiers d'appoint : le lanceur du navigateur et les deux unités.
 #
-# On les prenait dans le dépôt, alors que la commande annoncée est
-# `curl … | sudo bash`, qui n'en a aucun : l'installation officielle échouait
-# ici, au premier boîtier posé. On les prend donc du dépôt s'il est là, du
-# serveur sinon — c'est lui qui sert déjà le lecteur.
+# Du serveur, comme le lecteur — c'est lui qui sert ce que les boîtiers
+# exécutent. Du dépôt seulement sur demande explicite, pour la même raison
+# que le lecteur : un fichier trouvé par hasard dans le dossier courant n'a
+# rien à faire sur un écran.
 #
 recuperer() {
   local nom="$1" chemin_local="$2" destination="$3" droits="$4"
-  if [ -f "$chemin_local" ]; then
+  if [ "${COULOIR_DEPUIS_LE_DEPOT:-}" = "1" ] && [ -f "$chemin_local" ]; then
     install -m "$droits" "$chemin_local" "$destination"
   elif curl -fsSL "${SERVER}/telechargements/${nom}" -o "$TEMPO_APPOINT/$nom"; then
     install -m "$droits" "$TEMPO_APPOINT/$nom" "$destination"
@@ -132,9 +168,6 @@ recuperer() {
     exit 1
   fi
 }
-
-TEMPO_APPOINT="$(mktemp -d)"
-trap 'rm -rf "$TEMPO_APPOINT"' EXIT
 
 recuperer kiosk.sh scripts/kiosk.sh "$PREFIX"/kiosk.sh 755
 chown -R couloir:couloir /opt/couloir

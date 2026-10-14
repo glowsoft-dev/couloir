@@ -107,6 +107,7 @@ export class Player {
       sources: () => this.poller?.snapshotsBySourceId() ?? {},
       identify: () => this.identify,
       onResolution: (charge) => this.noterLaResolution(charge),
+      onPage: (rendu) => this.log("info", "affichage chargé", { rendu }),
       forceFallback: () => this.runtime?.getContext().state === "fallback",
     });
     await new Promise<void>((resolve) => this.server!.listen(this.options.localPort, "127.0.0.1", resolve));

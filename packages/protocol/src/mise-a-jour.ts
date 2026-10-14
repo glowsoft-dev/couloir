@@ -40,6 +40,28 @@ export function doitSeMettreAJour(locale: string, distante: string | null): bool
 }
 
 /**
+ * Les fichiers en place correspondent-ils à ceux que le serveur sert ?
+ *
+ * L'étiquette de version ne suffit pas. Le 31 août, un installateur relancé
+ * depuis un dossier qui contenait un vieux paquet de test l'a installé à la
+ * place du bon, puis lui a collé l'étiquette de la version servie. L'écran
+ * s'est cru à jour sept semaines durant, avec un affichage d'avant tous les
+ * correctifs de lisibilité, et ne téléchargeait plus rien puisque l'étiquette
+ * concordait.
+ *
+ * Ce sont donc les empreintes qui tranchent. Un fichier absent, ou dont le
+ * contenu diffère, suffit à déclencher une réinstallation. Les fichiers en
+ * trop sont ignorés : ce n'est pas au lecteur de faire le ménage.
+ */
+export function fichiersConformes(
+  installes: readonly { nom: string; sha256: string }[],
+  servis: readonly { nom: string; sha256: string }[],
+): boolean {
+  const enPlace = new Map(installes.map((f) => [f.nom, f.sha256]));
+  return servis.every((f) => enPlace.get(f.nom) === f.sha256);
+}
+
+/**
  * Le délai avant qu'un écran donné n'applique la mise à jour.
  *
  * Douze écrans qui basculent à la même minute, c'est douze couloirs noirs si

@@ -4,6 +4,7 @@ import {
   delaiDeBascule,
   doitRevenirEnArriere,
   doitSeMettreAJour,
+  fichiersConformes,
 } from "@couloir/protocol";
 import type { NetPort, UpdatePort } from "./ports.js";
 
@@ -71,7 +72,20 @@ export async function mettreAJourLeLecteur(
 
   const installee = await update.versionInstallee();
   if (!doitSeMettreAJour(installee ?? "", servie.version)) {
-    return { fait: "rien", pourquoi: "déjà à jour" };
+    /*
+     * L'étiquette concorde. Reste à vérifier que les fichiers aussi.
+     *
+     * Un écran a passé sept semaines sur un vieux paquet de test portant
+     * l'étiquette de la version servie : il se croyait à jour et ne
+     * téléchargeait plus rien. Les empreintes, elles, ne mentent pas.
+     */
+    const enPlace = await update.empreintesInstallees?.().catch(() => null);
+    if (!enPlace || fichiersConformes(enPlace, servie.fichiers)) {
+      return { fait: "rien", pourquoi: "déjà à jour" };
+    }
+    log("warn", "fichiers en place différents de leur version déclarée, réinstallation", {
+      version: servie.version,
+    });
   }
 
   /*

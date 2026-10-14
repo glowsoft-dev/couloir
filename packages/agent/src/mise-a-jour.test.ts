@@ -69,6 +69,42 @@ describe("mettreAJourLeLecteur", () => {
     expect(etat.pose).toBeNull();
   });
 
+  it("réinstalle quand l'étiquette concorde mais pas les fichiers", async () => {
+    // Le cas réel : un vieux paquet de test installé sous l'étiquette de la
+    // version servie. L'écran se croyait à jour et ne bougeait plus.
+    const { etat, update } = faussePorte("v2");
+    const avecEmpreintes: UpdatePort = {
+      ...update,
+      empreintesInstallees: async () => [{ nom: "p.mjs", sha256: sha("vieux") }],
+    };
+    const net = fauxReseau(
+      { version: "v2", fichiers: [{ nom: "p.mjs", sha256: sha("neuf"), octets: 4 }] },
+      { "p.mjs": "neuf" },
+    );
+
+    const resultat = await mettreAJourLeLecteur(net, avecEmpreintes, { deviceId: "hall" });
+
+    expect(resultat).toEqual({ fait: "installee", version: "v2" });
+    expect(etat.pose).toEqual({ version: "v2", noms: ["p.mjs"] });
+  });
+
+  it("ne réinstalle pas quand étiquette et fichiers concordent", async () => {
+    const { etat, update } = faussePorte("v2");
+    const avecEmpreintes: UpdatePort = {
+      ...update,
+      empreintesInstallees: async () => [{ nom: "p.mjs", sha256: sha("neuf") }],
+    };
+    const net = fauxReseau(
+      { version: "v2", fichiers: [{ nom: "p.mjs", sha256: sha("neuf"), octets: 4 }] },
+      { "p.mjs": "neuf" },
+    );
+
+    expect(await mettreAJourLeLecteur(net, avecEmpreintes, { deviceId: "hall" })).toMatchObject({
+      fait: "rien",
+    });
+    expect(etat.pose).toBeNull();
+  });
+
   it("refuse un contenu dont l'empreinte ne correspond pas", async () => {
     /*
      * Le cas qui justifie tout le reste : un portail captif répond 200 avec

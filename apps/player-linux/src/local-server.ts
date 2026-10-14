@@ -2,7 +2,7 @@ import { createReadStream, existsSync } from "node:fs";
 import { readFile, stat } from "node:fs/promises";
 import { createServer, type Server } from "node:http";
 import { fileURLToPath } from "node:url";
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import type { AgentRuntime } from "@couloir/agent";
 import type { PlayEvent } from "@couloir/protocol";
 import type { FileStore } from "./ports/store.js";
@@ -38,9 +38,26 @@ export interface LocalServerOptions {
    * l'écran. Il l'apprend donc par cette porte, et le joint à sa télémétrie.
    */
   onResolution?: (resolution: unknown) => void;
+  /**
+   * La page de rendu vient d'être servie, avec ce moteur de rendu.
+   *
+   * C'est la trace qui dit, dans le journal du boîtier, quand l'affichage
+   * a réellement pris une nouvelle version — pas seulement quand elle a été
+   * posée sur le disque.
+   */
+  onPage?: (rendu: string) => void;
 }
 
-const PAGE = `<!doctype html>
+/*
+ * La page porte l'empreinte du moteur de rendu qu'elle charge.
+ *
+ * Elle la compare à celle que l'agent publie dans /state, et se recharge quand
+ * elles divergent : c'est ainsi qu'une mise à jour de l'affichage atteint la
+ * dalle sans qu'il faille redémarrer la machine. L'empreinte figure aussi dans
+ * l'adresse du script, pour que le navigateur ne serve jamais l'ancien depuis
+ * son cache.
+ */
+const page = (rendu: string): string => `<!doctype html>
 <html lang="fr">
   <head>
     <meta charset="utf-8" />
@@ -56,8 +73,9 @@ const PAGE = `<!doctype html>
   <body>
     <div id="screen"></div>
     <script type="module">
-      import { startPlayer } from "/couloir.js";
+      import { startPlayer } from "/couloir.js?h=${rendu}";
       startPlayer(document.getElementById("screen"), {
+        rendu: "${rendu}",
         stateUrl: "/state",
         transitionsUrl: "/transitions",
         assetUrl: (id) => "/media/" + id,
@@ -91,6 +109,30 @@ const BUNDLE_PATH =
     fileURLToPath(new URL("../../../packages/renderer/dist-browser/couloir.js", import.meta.url)),
   ]);
 
+/**
+ * L'empreinte du moteur de rendu servi, recalculée seulement s'il a changé.
+ *
+ * La page interroge /state toutes les deux secondes : hacher le fichier à
+ * chaque fois serait du travail inutile sur un Raspberry. La date et la
+ * taille suffisent à savoir qu'il faut recompter.
+ */
+let empreinteConnue: { cle: string; valeur: string } | null = null;
+
+async function empreinteDuRendu(): Promise<string> {
+  try {
+    const info = await stat(BUNDLE_PATH);
+    const cle = `${info.mtimeMs}:${info.size}`;
+    if (empreinteConnue?.cle !== cle) {
+      const contenu = await readFile(BUNDLE_PATH);
+      const valeur = createHash("sha256").update(contenu).digest("hex").slice(0, 16);
+      empreinteConnue = { cle, valeur };
+    }
+    return empreinteConnue.valeur;
+  } catch {
+    return "absent";
+  }
+}
+
 function firstExisting(candidates: string[]): string {
   for (const candidate of candidates) {
     if (existsSync(candidate)) return candidate;
@@ -103,15 +145,24 @@ export function createLocalServer(options: LocalServerOptions): Server {
     const url = new URL(request.url ?? "/", "http://localhost");
 
     if (url.pathname === "/" || url.pathname === "/index.html") {
-      response.writeHead(200, { "content-type": "text/html; charset=utf-8" });
-      response.end(PAGE);
+      void empreinteDuRendu().then((rendu) => {
+        response.writeHead(200, {
+          "content-type": "text/html; charset=utf-8",
+          "cache-control": "no-store",
+        });
+        response.end(page(rendu));
+        options.onPage?.(rendu);
+      });
       return;
     }
 
     if (url.pathname === "/couloir.js") {
       void readFile(BUNDLE_PATH)
         .then((bundle) => {
-          response.writeHead(200, { "content-type": "text/javascript; charset=utf-8" });
+          response.writeHead(200, {
+            "content-type": "text/javascript; charset=utf-8",
+            "cache-control": "no-store",
+          });
           response.end(bundle);
         })
         .catch(() => {
@@ -122,18 +173,21 @@ export function createLocalServer(options: LocalServerOptions): Server {
     }
 
     if (url.pathname === "/state") {
-      const manifest = options.runtime()?.getManifest() ?? null;
-      const body = JSON.stringify({
-        manifest,
-        sources: options.sources(),
-        availableAssetIds: manifest?.assets.map((a) => a.id) ?? [],
-        forceFallback: options.forceFallback(),
-        identify: options.identify(),
-        screenCode: options.screenCode(),
-        pairing: options.pairing(),
+      void empreinteDuRendu().then((rendu) => {
+        const manifest = options.runtime()?.getManifest() ?? null;
+        const body = JSON.stringify({
+          manifest,
+          sources: options.sources(),
+          availableAssetIds: manifest?.assets.map((a) => a.id) ?? [],
+          forceFallback: options.forceFallback(),
+          identify: options.identify(),
+          screenCode: options.screenCode(),
+          pairing: options.pairing(),
+          rendu,
+        });
+        response.writeHead(200, { "content-type": "application/json", "cache-control": "no-store" });
+        response.end(body);
       });
-      response.writeHead(200, { "content-type": "application/json", "cache-control": "no-store" });
-      response.end(body);
       return;
     }
 

@@ -109,6 +109,10 @@ export class LinuxUpdate implements UpdatePort {
     await writeFile(this.compteur, "0\n");
   }
 
+  async empreintesInstallees(): Promise<{ nom: string; sha256: string }[]> {
+    return this.fichiersCourants();
+  }
+
   /** Les fichiers de la version en place, pour vérifier ce qui tourne. */
   async fichiersCourants(): Promise<{ nom: string; sha256: string }[]> {
     if (!existsSync(this.courant)) return [];
