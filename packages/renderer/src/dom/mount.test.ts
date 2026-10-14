@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ScreenState } from "../director.js";
 import { mountRenderer } from "./mount.js";
 
@@ -206,7 +206,7 @@ describe("économie de rendu", () => {
             slideId: "cours",
             sourceId: "edt",
             view: "timetable-day",
-            params: {},
+            params: { affichage: "journee" },
             staleLabel: null,
             payload: {
               days: [
@@ -256,7 +256,7 @@ describe("économie de rendu", () => {
             slideId: "cours",
             sourceId: "edt",
             view: "timetable-day",
-            params: {},
+            params: { affichage: "journee" },
             staleLabel: null,
             payload: {
               days: [
@@ -306,7 +306,7 @@ describe("économie de rendu", () => {
             slideId: "cours",
             sourceId: "edt",
             view: "timetable-day",
-            params: {},
+            params: { affichage: "journee" },
             staleLabel: null,
             payload: {
               days: [
@@ -342,7 +342,7 @@ describe("économie de rendu", () => {
             slideId: "cours",
             sourceId: "edt",
             view: "timetable-day" as const,
-            params: champs === undefined ? {} : { champs },
+            params: { affichage: "journee", ...(champs === undefined ? {} : { champs }) },
             staleLabel: null,
             payload: {
               days: [
@@ -396,7 +396,7 @@ describe("économie de rendu", () => {
             slideId: "cours",
             sourceId: "edt",
             view: "timetable-day",
-            params: {},
+            params: { affichage: "journee" },
             staleLabel: null,
             payload: {
               days: [
@@ -433,7 +433,7 @@ describe("économie de rendu", () => {
             slideId: "cours",
             sourceId: "edt",
             view: "timetable-day",
-            params: { champs: "" },
+            params: { affichage: "journee", champs: "" },
             staleLabel: null,
             payload: {
               days: [
@@ -475,5 +475,163 @@ describe("filigrane", () => {
 
     renderer.update({ ...zonesScreen(), watermark: null });
     expect(container.querySelector(".couloir-watermark")).toBeNull();
+  });
+});
+
+interface TimetableEntryDeTest {
+  time: string;
+  endTime?: string;
+  subject: string;
+  detail?: string;
+  room: string;
+  teacher?: string;
+  change?: string;
+}
+
+describe("maintenant et ensuite", () => {
+  // Mercredi 14 octobre, 9 h 15 à Paris (UTC+2 en octobre).
+  const A_9H15 = new Date("2026-10-14T07:15:00Z");
+
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ["Date", "setTimeout", "setInterval", "clearInterval"] });
+    vi.setSystemTime(A_9H15);
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  const ecran = (
+    entries: TimetableEntryDeTest[],
+    params: Record<string, string> = {},
+    notice?: string,
+  ): ScreenState => ({
+    ...zonesScreen(),
+    zones: [
+      {
+        ...zonesScreen().zones[0]!,
+        slide: {
+          kind: "data",
+          slideId: "cours",
+          sourceId: "edt",
+          view: "timetable-day",
+          params,
+          staleLabel: null,
+          payload: {
+            days: [
+              {
+                classId: "a",
+                classLabel: "Campus by CCI Nievre Bat A",
+                entries,
+                ...(notice ? { notice } : {}),
+              },
+            ],
+          },
+        },
+      },
+    ],
+  });
+
+  const JOURNEE: TimetableEntryDeTest[] = [
+    {
+      time: "08:30",
+      endTime: "12:00",
+      subject: "BTS NDRC 1",
+      detail: "Relation client",
+      room: "CCI SALLE A14",
+      teacher: "M. Perrin",
+    },
+    { time: "10:00", endTime: "12:00", subject: "Bachelor RH", room: "CCI SALLE A03" },
+    { time: "13:30", endTime: "17:00", subject: "BTS MCO 2", room: "CCI SALLE A21" },
+  ];
+
+  const lignes = () =>
+    [...container.querySelectorAll<HTMLElement>(".mx-ligne")].filter((li) => !li.hidden);
+  const texteDe = (li: HTMLElement) => li.textContent ?? "";
+
+  it("montre ce qui se passe et ce qui vient, pas l'après-midi", () => {
+    mountRenderer(container).update(ecran(JOURNEE));
+    vi.advanceTimersByTime(0);
+
+    const enCours = container.querySelectorAll(".mx-bloc--en-cours .mx-ligne");
+    expect(enCours).toHaveLength(1);
+    expect(texteDe(enCours[0] as HTMLElement)).toContain("jusqu'à 12 h");
+    expect(lignes().map((li) => li.querySelector(".mx-salle-nom")?.textContent)).toEqual([
+      "A14",
+      "A03",
+    ]);
+    // 13 h 30 est à plus de deux heures : il n'oriente personne à 9 h 15.
+    expect(container.textContent).not.toContain("BTS MCO 2");
+    expect(container.querySelector(".mx-lieu")?.textContent).toBe("Bâtiment A");
+    expect(container.querySelector(".mx-heure")?.textContent).toBe("9 h 15");
+  });
+
+  it("tait le module et l'enseignant tant qu'on ne les a pas demandés", () => {
+    mountRenderer(container).update(ecran(JOURNEE));
+    vi.advanceTimersByTime(0);
+    expect(container.textContent).not.toContain("M. Perrin");
+    expect(container.textContent).not.toContain("Relation client");
+  });
+
+  it("les montre quand l'écran les demande", () => {
+    mountRenderer(container).update(ecran(JOURNEE, { champs: "module,enseignant,salle" }));
+    vi.advanceTimersByTime(0);
+    expect(container.querySelector(".mx-prof")?.textContent).toBe("M. Perrin");
+    expect(container.querySelector(".mx-detail")?.textContent).toBe("Relation client");
+  });
+
+  it("dit annulé à la place de la salle", () => {
+    const annule = {
+      time: "10:00",
+      endTime: "12:00",
+      subject: "BTS SIO 1",
+      room: "CCI SALLE A08",
+      change: "cancelled",
+    };
+    mountRenderer(container).update(ecran([annule]));
+    vi.advanceTimersByTime(0);
+    const salle = container.querySelector(".mx-ligne--annulee .mx-salle-nom");
+    expect(salle?.textContent).toBe("Annulé");
+    expect(container.textContent).not.toContain("A08");
+  });
+
+  it("fait passer un cours dans « En ce moment » à son heure, sans nouvelles données", () => {
+    mountRenderer(container).update(ecran(JOURNEE));
+    vi.advanceTimersByTime(0);
+    expect(container.querySelectorAll(".mx-bloc--en-cours .mx-ligne")).toHaveLength(1);
+
+    vi.advanceTimersByTime(45 * 60_000); // 10 h
+    expect(container.querySelectorAll(".mx-bloc--en-cours .mx-ligne")).toHaveLength(2);
+    expect(container.querySelector(".mx-heure")?.textContent).toBe("10 h");
+  });
+
+  it("explique une dalle vide au lieu de la laisser vide", () => {
+    vi.setSystemTime(new Date("2026-10-14T09:15:00Z")); // 11 h 15
+    mountRenderer(container).update(ecran(JOURNEE.slice(2)));
+    vi.advanceTimersByTime(0);
+    expect(container.querySelector(".mx-vide")?.textContent).toBe(
+      "Pas de cours dans les deux prochaines heures. Reprise à 13 h 30.",
+    );
+  });
+
+  it("annonce la fin de la journée", () => {
+    vi.setSystemTime(new Date("2026-10-14T16:00:00Z")); // 18 h
+    mountRenderer(container).update(ecran(JOURNEE));
+    vi.advanceTimersByTime(0);
+    expect(container.querySelector(".mx-vide")?.textContent).toBe(
+      "Les cours sont terminés pour aujourd'hui.",
+    );
+  });
+
+  it("relaie les vacances", () => {
+    mountRenderer(container).update(ecran([], {}, "Vacances de la Toussaint"));
+    vi.advanceTimersByTime(0);
+    expect(container.querySelector(".mx-vide")?.textContent).toBe("Vacances de la Toussaint");
+  });
+
+  it("garde la journée complète pour qui la demande", () => {
+    mountRenderer(container).update(ecran(JOURNEE, { affichage: "journee" }));
+    vi.advanceTimersByTime(0);
+    expect(container.querySelector(".mx")).toBeNull();
+    expect(container.textContent).toContain("BTS MCO 2");
   });
 });

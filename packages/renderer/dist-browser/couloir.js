@@ -1,4 +1,4 @@
-const q = {
+const Y = {
   Mon: 1,
   Tue: 2,
   Wed: 3,
@@ -7,37 +7,37 @@ const q = {
   Sat: 6,
   Sun: 7
 };
-function R(e, t) {
+function G(e, t) {
   const n = new Intl.DateTimeFormat("en-CA", {
     timeZone: t,
     year: "numeric",
     month: "2-digit",
     day: "2-digit"
-  }).formatToParts(new Date(e)), i = (r) => n.find((a) => a.type === r)?.value ?? "";
+  }).formatToParts(new Date(e)), i = (r) => n.find((o) => o.type === r)?.value ?? "";
   return `${i("year")}-${i("month")}-${i("day")}`;
 }
-function P(e, t) {
+function T(e, t) {
   const n = new Intl.DateTimeFormat("en-US", {
     timeZone: t,
     weekday: "short",
     hour: "2-digit",
     minute: "2-digit",
     hour12: !1
-  }).formatToParts(new Date(e)), i = (l) => n.find((o) => o.type === l)?.value ?? "", r = Number(i("hour")) % 24, a = Number(i("minute"));
+  }).formatToParts(new Date(e)), i = (a) => n.find((l) => l.type === a)?.value ?? "", r = Number(i("hour")) % 24, o = Number(i("minute"));
   return {
-    dayOfWeek: q[i("weekday")] ?? 1,
-    minutesOfDay: r * 60 + a
+    dayOfWeek: Y[i("weekday")] ?? 1,
+    minutesOfDay: r * 60 + o
   };
 }
-function E(e) {
+function F(e) {
   const [t, n] = e.split(":");
   return Number(t) * 60 + Number(n);
 }
-function C(e, t, n) {
-  const i = E(t), r = E(n);
+function O(e, t, n) {
+  const i = F(t), r = F(n);
   return i === r ? !0 : i < r ? e >= i && e < r : e >= i || e < r;
 }
-function $(e, t, n) {
+function K(e, t, n) {
   if (!t) return { status: "never-loaded" };
   const i = Math.max(0, (n - t.fetchedAtMs) / 1e3);
   if (i <= e.maxStaleSec)
@@ -56,10 +56,10 @@ function $(e, t, n) {
       return { status: "fallback", ageSec: i };
   }
 }
-function L(e) {
+function H(e) {
   return e.status === "usable" || e.status === "stale-shown";
 }
-function _(e, t = "fr-FR", n = "Europe/Paris") {
+function Q(e, t = "fr-FR", n = "Europe/Paris") {
   return e.status !== "stale-shown" ? null : `Mis à jour ${new Intl.DateTimeFormat(t, {
     timeZone: n,
     weekday: "long",
@@ -67,61 +67,61 @@ function _(e, t = "fr-FR", n = "Europe/Paris") {
     minute: "2-digit"
   }).format(new Date(e.fetchedAtMs))}`;
 }
-function W(e, t, n) {
+function ee(e, t, n) {
   if (e.startsAt && t < Date.parse(e.startsAt) || e.endsAt && t >= Date.parse(e.endsAt)) return !1;
-  const i = P(t, n);
-  return !(e.daysOfWeek && e.daysOfWeek.length > 0 && !e.daysOfWeek.includes(i.dayOfWeek) || e.dailyStart && e.dailyEnd && !C(i.minutesOfDay, e.dailyStart, e.dailyEnd));
+  const i = T(t, n);
+  return !(e.daysOfWeek && e.daysOfWeek.length > 0 && !e.daysOfWeek.includes(i.dayOfWeek) || e.dailyStart && e.dailyEnd && !O(i.minutesOfDay, e.dailyStart, e.dailyEnd));
 }
-function j(e, t, n) {
-  const i = e.layout.zones.find((o) => o.id === t);
+function te(e, t, n) {
+  const i = e.layout.zones.find((l) => l.id === t);
   if (!i) return null;
-  const r = e.settings.timezone, a = e.schedules.filter((o) => o.zoneId === t).filter((o) => W(o, n, r));
-  if (a.length === 0) return i.playlistId;
-  let l = a[0];
-  for (const o of a.slice(1))
-    o.priority >= l.priority && (l = o);
-  return l.playlistId;
+  const r = e.settings.timezone, o = e.schedules.filter((l) => l.zoneId === t).filter((l) => ee(l, n, r));
+  if (o.length === 0) return i.playlistId;
+  let a = o[0];
+  for (const l of o.slice(1))
+    l.priority >= a.priority && (a = l);
+  return a.playlistId;
 }
-function U(e, t, n) {
+function ne(e, t, n) {
   if (!e) return !0;
   if (e.startsAt && t < Date.parse(e.startsAt) || e.endsAt && t >= Date.parse(e.endsAt)) return !1;
-  const i = P(t, n);
-  if (e.dailyStart && e.dailyEnd && !C(i.minutesOfDay, e.dailyStart, e.dailyEnd))
+  const i = T(t, n);
+  if (e.dailyStart && e.dailyEnd && !O(i.minutesOfDay, e.dailyStart, e.dailyEnd))
     return !1;
   if (e.daysOfWeek && e.daysOfWeek.length > 0) {
-    const r = (i.dayOfWeek + 5) % 7 + 1, a = !!(e.dailyStart && e.dailyEnd) && E(e.dailyStart) > E(e.dailyEnd) && i.minutesOfDay < E(e.dailyEnd);
-    if (!e.daysOfWeek.includes(a ? r : i.dayOfWeek)) return !1;
+    const r = (i.dayOfWeek + 5) % 7 + 1, o = !!(e.dailyStart && e.dailyEnd) && F(e.dailyStart) > F(e.dailyEnd) && i.minutesOfDay < F(e.dailyEnd);
+    if (!e.daysOfWeek.includes(o ? r : i.dayOfWeek)) return !1;
   }
   return !0;
 }
-function Z(e, t) {
-  const n = P(t, e.timezone), i = (n.dayOfWeek + 5) % 7 + 1;
+function re(e, t) {
+  const n = T(t, e.timezone), i = (n.dayOfWeek + 5) % 7 + 1;
   return e.displayOff.some((r) => {
-    if (!C(n.minutesOfDay, r.from, r.to)) return !1;
+    if (!O(n.minutesOfDay, r.from, r.to)) return !1;
     if (r.daysOfWeek.length === 0) return !0;
-    const a = E(r.from), l = E(r.to), o = a > l && n.minutesOfDay < l;
-    return r.daysOfWeek.includes(o ? i : n.dayOfWeek);
+    const o = F(r.from), a = F(r.to), l = o > a && n.minutesOfDay < a;
+    return r.daysOfWeek.includes(l ? i : n.dayOfWeek);
   });
 }
-const B = 130, H = 2500, V = 6e4, J = 1.9;
-function X(e) {
+const ie = 130, ae = 2500, oe = 6e4, le = 1.9;
+function se(e) {
   const t = e.trim();
   return t === "" ? 0 : t.split(/\s+/).length;
 }
-function Y(e) {
-  const t = X(e);
-  return Math.round(H + t / B * 6e4);
+function ce(e) {
+  const t = se(e);
+  return Math.round(ae + t / ie * 6e4);
 }
-function G(e) {
+function ue(e) {
   return e.kind !== "template" ? "" : Object.values(e.fields).filter((t) => typeof t == "string").join(" ");
 }
-function K(e) {
-  const t = "durationMs" in e && e.durationMs ? e.durationMs : 0, n = Y(G(e)), i = Math.min(Math.max(t, n), V);
+function de(e) {
+  const t = "durationMs" in e && e.durationMs ? e.durationMs : 0, n = ce(ue(e)), i = Math.min(Math.max(t, n), oe);
   return { effectiveMs: i, requestedMs: t, extended: i > t };
 }
-function Q(e, t = 1) {
+function fe(e, t = 1) {
   const n = Math.round(
-    e * J * t / 100
+    e * le * t / 100
   );
   return {
     eyebrow: Math.round(n * 0.72),
@@ -130,163 +130,163 @@ function Q(e, t = 1) {
     caption: Math.round(n * 0.8)
   };
 }
-function A(e, t, n) {
+function R(e, t, n) {
   for (let i = 1; i <= e.length; i++) {
-    const r = (t + i) % e.length, a = e[r];
-    if (a !== void 0 && n(a)) return r;
+    const r = (t + i) % e.length, o = e[r];
+    if (o !== void 0 && n(o)) return r;
   }
   return null;
 }
-function ee(e, t) {
+function me(e, t) {
   for (let n = 0; n < e.length; n++) {
     const i = e[n];
     if (i !== void 0 && t(i)) return n;
   }
   return null;
 }
-function N(e) {
-  const { state: t, playlistId: n, slideIds: i, isEligible: r, durationMsOf: a, nowMs: l } = e, o = t && t.playlistId === n ? i[t.index] ?? null : null, u = (f) => {
-    if (f === null)
-      return { state: null, currentSlideId: null, changed: o !== null };
-    const c = i[f];
+function _(e) {
+  const { state: t, playlistId: n, slideIds: i, isEligible: r, durationMsOf: o, nowMs: a } = e, l = t && t.playlistId === n ? i[t.index] ?? null : null, u = (p) => {
+    if (p === null)
+      return { state: null, currentSlideId: null, changed: l !== null };
+    const s = i[p];
     return {
-      state: { playlistId: n, index: f, slideStartedAtMs: l },
-      currentSlideId: c,
-      changed: c !== o
+      state: { playlistId: n, index: p, slideStartedAtMs: a },
+      currentSlideId: s,
+      changed: s !== l
     };
   };
   if (!t || t.playlistId !== n || t.index >= i.length)
-    return u(ee(i, r));
-  const s = i[t.index];
-  if (s === void 0 || !r(s))
-    return u(A(i, t.index, r));
-  const m = a(s), p = l - t.slideStartedAtMs;
-  if (!(m === null ? e.mediaEnded === !0 : p >= m))
-    return { state: t, currentSlideId: s, changed: !1 };
-  const b = A(i, t.index, r);
-  return u(b === null ? null : b);
+    return u(me(i, r));
+  const c = i[t.index];
+  if (c === void 0 || !r(c))
+    return u(R(i, t.index, r));
+  const d = o(c), y = a - t.slideStartedAtMs;
+  if (!(d === null ? e.mediaEnded === !0 : y >= d))
+    return { state: t, currentSlideId: c, changed: !1 };
+  const S = R(i, t.index, r);
+  return u(S === null ? null : S);
 }
-function te(e) {
-  const { manifest: t, nowMs: n } = e, i = new Map(t.slides.map((d) => [d.id, d])), r = new Map(t.assets.map((d) => [d.id, d])), a = new Map(t.playlists.map((d) => [d.id, d])), l = new Map(
-    t.dataSources.map((d) => [
-      d.id,
-      $(d, e.sources.get(d.id), n)
+function pe(e) {
+  const { manifest: t, nowMs: n } = e, i = new Map(t.slides.map((f) => [f.id, f])), r = new Map(t.assets.map((f) => [f.id, f])), o = new Map(t.playlists.map((f) => [f.id, f])), a = new Map(
+    t.dataSources.map((f) => [
+      f.id,
+      K(f, e.sources.get(f.id), n)
     ])
-  ), o = t.settings.showScreenCodeWatermark ? e.screenCode ?? null : null, u = t.settings.branding?.accent ?? null, s = t.settings.zoom ?? null, m = t.emergency;
-  if (m && n < Date.parse(m.validUntil))
+  ), l = t.settings.showScreenCodeWatermark ? e.screenCode ?? null : null, u = t.settings.branding?.accent ?? null, c = t.settings.zoom ?? null, d = t.emergency;
+  if (d && n < Date.parse(d.validUntil))
     return {
-      screen: { mode: "emergency", zones: [], emergency: m, identify: null, watermark: o, accent: u, zoom: s },
+      screen: { mode: "emergency", zones: [], emergency: d, identify: null, watermark: l, accent: u, zoom: c },
       rotations: new Map(e.rotations),
       transitions: []
     };
   if (e.identify)
     return {
-      screen: { mode: "identify", zones: [], emergency: null, identify: e.identify, watermark: null, accent: u, zoom: s },
+      screen: { mode: "identify", zones: [], emergency: null, identify: e.identify, watermark: null, accent: u, zoom: c },
       rotations: new Map(e.rotations),
       transitions: []
     };
-  if (Z(t.settings, n))
+  if (re(t.settings, n))
     return {
-      screen: { mode: "display-off", zones: [], emergency: null, identify: null, watermark: null, accent: u, zoom: s },
+      screen: { mode: "display-off", zones: [], emergency: null, identify: null, watermark: null, accent: u, zoom: c },
       rotations: new Map(e.rotations),
       transitions: []
     };
-  const p = (d) => {
-    const g = i.get(d);
-    if (!g || !U(g.visibility, n, t.settings.timezone)) return !1;
-    switch (g.kind) {
+  const y = (f) => {
+    const x = i.get(f);
+    if (!x || !ne(x.visibility, n, t.settings.timezone)) return !1;
+    switch (x.kind) {
       case "media":
-        return e.availableAssetIds.has(g.assetId);
+        return e.availableAssetIds.has(x.assetId);
       case "template":
-        return g.assetIds.every((k) => e.availableAssetIds.has(k));
+        return x.assetIds.every((E) => e.availableAssetIds.has(E));
       case "widget":
         return !0;
       case "data": {
-        const k = l.get(g.sourceId);
-        if (k === void 0 || !L(k)) return !1;
-        if (g.view.startsWith("timetable") && "payload" in k) {
-          const x = ne(k.payload, g.params.classId);
-          if (x?.date && x.date !== R(n, t.settings.timezone)) return !1;
+        const E = a.get(x.sourceId);
+        if (E === void 0 || !H(E)) return !1;
+        if (x.view.startsWith("timetable") && "payload" in E) {
+          const P = he(E.payload, x.params.classId);
+          if (P?.date && P.date !== G(n, t.settings.timezone)) return !1;
         }
         return !0;
       }
     }
-  }, I = (d) => {
-    const g = i.get(d);
-    return g ? g.kind === "media" && g.durationMs === void 0 ? null : K(g).effectiveMs : 0;
-  }, b = e.forceFallback ? "fallback" : "normal", f = /* @__PURE__ */ new Map(), c = [], v = [];
-  for (const d of t.layout.zones) {
-    const g = e.forceFallback ? t.fallbackPlaylistId : j(t, d.id, n) ?? d.playlistId, k = a.get(g), x = e.rotations.get(d.id), M = x && x.playlistId === g ? k?.slideIds[x.index] ?? null : null, S = N({
-      state: x,
-      playlistId: g,
-      slideIds: k?.slideIds ?? [],
-      isEligible: p,
+  }, I = (f) => {
+    const x = i.get(f);
+    return x ? x.kind === "media" && x.durationMs === void 0 ? null : de(x).effectiveMs : 0;
+  }, S = e.forceFallback ? "fallback" : "normal", p = /* @__PURE__ */ new Map(), s = [], b = [];
+  for (const f of t.layout.zones) {
+    const x = e.forceFallback ? t.fallbackPlaylistId : te(t, f.id, n) ?? f.playlistId, E = o.get(x), P = e.rotations.get(f.id), h = P && P.playlistId === x ? E?.slideIds[P.index] ?? null : null, w = _({
+      state: P,
+      playlistId: x,
+      slideIds: E?.slideIds ?? [],
+      isEligible: y,
       durationMsOf: I,
       nowMs: n,
-      mediaEnded: e.mediaEndedZoneIds?.has(d.id) ?? !1
+      mediaEnded: e.mediaEndedZoneIds?.has(f.id) ?? !1
     });
-    S.state && f.set(d.id, S.state), S.changed && c.push({
-      zoneId: d.id,
-      fromSlideId: M,
-      toSlideId: S.currentSlideId,
+    w.state && p.set(f.id, w.state), w.changed && s.push({
+      zoneId: f.id,
+      fromSlideId: h,
+      toSlideId: w.currentSlideId,
       atMs: n
     });
-    const z = S.currentSlideId ? i.get(S.currentSlideId) : void 0;
-    if (v.push({
-      zoneId: d.id,
-      rect: d.rect,
-      playlistId: g,
-      slide: z ? D(z, r, l, t.settings.timezone) : null
+    const v = w.currentSlideId ? i.get(w.currentSlideId) : void 0;
+    if (b.push({
+      zoneId: f.id,
+      rect: f.rect,
+      playlistId: x,
+      slide: v ? j(v, r, a, t.settings.timezone) : null
     }), e.forceFallback) break;
   }
-  if (!e.forceFallback && v.every((d) => d.slide === null)) {
-    const d = t.defaultPlaylistId ?? t.fallbackPlaylistId, g = a.get(d), k = t.layout.zones[0]?.id ?? "principal", x = N({
-      state: e.rotations.get(k),
-      playlistId: d,
-      slideIds: g?.slideIds ?? [],
-      isEligible: p,
+  if (!e.forceFallback && b.every((f) => f.slide === null)) {
+    const f = t.defaultPlaylistId ?? t.fallbackPlaylistId, x = o.get(f), E = t.layout.zones[0]?.id ?? "principal", P = _({
+      state: e.rotations.get(E),
+      playlistId: f,
+      slideIds: x?.slideIds ?? [],
+      isEligible: y,
       durationMsOf: I,
       nowMs: n,
-      mediaEnded: e.mediaEndedZoneIds?.has(k) ?? !1
-    }), M = x.currentSlideId ? i.get(x.currentSlideId) : void 0;
-    if (M)
-      return x.state && f.set(k, x.state), {
+      mediaEnded: e.mediaEndedZoneIds?.has(E) ?? !1
+    }), h = P.currentSlideId ? i.get(P.currentSlideId) : void 0;
+    if (h)
+      return P.state && p.set(E, P.state), {
         screen: {
           mode: "normal",
           zones: [
             {
-              zoneId: k,
+              zoneId: E,
               rect: { xPercent: 0, yPercent: 0, widthPercent: 100, heightPercent: 100 },
-              playlistId: d,
-              slide: D(M, r, l, t.settings.timezone)
+              playlistId: f,
+              slide: j(h, r, a, t.settings.timezone)
             }
           ],
           emergency: null,
           identify: null,
-          watermark: o,
+          watermark: l,
           accent: u,
-          zoom: s
+          zoom: c
         },
-        rotations: f,
-        transitions: c
+        rotations: p,
+        transitions: s
       };
   }
-  const h = e.forceFallback ? v.map((d) => ({ ...d, rect: { xPercent: 0, yPercent: 0, widthPercent: 100, heightPercent: 100 } })) : re(v);
+  const g = e.forceFallback ? b.map((f) => ({ ...f, rect: { xPercent: 0, yPercent: 0, widthPercent: 100, heightPercent: 100 } })) : ge(b);
   return {
     screen: {
-      mode: b,
-      zones: h,
+      mode: S,
+      zones: g,
       emergency: null,
       identify: null,
-      watermark: o,
+      watermark: l,
       accent: u,
-      zoom: s
+      zoom: c
     },
-    rotations: f,
-    transitions: c
+    rotations: p,
+    transitions: s
   };
 }
-function D(e, t, n, i) {
+function j(e, t, n, i) {
   switch (e.kind) {
     case "media": {
       const r = t.get(e.assetId);
@@ -298,76 +298,76 @@ function D(e, t, n, i) {
       return { kind: "widget", slideId: e.id, widget: e.widget, config: e.config };
     case "data": {
       const r = n.get(e.sourceId);
-      return !r || !L(r) ? null : {
+      return !r || !H(r) ? null : {
         kind: "data",
         slideId: e.id,
         sourceId: e.sourceId,
         view: e.view,
         payload: "payload" in r ? r.payload : null,
         params: e.params,
-        staleLabel: _(r, "fr-FR", i)
+        staleLabel: Q(r, "fr-FR", i)
       };
     }
   }
 }
-function ne(e, t) {
+function he(e, t) {
   const n = e?.days;
   return Array.isArray(n) ? t ? n.find((i) => i.classId === t) ?? null : n[0] ?? null : e ?? null;
 }
-function re(e) {
+function ge(e) {
   const t = /* @__PURE__ */ new Map();
   for (const u of e) {
-    const s = `${u.rect.yPercent}:${u.rect.heightPercent}`, m = t.get(s);
-    m ? m.push(u) : t.set(s, [u]);
+    const c = `${u.rect.yPercent}:${u.rect.heightPercent}`, d = t.get(c);
+    d ? d.push(u) : t.set(c, [u]);
   }
   const n = [];
   for (const u of t.values()) {
-    const s = u.filter((f) => f.slide !== null);
-    if (s.length === 0) continue;
-    const m = u.reduce((f, c) => f + c.rect.widthPercent, 0), p = s.reduce((f, c) => f + c.rect.widthPercent, 0), I = p > 0 ? m / p : 1;
-    let b = Math.min(...u.map((f) => f.rect.xPercent));
+    const c = u.filter((p) => p.slide !== null);
+    if (c.length === 0) continue;
+    const d = u.reduce((p, s) => p + s.rect.widthPercent, 0), y = c.reduce((p, s) => p + s.rect.widthPercent, 0), I = y > 0 ? d / y : 1;
+    let S = Math.min(...u.map((p) => p.rect.xPercent));
     n.push(
-      s.map((f) => {
-        const c = f.rect.widthPercent * I, v = { ...f, rect: { ...f.rect, xPercent: b, widthPercent: c } };
-        return b += c, v;
+      c.map((p) => {
+        const s = p.rect.widthPercent * I, b = { ...p, rect: { ...p.rect, xPercent: S, widthPercent: s } };
+        return S += s, b;
       })
     );
   }
   if (n.length === 0) return [];
-  const i = [...t.values()].reduce((u, s) => u + (s[0]?.rect.heightPercent ?? 0), 0), r = n.reduce((u, s) => u + (s[0]?.rect.heightPercent ?? 0), 0), a = r > 0 ? i / r : 1, l = [];
-  let o = Math.min(...e.map((u) => u.rect.yPercent));
-  for (const u of n.sort((s, m) => (s[0]?.rect.yPercent ?? 0) - (m[0]?.rect.yPercent ?? 0))) {
-    const s = (u[0]?.rect.heightPercent ?? 0) * a;
-    for (const m of u)
-      l.push({ ...m, rect: { ...m.rect, yPercent: o, heightPercent: s } });
-    o += s;
+  const i = [...t.values()].reduce((u, c) => u + (c[0]?.rect.heightPercent ?? 0), 0), r = n.reduce((u, c) => u + (c[0]?.rect.heightPercent ?? 0), 0), o = r > 0 ? i / r : 1, a = [];
+  let l = Math.min(...e.map((u) => u.rect.yPercent));
+  for (const u of n.sort((c, d) => (c[0]?.rect.yPercent ?? 0) - (d[0]?.rect.yPercent ?? 0))) {
+    const c = (u[0]?.rect.heightPercent ?? 0) * o;
+    for (const d of u)
+      a.push({ ...d, rect: { ...d.rect, yPercent: l, heightPercent: c } });
+    l += c;
   }
-  return l;
+  return a;
 }
-const F = 0.92, ie = 0.6, ae = 2.5;
-function oe(e) {
-  return typeof e != "number" || !Number.isFinite(e) || e <= 0 ? 1 : Math.min(Math.max(e, ie), ae);
+const U = 0.92, ye = 0.6, xe = 2.5;
+function ve(e) {
+  return typeof e != "number" || !Number.isFinite(e) || e <= 0 ? 1 : Math.min(Math.max(e, ye), xe);
 }
-function le(e, t, n) {
-  const i = Math.round(n.largeur) || 0, r = Math.round(n.hauteur) || 0, l = !(i > 0 && r > 0) || e >= i * F && t >= r * F;
+function be(e, t, n) {
+  const i = Math.round(n.largeur) || 0, r = Math.round(n.hauteur) || 0, a = !(i > 0 && r > 0) || e >= i * U && t >= r * U;
   return {
     largeurPx: Math.round(e),
     hauteurPx: Math.round(t),
     largeurDallePx: i,
     hauteurDallePx: r,
     densite: n.densite > 0 ? n.densite : 1,
-    pleinEcran: l
+    pleinEcran: a
   };
 }
-function se(e, t) {
+function we(e, t) {
   return e ? e.largeurPx !== t.largeurPx || e.hauteurPx !== t.hauteurPx || e.largeurDallePx !== t.largeurDallePx || e.hauteurDallePx !== t.hauteurDallePx || e.densite !== t.densite || e.pleinEcran !== t.pleinEcran : !0;
 }
-const ce = 1.7, ue = 780;
-function O(e) {
+const ke = 1.7, Ce = 780;
+function W(e) {
   const [t, n] = e.split(":").map(Number);
   return (t ?? 0) * 60 + (n ?? 0);
 }
-function de(e, t) {
+function q(e, t) {
   const n = new Intl.DateTimeFormat("fr-FR", {
     timeZone: t,
     hour: "2-digit",
@@ -376,34 +376,68 @@ function de(e, t) {
   }), [i, r] = n.format(new Date(e)).split(":").map(Number);
   return (i ?? 0) * 60 + (r ?? 0);
 }
-function fe(e, t, n = ue) {
+function Ie(e, t, n = Ce) {
   if (e.length === 0) return [];
-  const i = e.filter((o) => O(o.time) < n), r = e.filter((o) => O(o.time) >= n), a = t < n ? i : r;
-  if (a.length > 0) return a;
-  const l = t < n ? r : i;
-  return l.length > 0 ? l : [...e];
+  const i = e.filter((l) => W(l.time) < n), r = e.filter((l) => W(l.time) >= n), o = t < n ? i : r;
+  if (o.length > 0) return o;
+  const a = t < n ? r : i;
+  return a.length > 0 ? a : [...e];
 }
-function me(e, t, n) {
+function Se(e, t, n) {
   if (t <= 0) return n;
-  const i = e * 0.9 / t / 2.5, r = n * ce;
+  const i = e * 0.9 / t / 2.5, r = n * ke;
   return Math.round(Math.min(Math.max(i, r), n * 4));
 }
-function pe(e, t) {
+function Ee(e, t) {
   const n = Math.ceil(e - t);
   return n < 8 ? null : {
     coursePx: n,
     dureeMs: Math.round(n / 28 * 2 * 1e3) + 6e3
   };
 }
-const he = `
+const Me = 120, Pe = 60;
+function D(e) {
+  const [t, n] = e.split(":").map(Number);
+  return (t ?? 0) * 60 + (n ?? 0);
+}
+function ze(e, t, n = Me) {
+  const i = [...e].sort((u, c) => D(u.time) - D(c.time)), r = [], o = [];
+  let a = null;
+  for (const u of i) {
+    const c = D(u.time), d = u.endTime ? D(u.endTime) : c + Pe;
+    c <= t && t < d ? r.push(u) : t < c && c <= t + n ? o.push(u) : c > t + n && a === null && (a = u);
+  }
+  const l = r.length === 0 && o.length === 0 && a === null;
+  return { enCours: r, aSuivre: o, prochain: a, journeeTerminee: l };
+}
+function Ae(e) {
+  return e.trim().replace(/^CCI\s+/i, "").replace(/^SALLE\s+/i, "").trim() || e.trim();
+}
+function Fe(e) {
+  const t = /\bb[aâ]t(?:iment)?\.?\s+([A-Z0-9]+)\s*$/i.exec(e.trim());
+  return t ? `Bâtiment ${t[1].toUpperCase()}` : e.trim();
+}
+function N(e) {
+  const [t, n] = e.split(":").map(Number);
+  return t === void 0 || Number.isNaN(t) ? e : n ? `${t} h ${String(n).padStart(2, "0")}` : `${t} h`;
+}
+const Le = `
 :host, .couloir-root {
-  --ink: #F4F6F4;
-  --ink-soft: #A8B2AC;
-  --ground: #0E1211;
-  --surface: #171C1A;
-  --accent: #54BE95;
-  --signal: #E4633A;
-  --rule: rgba(244, 246, 244, 0.10);
+  /* Fond clair, encre sombre.
+     L'ancien fond quasi noir, avec son vert vif et ses majuscules espacees,
+     faisait tableau de bord technique ; les personnes qui passent devant le
+     trouvaient sombre et peu lisible. L'accent reprend le bleu de
+     l'etablissement, dans sa variante foncee quand il porte du texte : la
+     variante vive n'atteint pas le contraste requis sur fond clair. */
+  --ink: #14202A;
+  --ink-soft: #4B5E6C;
+  --ink-faint: #7D8F9B;
+  --ground: #F4F7F8;
+  --surface: #FFFFFF;
+  --accent: #0A7B92;
+  --accent-vif: #11A6C4;
+  --signal: #C3215D;
+  --rule: rgba(20, 32, 42, 0.12);
 }
 
 .couloir-root {
@@ -468,7 +502,10 @@ const he = `
    sans prévenir, et personne ne s'en apercevrait avant de passer devant. */
 .couloir-media { width: 100%; height: 100%; object-fit: contain; display: block }
 .couloir-slide--remplir .couloir-media { object-fit: cover }
-.couloir-slide--media { padding: 0 }
+/* Les affiches gardent un fond sombre : une photo y rend mieux, et les bandes
+   de part et d'autre d'une image qui ne remplit pas la dalle se fondent dans
+   le noir au lieu de l'encadrer de blanc. */
+.couloir-slide--media { padding: 0; background: #0E1211 }
 
 .couloir-eyebrow {
   font-size: var(--fs-eyebrow);
@@ -605,6 +642,152 @@ const he = `
   opacity: .8;
 }
 
+/* --- maintenant et ensuite --- */
+/* Ce qu'un ecran de couloir montre par defaut : les cours en cours et ceux
+   des deux prochaines heures. Toutes les tailles internes sont en em, et le
+   rendu fixe celle du corps a la plus grande qui laisse tout tenir. */
+.couloir-slide--maintenant {
+  justify-content: flex-start;
+  padding: calc(var(--pad) * 0.75) var(--pad);
+}
+.mx {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  container-type: inline-size;
+}
+.mx-tete {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1em;
+  font-size: calc(var(--fs-body) * 1.9);
+  padding-bottom: .4em;
+  margin-bottom: .45em;
+  border-bottom: 2px solid var(--rule);
+}
+.mx-lieu { margin: 0; font-weight: 700; letter-spacing: -.01em; color: var(--ink) }
+.mx-horloge { margin: 0; display: flex; align-items: baseline; gap: .55em; color: var(--ink-soft) }
+.mx-heure { font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums }
+.mx-date { font-size: .7em }
+.mx-corps {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: .3em;
+}
+.mx-titre {
+  display: flex;
+  align-items: center;
+  gap: .5em;
+  margin: .15em 0 .1em;
+  font-size: .5em;
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+.mx-bloc--en-cours .mx-titre::before {
+  content: "";
+  width: .65em;
+  height: .65em;
+  border-radius: 50%;
+  background: var(--accent-vif);
+}
+.mx-liste { list-style: none; margin: 0; padding: 0 }
+/* La pagination masque des lignes et des sections par l'attribut hidden. Sans
+   cette regle, le display: grid des lignes l'emporte sur celui du navigateur,
+   et rien ne disparait : l'indicateur tournait sur des pages identiques. */
+.mx [hidden] { display: none !important }
+.mx-ligne {
+  display: grid;
+  grid-template-columns: 4.4em 1fr auto;
+  align-items: center;
+  gap: .7em;
+  padding: .26em .45em;
+  border-bottom: 1px solid var(--rule);
+}
+/* En cours : la ligne se detache sur une carte blanche marquee d'un filet
+   bleu, pour qu'on la repere avant meme de la lire. */
+.mx-ligne--en-cours {
+  background: var(--surface);
+  box-shadow: inset .13em 0 0 var(--accent-vif);
+  border-radius: .1em;
+}
+.mx-horaire {
+  font-size: .55em;
+  line-height: 1.2;
+  color: var(--ink-soft);
+  font-variant-numeric: tabular-nums;
+}
+.mx-groupe { display: flex; flex-direction: column; min-width: 0 }
+.mx-groupe-nom {
+  font-weight: 600;
+  line-height: 1.15;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+.mx-detail { font-size: .55em; color: var(--ink-soft); margin-top: .15em }
+.mx-note {
+  align-self: flex-start;
+  margin-top: .25em;
+  padding: .05em .45em;
+  font-size: .45em;
+  font-weight: 700;
+  color: var(--signal);
+  border: 1px solid currentColor;
+  border-radius: .35em;
+}
+.mx-salle {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  text-align: right;
+  min-width: 2.4em;
+}
+/* La salle est ce qu'on cherche : c'est le plus grand texte de la ligne. */
+.mx-salle-nom {
+  font-size: 1.3em;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -.01em;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+.mx-prof { font-size: .5em; color: var(--ink-soft); margin-top: .25em }
+.mx-ligne--annulee .mx-groupe-nom { color: var(--ink-soft); text-decoration: line-through }
+.mx-ligne--annulee .mx-salle-nom { font-size: .75em; color: var(--signal) }
+.mx-ligne--changee .mx-salle-nom { color: var(--signal) }
+.mx-vide {
+  margin: auto 0;
+  max-width: 24ch;
+  font-size: calc(var(--fs-body) * 2);
+  font-weight: 600;
+  line-height: 1.25;
+  color: var(--ink-soft);
+}
+.mx-pages {
+  min-height: 1.2em;
+  margin: .3em 0 0;
+  text-align: right;
+  font-size: var(--fs-caption);
+  color: var(--ink-faint);
+  font-variant-numeric: tabular-nums;
+}
+/* Dans une colonne etroite, a cote d'une affiche, l'horaire passe sous le
+   groupe et l'en-tete s'empile : la salle garde sa place a droite. */
+@container (max-width: 900px) {
+  .mx-tete { flex-direction: column; gap: .1em; font-size: calc(var(--fs-body) * 1.3) }
+  .mx-ligne { grid-template-columns: 1fr auto; row-gap: .1em }
+  .mx-horaire { grid-column: 1 / -1 }
+  /* Trois lignes : sur deux, des groupes qui ne different que par leur fin
+     devenaient indiscernables. */
+  .mx-groupe-nom { -webkit-line-clamp: 3 }
+}
+
 /* --- bandeau --- */
 .couloir-slide--ticker {
   flex-direction: row;
@@ -656,8 +839,8 @@ const he = `
   max-width: 34ch;
 }
 
-.couloir-full--identify { background: var(--accent); color: #06120E }
-.couloir-full--identify .couloir-body { color: #06120E; opacity: .75 }
+.couloir-full--identify { background: var(--accent); color: #FFFFFF }
+.couloir-full--identify .couloir-body { color: #FFFFFF; opacity: .85 }
 .couloir-full--identify .couloir-code {
   font-size: calc(var(--fs-title) * 2.6);
   font-weight: 700;
@@ -675,85 +858,85 @@ const he = `
   letter-spacing: .08em;
   pointer-events: none;
 }
-`, T = Symbol.for("couloir.ajusteur");
-function ge(e, t = {}) {
+`, Z = Symbol.for("couloir.ajusteur");
+function De(e, t = {}) {
   const n = e.ownerDocument, i = n.createElement("style");
-  i.textContent = he, e.appendChild(i);
+  i.textContent = Le, e.appendChild(i);
   const r = n.createElement("div");
   r.className = "couloir-root", e.appendChild(r);
-  let a = () => {
+  let o = () => {
   };
-  const l = /* @__PURE__ */ new Map();
-  let o = "", u = 1, s = null;
-  const m = () => {
-    const c = r.clientHeight || 1080, v = Q(c, u);
-    r.style.setProperty("--fs-eyebrow", `${v.eyebrow}px`), r.style.setProperty("--fs-title", `${v.title}px`), r.style.setProperty("--fs-body", `${v.body}px`), r.style.setProperty("--fs-caption", `${v.caption}px`), r.style.setProperty("--pad", `${Math.round(c * 0.045)}px`);
-    for (const h of r.querySelectorAll(".couloir-list"))
-      h[T]?.();
-    const w = n.defaultView;
-    if (t.onResolution && w) {
-      const h = le(r.clientWidth, c, {
-        largeur: w.screen?.width ?? 0,
-        hauteur: w.screen?.height ?? 0,
-        densite: w.devicePixelRatio ?? 1
+  const a = /* @__PURE__ */ new Map();
+  let l = "", u = 1, c = null;
+  const d = () => {
+    const s = r.clientHeight || 1080, b = fe(s, u);
+    r.style.setProperty("--fs-eyebrow", `${b.eyebrow}px`), r.style.setProperty("--fs-title", `${b.title}px`), r.style.setProperty("--fs-body", `${b.body}px`), r.style.setProperty("--fs-caption", `${b.caption}px`), r.style.setProperty("--pad", `${Math.round(s * 0.045)}px`);
+    for (const g of r.querySelectorAll(".couloir-list"))
+      g[Z]?.();
+    const C = n.defaultView;
+    if (t.onResolution && C) {
+      const g = be(r.clientWidth, s, {
+        largeur: C.screen?.width ?? 0,
+        hauteur: C.screen?.height ?? 0,
+        densite: C.devicePixelRatio ?? 1
       });
-      se(s, h) && (s = h, t.onResolution(h));
+      we(c, g) && (c = g, t.onResolution(g));
     }
-  }, p = new ResizeObserver(m);
-  p.observe(r), m();
-  function I(c) {
-    const v = `${c.mode}:${c.emergency?.id ?? ""}:${c.identify?.screenCode ?? ""}`;
-    if (c.mode === "normal" || c.mode === "fallback") return !1;
-    if (v === o) return !0;
-    o = v, r.replaceChildren(), l.clear();
-    const w = n.createElement("div");
-    return c.mode === "emergency" && c.emergency ? (w.className = "couloir-full couloir-full--emergency", w.append(
-      y(n, "p", "couloir-eyebrow", "Message important"),
-      y(n, "h1", "couloir-title", c.emergency.title)
-    ), c.emergency.body && w.append(y(n, "p", "couloir-body", c.emergency.body))) : c.mode === "identify" && c.identify ? (w.className = "couloir-full couloir-full--identify", w.append(
-      y(n, "div", "couloir-code", c.identify.screenCode),
-      y(n, "p", "couloir-body", c.identify.label),
-      y(n, "p", "couloir-body", c.identify.ipAddress)
-    )) : w.className = "couloir-full couloir-full--off", r.appendChild(w), !0;
+  }, y = new ResizeObserver(d);
+  y.observe(r), d();
+  function I(s) {
+    const b = `${s.mode}:${s.emergency?.id ?? ""}:${s.identify?.screenCode ?? ""}`;
+    if (s.mode === "normal" || s.mode === "fallback") return !1;
+    if (b === l) return !0;
+    l = b, r.replaceChildren(), a.clear();
+    const C = n.createElement("div");
+    return s.mode === "emergency" && s.emergency ? (C.className = "couloir-full couloir-full--emergency", C.append(
+      m(n, "p", "couloir-eyebrow", "Message important"),
+      m(n, "h1", "couloir-title", s.emergency.title)
+    ), s.emergency.body && C.append(m(n, "p", "couloir-body", s.emergency.body))) : s.mode === "identify" && s.identify ? (C.className = "couloir-full couloir-full--identify", C.append(
+      m(n, "div", "couloir-code", s.identify.screenCode),
+      m(n, "p", "couloir-body", s.identify.label),
+      m(n, "p", "couloir-body", s.identify.ipAddress)
+    )) : C.className = "couloir-full couloir-full--off", r.appendChild(C), !0;
   }
-  function b(c) {
-    o !== "" && (r.replaceChildren(), l.clear(), o = "");
-    const v = /* @__PURE__ */ new Set();
-    for (const h of c.zones) {
-      v.add(h.zoneId);
-      let d = r.querySelector(`[data-zone="${h.zoneId}"]`);
-      d || (d = n.createElement("section"), d.className = "couloir-zone", d.dataset.zone = h.zoneId, r.appendChild(d)), d.style.left = `${h.rect.xPercent}%`, d.style.top = `${h.rect.yPercent}%`, d.style.width = `${h.rect.widthPercent}%`, d.style.height = `${h.rect.heightPercent}%`;
-      const g = h.slide ? ye(h.slide) : null;
-      if (l.get(h.zoneId) !== g) {
-        if (d.replaceChildren(), g === null) {
-          l.delete(h.zoneId);
+  function S(s) {
+    l !== "" && (r.replaceChildren(), a.clear(), l = "");
+    const b = /* @__PURE__ */ new Set();
+    for (const g of s.zones) {
+      b.add(g.zoneId);
+      let f = r.querySelector(`[data-zone="${g.zoneId}"]`);
+      f || (f = n.createElement("section"), f.className = "couloir-zone", f.dataset.zone = g.zoneId, r.appendChild(f)), f.style.left = `${g.rect.xPercent}%`, f.style.top = `${g.rect.yPercent}%`, f.style.width = `${g.rect.widthPercent}%`, f.style.height = `${g.rect.heightPercent}%`;
+      const x = g.slide ? Ne(g.slide) : null;
+      if (a.get(g.zoneId) !== x) {
+        if (f.replaceChildren(), x === null) {
+          a.delete(g.zoneId);
           continue;
         }
-        l.set(h.zoneId, g), d.appendChild(ve(n, h, h.slide, t, a));
+        a.set(g.zoneId, x), f.appendChild(qe(n, g, g.slide, t, o));
       }
     }
-    for (const h of [...r.querySelectorAll("[data-zone]")]) {
-      const d = h.dataset.zone;
-      d && !v.has(d) && (h.remove(), l.delete(d));
+    for (const g of [...r.querySelectorAll("[data-zone]")]) {
+      const f = g.dataset.zone;
+      f && !b.has(f) && (g.remove(), a.delete(f));
     }
-    let w = r.querySelector(".couloir-watermark");
-    c.watermark ? (w || (w = y(n, "div", "couloir-watermark", c.watermark), r.appendChild(w)), w.textContent = c.watermark) : w?.remove();
+    let C = r.querySelector(".couloir-watermark");
+    s.watermark ? (C || (C = m(n, "div", "couloir-watermark", s.watermark), r.appendChild(C)), C.textContent = s.watermark) : C?.remove();
   }
-  let f = null;
+  let p = null;
   return {
-    update(c) {
-      const v = oe(c.zoom);
-      v !== u && (u = v, m()), c.accent !== f && (f = c.accent, c.accent ? r.style.setProperty("--accent", c.accent) : r.style.removeProperty("--accent")), !I(c) && b(c);
+    update(s) {
+      const b = ve(s.zoom);
+      b !== u && (u = b, d()), s.accent !== p && (p = s.accent, s.accent ? r.style.setProperty("--accent", s.accent) : r.style.removeProperty("--accent")), !I(s) && S(s);
     },
-    onMediaEnded(c) {
-      a = c;
+    onMediaEnded(s) {
+      o = s;
     },
     destroy() {
-      p.disconnect(), r.remove(), i.remove();
+      y.disconnect(), r.remove(), i.remove();
     }
   };
 }
-function ye(e) {
+function Ne(e) {
   const t = () => {
     switch (e.kind) {
       case "media":
@@ -768,176 +951,294 @@ function ye(e) {
   };
   return `${e.slideId}|${t()}`;
 }
-function y(e, t, n, i) {
+function m(e, t, n, i) {
   const r = e.createElement(t);
   return r.className = n, i !== void 0 && (r.textContent = i), r;
 }
-function ve(e, t, n, i, r) {
-  const a = e.createElement("div");
-  switch (a.className = "couloir-slide", a.dataset.slide = n.slideId, n.kind) {
+function qe(e, t, n, i, r) {
+  const o = e.createElement("div");
+  switch (o.className = "couloir-slide", o.dataset.slide = n.slideId, n.kind) {
     case "media": {
-      a.classList.add("couloir-slide--media"), n.fit === "remplir" && a.classList.add("couloir-slide--remplir");
-      const l = i.assetUrl?.(n.asset.id) ?? n.asset.url;
+      o.classList.add("couloir-slide--media"), n.fit === "remplir" && o.classList.add("couloir-slide--remplir");
+      const a = i.assetUrl?.(n.asset.id) ?? n.asset.url;
       if (n.asset.mime.startsWith("video/")) {
-        const o = e.createElement("video");
-        o.className = "couloir-media", o.src = l, o.muted = !0, o.autoplay = !0, o.playsInline = !0, o.addEventListener("ended", () => r(t.zoneId)), o.addEventListener("error", () => r(t.zoneId)), a.appendChild(o);
+        const l = e.createElement("video");
+        l.className = "couloir-media", l.src = a, l.muted = !0, l.autoplay = !0, l.playsInline = !0, l.addEventListener("ended", () => r(t.zoneId)), l.addEventListener("error", () => r(t.zoneId)), o.appendChild(l);
       } else {
-        const o = e.createElement("img");
-        o.className = "couloir-media", o.src = l, o.alt = "", a.appendChild(o);
+        const l = e.createElement("img");
+        l.className = "couloir-media", l.src = a, l.alt = "", o.appendChild(l);
       }
-      return a;
+      return o;
     }
     case "template": {
-      const l = (m) => {
-        const p = n.fields[m];
-        return typeof p == "string" ? p : void 0;
-      }, o = l("eyebrow"), u = l("titre") ?? l("title"), s = l("texte") ?? l("body");
-      return o && a.appendChild(y(e, "p", "couloir-eyebrow", o)), u && a.appendChild(y(e, "h1", "couloir-title", u)), s && a.appendChild(y(e, "p", "couloir-body", s)), a;
+      const a = (d) => {
+        const y = n.fields[d];
+        return typeof y == "string" ? y : void 0;
+      }, l = a("eyebrow"), u = a("titre") ?? a("title"), c = a("texte") ?? a("body");
+      return l && o.appendChild(m(e, "p", "couloir-eyebrow", l)), u && o.appendChild(m(e, "h1", "couloir-title", u)), c && o.appendChild(m(e, "p", "couloir-body", c)), o;
     }
     case "widget": {
       if (n.widget === "ticker") {
-        a.classList.add("couloir-slide--ticker");
-        const l = typeof n.config.text == "string" ? n.config.text : "", o = y(e, "div", "couloir-ticker-viewport");
-        o.appendChild(y(e, "span", "couloir-ticker-text", l)), a.appendChild(o);
-        const u = y(e, "div", "couloir-clock", ""), s = () => {
+        o.classList.add("couloir-slide--ticker");
+        const a = typeof n.config.text == "string" ? n.config.text : "", l = m(e, "div", "couloir-ticker-viewport");
+        l.appendChild(m(e, "span", "couloir-ticker-text", a)), o.appendChild(l);
+        const u = m(e, "div", "couloir-clock", ""), c = () => {
           u.textContent = new Intl.DateTimeFormat(i.locale ?? "fr-FR", {
             timeZone: i.timezone ?? "Europe/Paris",
             hour: "2-digit",
             minute: "2-digit"
           }).format(/* @__PURE__ */ new Date());
         };
-        s();
-        const m = setInterval(s, 1e4);
-        return new MutationObserver((p, I) => {
-          u.isConnected || (clearInterval(m), I.disconnect());
-        }).observe(a.ownerDocument.body, { childList: !0, subtree: !0 }), a.appendChild(u), a;
+        c();
+        const d = setInterval(c, 1e4);
+        return new MutationObserver((y, I) => {
+          u.isConnected || (clearInterval(d), I.disconnect());
+        }).observe(o.ownerDocument.body, { childList: !0, subtree: !0 }), o.appendChild(u), o;
       }
-      return a.appendChild(y(e, "p", "couloir-eyebrow", n.widget)), a;
+      return o.appendChild(m(e, "p", "couloir-eyebrow", n.widget)), o;
     }
     case "data":
-      return Ee(e, a, n, i.timezone ?? "Europe/Paris"), n.staleLabel && a.appendChild(y(e, "p", "couloir-stale", n.staleLabel)), a;
+      return je(e, o, n, i.timezone ?? "Europe/Paris"), n.staleLabel && o.appendChild(m(e, "p", "couloir-stale", n.staleLabel)), o;
   }
 }
-const we = ["heureFin", "module", "salle", "enseignant"];
-function be(e) {
-  return e === void 0 ? new Set(we) : new Set(
+const Te = ["heureFin", "module", "salle", "enseignant"];
+function B(e) {
+  return e === void 0 ? new Set(Te) : new Set(
     e.split(",").map((t) => t.trim()).filter(Boolean)
   );
 }
-function Ie(e, t) {
+function Oe(e, t) {
   const n = e?.days;
   if (Array.isArray(n))
     return t ? n.find((r) => r.classId === t) ?? null : n[0] ?? null;
   const i = e;
   return i && Array.isArray(i.entries) ? i : null;
 }
-function ke(e, t, n) {
+function $e(e, t, n) {
   const i = n.payload, r = Array.isArray(i) ? i : i?.articles ?? [];
   if (r.length === 0) return;
-  const a = Number(n.params.index ?? 0), l = r[(a % r.length + r.length) % r.length];
-  if (l?.titre) {
-    if (l.image) {
-      const o = e.createElement("img");
-      o.className = "couloir-illustration", o.src = l.image, o.alt = "", o.addEventListener("error", () => o.remove()), t.appendChild(o);
+  const o = Number(n.params.index ?? 0), a = r[(o % r.length + r.length) % r.length];
+  if (a?.titre) {
+    if (a.image) {
+      const l = e.createElement("img");
+      l.className = "couloir-illustration", l.src = a.image, l.alt = "", l.addEventListener("error", () => l.remove()), t.appendChild(l);
     }
-    l.categorie && t.appendChild(y(e, "p", "couloir-eyebrow", l.categorie)), t.appendChild(y(e, "h1", "couloir-title", l.titre)), l.extrait && t.appendChild(y(e, "p", "couloir-body", l.extrait));
+    a.categorie && t.appendChild(m(e, "p", "couloir-eyebrow", a.categorie)), t.appendChild(m(e, "h1", "couloir-title", a.titre)), a.extrait && t.appendChild(m(e, "p", "couloir-body", a.extrait));
   }
 }
-function xe(e, t, n, i) {
+function Re(e, t, n, i) {
   if (i <= 0) return;
-  const r = e.defaultView, a = () => {
+  const r = e.defaultView, o = () => {
     if (!t.isConnected) return;
-    const l = t.clientHeight;
-    if (l <= 0) return;
-    const o = Number.parseFloat(
+    const a = t.clientHeight;
+    if (a <= 0) return;
+    const l = Number.parseFloat(
       r?.getComputedStyle(t).getPropertyValue("--fs-body") ?? ""
-    ) || 24, u = `${me(l, i, o)}px`;
+    ) || 24, u = `${Se(a, i, l)}px`;
     n.style.fontSize !== u && (n.style.fontSize = u);
-    const s = pe(n.scrollHeight, l);
-    if (n.classList.toggle("couloir-defile", s !== null), s) {
-      const m = `-${s.coursePx}px`, p = `${s.dureeMs}ms`;
-      n.style.getPropertyValue("--defile-course") !== m && (n.style.setProperty("--defile-course", m), n.style.setProperty("--defile-duree", p));
+    const c = Ee(n.scrollHeight, a);
+    if (n.classList.toggle("couloir-defile", c !== null), c) {
+      const d = `-${c.coursePx}px`, y = `${c.dureeMs}ms`;
+      n.style.getPropertyValue("--defile-course") !== d && (n.style.setProperty("--defile-course", d), n.style.setProperty("--defile-duree", y));
     }
   };
-  n[T] = a, r?.requestAnimationFrame ? r.requestAnimationFrame(() => r.requestAnimationFrame(a)) : a(), e.fonts?.ready?.then(a).catch(() => {
+  n[Z] = o, r?.requestAnimationFrame ? r.requestAnimationFrame(() => r.requestAnimationFrame(o)) : o(), e.fonts?.ready?.then(o).catch(() => {
   });
 }
-function Ee(e, t, n, i) {
-  if (n.view.startsWith("timetable")) {
-    const r = Ie(n.payload, n.params.classId);
-    if (!r) return;
-    const a = be(n.params.champs);
-    if (t.appendChild(y(e, "p", "couloir-eyebrow", r.classLabel)), r.notice) {
-      t.appendChild(y(e, "p", "couloir-body", r.notice));
+function _e(e, t, n, i, r) {
+  const o = i === void 0 ? /* @__PURE__ */ new Set() : B(i);
+  t.classList.add("couloir-slide--maintenant");
+  const a = m(e, "div", "mx");
+  t.appendChild(a);
+  const l = e.defaultView;
+  let u = -1, c = [], d = 0, y = 0, I = !1, S = 0;
+  const p = (h, w) => {
+    const v = m(e, "li", "mx-ligne");
+    w && v.classList.add("mx-ligne--en-cours"), h.change === "cancelled" ? v.classList.add("mx-ligne--annulee") : h.change && h.change !== "none" && v.classList.add("mx-ligne--changee");
+    const z = w ? h.endTime ? `jusqu'à ${N(h.endTime)}` : "en cours" : N(h.time);
+    v.appendChild(m(e, "span", "mx-horaire", z));
+    const M = m(e, "span", "mx-groupe");
+    M.appendChild(m(e, "span", "mx-groupe-nom", h.subject)), h.note && M.appendChild(m(e, "span", "mx-note", h.note)), o.has("module") && h.detail && M.appendChild(m(e, "span", "mx-detail", h.detail)), v.appendChild(M);
+    const k = m(e, "span", "mx-salle");
+    return h.change === "cancelled" ? k.appendChild(m(e, "span", "mx-salle-nom", "Annulé")) : (k.appendChild(m(e, "span", "mx-salle-nom", Ae(h.room))), o.has("enseignant") && h.teacher && k.appendChild(m(e, "span", "mx-prof", h.teacher))), v.appendChild(k), v;
+  }, s = (h, w, v) => {
+    const z = m(e, "section", v ? "mx-bloc mx-bloc--en-cours" : "mx-bloc");
+    z.appendChild(m(e, "h2", "mx-titre", h));
+    const M = m(e, "ul", "mx-liste");
+    for (const k of w) M.appendChild(p(k, v));
+    return z.appendChild(M), z;
+  }, b = () => {
+    c.forEach((w, v) => {
+      for (const z of w) z.hidden = v !== d;
+    });
+    for (const w of a.querySelectorAll(".mx-bloc"))
+      w.hidden = ![...w.querySelectorAll(".mx-ligne")].some(
+        (v) => !v.hidden
+      );
+    const h = a.querySelector(".mx-pages");
+    h && (h.textContent = c.length > 1 ? `${d + 1} / ${c.length}` : "");
+  }, C = (h) => {
+    const w = l?.getComputedStyle(a).getPropertyValue("--fs-body") ?? "", v = Number.parseFloat(w) || 21, z = v * 3.2, M = v * 1.8;
+    let k = z;
+    for (h.style.fontSize = `${k}px`; h.scrollHeight > h.clientHeight + 1 && k > M; )
+      k = Math.max(M, k * 0.92), h.style.fontSize = `${Math.round(k)}px`;
+    const A = [...h.querySelectorAll(".mx-ligne")];
+    if (c = [A], h.scrollHeight > h.clientHeight + 1 && A.length > 1) {
+      const J = Math.max(...A.map((L) => L.offsetHeight)), X = h.querySelector(".mx-titre")?.offsetHeight ?? 0, $ = Math.max(1, Math.floor((h.clientHeight - 2 * X) / J));
+      c = [];
+      for (let L = 0; L < A.length; L += $) c.push(A.slice(L, L + $));
+    }
+    d = Math.min(d, c.length - 1), b();
+  }, g = () => {
+    const h = Date.now(), w = q(h, r);
+    u = w, a.replaceChildren();
+    const v = m(e, "header", "mx-tete");
+    v.appendChild(m(e, "p", "mx-lieu", Fe(n.classLabel)));
+    const z = m(e, "p", "mx-horloge");
+    z.appendChild(
+      m(e, "span", "mx-heure", N(`${Math.floor(w / 60)}:${w % 60}`))
+    ), z.appendChild(
+      m(
+        e,
+        "span",
+        "mx-date",
+        new Intl.DateTimeFormat("fr-FR", {
+          timeZone: r,
+          weekday: "long",
+          day: "numeric",
+          month: "long"
+        }).format(new Date(h))
+      )
+    ), v.appendChild(z), a.appendChild(v);
+    const M = m(e, "div", "mx-corps");
+    if (a.appendChild(M), a.appendChild(m(e, "p", "mx-pages")), n.notice) {
+      M.appendChild(m(e, "p", "mx-vide", n.notice));
       return;
     }
-    const l = n.params.demiJournee === "1" ? fe(r.entries, de(Date.now(), i)) : r.entries, o = e.createElement("ul");
-    o.className = "couloir-list";
-    for (const s of l) {
-      const m = s.change && s.change !== "none", p = e.createElement("li");
-      p.className = m ? "couloir-row couloir-row--changed" : "couloir-row", s.change === "cancelled" && p.classList.add("couloir-row--cancelled");
-      const I = e.createElement("time");
-      I.appendChild(e.createTextNode(s.time)), a.has("heureFin") && s.endTime && s.endTime !== s.time && I.appendChild(y(e, "span", "couloir-fin", s.endTime));
-      const b = e.createElement("span");
-      b.appendChild(e.createTextNode(s.subject)), s.note && b.appendChild(y(e, "span", "couloir-badge", s.note)), a.has("module") && s.detail && b.appendChild(y(e, "span", "couloir-detail", s.detail));
-      const f = e.createElement("span");
-      f.className = "room", s.change === "cancelled" ? f.appendChild(e.createTextNode("—")) : (a.has("salle") && f.appendChild(e.createTextNode(s.room)), a.has("enseignant") && s.teacher && f.appendChild(y(e, "span", "couloir-prof", s.teacher))), p.append(I, b, f), o.appendChild(p);
+    const k = ze(n.entries, w);
+    if (k.enCours.length > 0 && M.appendChild(s("En ce moment", k.enCours, !0)), k.aSuivre.length > 0 && M.appendChild(s("À suivre", k.aSuivre, !1)), k.enCours.length === 0 && k.aSuivre.length === 0) {
+      const A = k.journeeTerminee || !k.prochain ? "Les cours sont terminés pour aujourd'hui." : `Pas de cours dans les deux prochaines heures. Reprise à ${N(k.prochain.time)}.`;
+      M.appendChild(m(e, "p", "mx-vide", A));
+      return;
     }
-    const u = e.createElement("div");
-    u.className = "couloir-liste-vue", u.appendChild(o), t.appendChild(u), xe(e, u, o, l.length);
+    C(M);
+  }, f = 2e3, x = 1e4, E = () => {
+    if (!a.isConnected) {
+      (I || ++S > 5) && clearInterval(P);
+      return;
+    }
+    if (I = !0, q(Date.now(), r) !== u) {
+      g(), y = 0;
+      return;
+    }
+    c.length > 1 && (y += f, y >= x && (y = 0, d = (d + 1) % c.length, b()));
+  }, P = setInterval(E, f);
+  setTimeout(E, 0), e.fonts?.ready?.then(() => {
+    a.isConnected && g();
+  }).catch(() => {
+  });
+}
+function je(e, t, n, i) {
+  if (n.view.startsWith("timetable")) {
+    const r = Oe(n.payload, n.params.classId);
+    if (!r) return;
+    if ((n.params.affichage ?? (n.params.demiJournee === "1" ? "demi-journee" : "maintenant")) === "maintenant") {
+      _e(e, t, r, n.params.champs, i);
+      return;
+    }
+    const a = B(n.params.champs);
+    if (t.appendChild(m(e, "p", "couloir-eyebrow", r.classLabel)), r.notice) {
+      t.appendChild(m(e, "p", "couloir-body", r.notice));
+      return;
+    }
+    const l = n.params.demiJournee === "1" ? Ie(r.entries, q(Date.now(), i)) : r.entries, u = e.createElement("ul");
+    u.className = "couloir-list";
+    for (const d of l) {
+      const y = d.change && d.change !== "none", I = e.createElement("li");
+      I.className = y ? "couloir-row couloir-row--changed" : "couloir-row", d.change === "cancelled" && I.classList.add("couloir-row--cancelled");
+      const S = e.createElement("time");
+      S.appendChild(e.createTextNode(d.time)), a.has("heureFin") && d.endTime && d.endTime !== d.time && S.appendChild(m(e, "span", "couloir-fin", d.endTime));
+      const p = e.createElement("span");
+      p.appendChild(e.createTextNode(d.subject)), d.note && p.appendChild(m(e, "span", "couloir-badge", d.note)), a.has("module") && d.detail && p.appendChild(m(e, "span", "couloir-detail", d.detail));
+      const s = e.createElement("span");
+      s.className = "room", d.change === "cancelled" ? s.appendChild(e.createTextNode("—")) : (a.has("salle") && s.appendChild(e.createTextNode(d.room)), a.has("enseignant") && d.teacher && s.appendChild(m(e, "span", "couloir-prof", d.teacher))), I.append(S, p, s), u.appendChild(I);
+    }
+    const c = e.createElement("div");
+    c.className = "couloir-liste-vue", c.appendChild(u), t.appendChild(c), Re(e, c, u, l.length);
     return;
   }
-  n.view.startsWith("news") && ke(e, t, n);
+  n.view.startsWith("news") && $e(e, t, n);
 }
-function Pe(e, t) {
-  const n = ge(e, t), i = t.pollMs ?? 2e3, r = t.tickMs ?? 500;
-  let a = null, l = /* @__PURE__ */ new Map(), o = /* @__PURE__ */ new Set(), u = !1;
-  n.onMediaEnded((f) => {
-    o.add(f), p();
-  });
-  function s(f) {
-    if (typeof document > "u") return;
-    const c = f.screenCode ? f.screenCode : f.pairing ? `À rattacher · ${f.pairing.code}` : "Couloir";
-    document.title !== c && (document.title = c);
+function Ue(e, t, n) {
+  return !e || !t || e === t ? !1 : n !== t;
+}
+const V = "couloir-rechargement";
+function We() {
+  try {
+    return globalThis.sessionStorage?.getItem(V) ?? null;
+  } catch {
+    return null;
   }
-  async function m() {
+}
+function He(e) {
+  try {
+    globalThis.sessionStorage?.setItem(V, e);
+  } catch {
+  }
+}
+function Ve(e, t) {
+  const n = De(e, t), i = t.pollMs ?? 2e3, r = t.tickMs ?? 500;
+  let o = null, a = /* @__PURE__ */ new Map(), l = /* @__PURE__ */ new Set(), u = !1;
+  n.onMediaEnded((p) => {
+    l.add(p), y();
+  });
+  function c(p) {
+    if (typeof document > "u") return;
+    const s = p.screenCode ? p.screenCode : p.pairing ? `À rattacher · ${p.pairing.code}` : "Couloir";
+    document.title !== s && (document.title = s);
+  }
+  async function d() {
     if (!u)
       try {
-        const f = await fetch(t.stateUrl, { cache: "no-store" });
-        if (f.ok) {
-          const c = await f.json();
-          c.manifest?.version !== a?.manifest?.version && (l = /* @__PURE__ */ new Map()), a = c, s(c);
+        const p = await fetch(t.stateUrl, { cache: "no-store" });
+        if (p.ok) {
+          const s = await p.json();
+          if (Ue(t.rendu, s.rendu, We())) {
+            He(s.rendu), globalThis.location?.reload();
+            return;
+          }
+          s.manifest?.version !== o?.manifest?.version && (a = /* @__PURE__ */ new Map()), o = s, c(s);
         }
       } catch {
       }
   }
-  function p() {
+  function y() {
     if (u) return;
-    if (!a?.manifest) {
-      n.update(Se(a));
+    if (!o?.manifest) {
+      n.update(Ze(o));
       return;
     }
-    const f = te({
-      manifest: a.manifest,
+    const p = pe({
+      manifest: o.manifest,
       nowMs: Date.now(),
-      sources: new Map(Object.entries(a.sources)),
-      availableAssetIds: new Set(a.availableAssetIds),
-      rotations: l,
-      forceFallback: a.forceFallback,
-      identify: a.identify,
-      mediaEndedZoneIds: o,
-      ...a.screenCode !== null ? { screenCode: a.screenCode } : {}
+      sources: new Map(Object.entries(o.sources)),
+      availableAssetIds: new Set(o.availableAssetIds),
+      rotations: a,
+      forceFallback: o.forceFallback,
+      identify: o.identify,
+      mediaEndedZoneIds: l,
+      ...o.screenCode !== null ? { screenCode: o.screenCode } : {}
     });
-    o = /* @__PURE__ */ new Set(), l = f.rotations, n.update(f.screen), f.transitions.length > 0 && t.transitionsUrl && Me(t.transitionsUrl, f.transitions);
+    l = /* @__PURE__ */ new Set(), a = p.rotations, n.update(p.screen), p.transitions.length > 0 && t.transitionsUrl && Be(t.transitionsUrl, p.transitions);
   }
-  const I = setInterval(() => void m(), i), b = setInterval(p, r);
-  return m().then(p), {
+  const I = setInterval(() => void d(), i), S = setInterval(y, r);
+  return d().then(y), {
     stop() {
-      u = !0, clearInterval(I), clearInterval(b), n.destroy();
+      u = !0, clearInterval(I), clearInterval(S), n.destroy();
     }
   };
 }
-function Se(e) {
+function Ze(e) {
   return e?.pairing ? {
     mode: "identify",
     zones: [],
@@ -973,7 +1274,7 @@ function Se(e) {
     watermark: e?.screenCode ?? null
   };
 }
-async function Me(e, t) {
+async function Be(e, t) {
   try {
     await fetch(e, {
       method: "POST",
@@ -985,30 +1286,31 @@ async function Me(e, t) {
   }
 }
 export {
-  H as GLANCE_TIME_MS,
-  V as MAX_SENSIBLE_DURATION_MS,
-  J as MIN_BODY_TEXT_HEIGHT_PERCENT,
-  B as READING_WORDS_PER_MINUTE,
-  he as RENDERER_CSS,
-  j as activePlaylistId,
-  N as advanceRotation,
-  re as collapseEmptyZones,
-  X as countWords,
-  R as dateLocale,
-  te as direct,
-  K as effectiveDuration,
-  Z as isDisplayOffPeriod,
-  L as isDisplayable,
-  W as isScheduleActive,
-  U as isVisible,
-  C as isWithinDailyWindow,
-  P as localMoment,
-  Y as minReadableDurationMs,
-  ge as mountRenderer,
-  E as parseClock,
-  $ as resolveSource,
-  G as slideText,
-  _ as stalenessLabel,
-  Pe as startPlayer,
-  Q as typeScale
+  ae as GLANCE_TIME_MS,
+  oe as MAX_SENSIBLE_DURATION_MS,
+  le as MIN_BODY_TEXT_HEIGHT_PERCENT,
+  ie as READING_WORDS_PER_MINUTE,
+  Le as RENDERER_CSS,
+  te as activePlaylistId,
+  _ as advanceRotation,
+  ge as collapseEmptyZones,
+  se as countWords,
+  G as dateLocale,
+  pe as direct,
+  Ue as doitRecharger,
+  de as effectiveDuration,
+  re as isDisplayOffPeriod,
+  H as isDisplayable,
+  ee as isScheduleActive,
+  ne as isVisible,
+  O as isWithinDailyWindow,
+  T as localMoment,
+  ce as minReadableDurationMs,
+  De as mountRenderer,
+  F as parseClock,
+  K as resolveSource,
+  ue as slideText,
+  Q as stalenessLabel,
+  Ve as startPlayer,
+  fe as typeScale
 };

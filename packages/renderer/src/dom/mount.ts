@@ -7,6 +7,12 @@ import {
   type Resolution,
 } from "../resolution.js";
 import { defilement, demiJourneeEnCours, minutesLocales, tailleDesLignes } from "../demi-journee.js";
+import {
+  heureLisible,
+  lieuLisible,
+  repartirAutourDeMaintenant,
+  salleCourte,
+} from "../maintenant.js";
 import { RENDERER_CSS } from "./styles.js";
 
 /**
@@ -564,6 +570,229 @@ function ajusterLaJournee(
   doc.fonts?.ready?.then(ajuster).catch(() => {});
 }
 
+/**
+ * La vue « maintenant et ensuite ».
+ *
+ * Elle se reconstruit d'elle-même à chaque changement de minute : un cours
+ * qui commence doit passer de « À suivre » à « En ce moment » sans attendre
+ * que la source de données se rafraîchisse.
+ *
+ * Le module et l'enseignant ne s'affichent que si l'écran les a demandés
+ * explicitement. Par défaut, une ligne dit l'horaire, le groupe et la salle,
+ * et rien d'autre : c'est ce qui oriente quelqu'un qui passe.
+ */
+function renderMaintenant(
+  doc: Document,
+  wrapper: HTMLElement,
+  day: TimetableDay,
+  champsBruts: string | undefined,
+  timezone: string,
+): void {
+  const champs = champsBruts === undefined ? new Set<string>() : champsAffichés(champsBruts);
+  wrapper.classList.add("couloir-slide--maintenant");
+  const racine = el(doc, "div", "mx");
+  wrapper.appendChild(racine);
+
+  const vue = doc.defaultView;
+  let minuteAffichee = -1;
+  let pages: HTMLElement[][] = [];
+  let page = 0;
+  let depuisBascule = 0;
+  let connue = false;
+  let absences = 0;
+
+  const ligne = (seance: TimetableEntry, enCours: boolean): HTMLElement => {
+    const li = el(doc, "li", "mx-ligne");
+    if (enCours) li.classList.add("mx-ligne--en-cours");
+    if (seance.change === "cancelled") li.classList.add("mx-ligne--annulee");
+    else if (seance.change && seance.change !== "none") li.classList.add("mx-ligne--changee");
+
+    const horaire = enCours
+      ? seance.endTime
+        ? `jusqu'à ${heureLisible(seance.endTime)}`
+        : "en cours"
+      : heureLisible(seance.time);
+    li.appendChild(el(doc, "span", "mx-horaire", horaire));
+
+    const groupe = el(doc, "span", "mx-groupe");
+    groupe.appendChild(el(doc, "span", "mx-groupe-nom", seance.subject));
+    if (seance.note) groupe.appendChild(el(doc, "span", "mx-note", seance.note));
+    if (champs.has("module") && seance.detail) {
+      groupe.appendChild(el(doc, "span", "mx-detail", seance.detail));
+    }
+    li.appendChild(groupe);
+
+    const salle = el(doc, "span", "mx-salle");
+    if (seance.change === "cancelled") {
+      // Un cours annulé n'a plus de salle : l'annoncer enverrait quelqu'un
+      // devant une porte fermée.
+      salle.appendChild(el(doc, "span", "mx-salle-nom", "Annulé"));
+    } else {
+      salle.appendChild(el(doc, "span", "mx-salle-nom", salleCourte(seance.room)));
+      if (champs.has("enseignant") && seance.teacher) {
+        salle.appendChild(el(doc, "span", "mx-prof", seance.teacher));
+      }
+    }
+    li.appendChild(salle);
+    return li;
+  };
+
+  const bloc = (titre: string, seances: TimetableEntry[], enCours: boolean): HTMLElement => {
+    const section = el(doc, "section", enCours ? "mx-bloc mx-bloc--en-cours" : "mx-bloc");
+    section.appendChild(el(doc, "h2", "mx-titre", titre));
+    const liste = el(doc, "ul", "mx-liste");
+    for (const seance of seances) liste.appendChild(ligne(seance, enCours));
+    section.appendChild(liste);
+    return section;
+  };
+
+  const montrerPage = (): void => {
+    pages.forEach((lignes, i) => {
+      for (const li of lignes) li.hidden = i !== page;
+    });
+    // Un titre de section sans ligne visible ne dit rien : on le masque.
+    for (const section of racine.querySelectorAll<HTMLElement>(".mx-bloc")) {
+      section.hidden = ![...section.querySelectorAll<HTMLElement>(".mx-ligne")].some(
+        (li) => !li.hidden,
+      );
+    }
+    const indicateur = racine.querySelector<HTMLElement>(".mx-pages");
+    if (indicateur) {
+      indicateur.textContent = pages.length > 1 ? `${page + 1} / ${pages.length}` : "";
+    }
+  };
+
+  /*
+   * La taille la plus grande qui laisse tout tenir.
+   *
+   * On part du grand et on réduit tant que ça déborde, plutôt que d'estimer :
+   * un nom de groupe sur deux lignes prend deux fois la place, et seule la
+   * mesure le sait. En dessous du plancher, on ne réduit plus — on pagine.
+   */
+  const dimensionner = (corps: HTMLElement): void => {
+    const corpsDeTexte = vue?.getComputedStyle(racine).getPropertyValue("--fs-body") ?? "";
+    const base = Number.parseFloat(corpsDeTexte) || 21;
+    const plafond = base * 3.2;
+    const plancher = base * 1.8;
+    let taille = plafond;
+    corps.style.fontSize = `${taille}px`;
+    while (corps.scrollHeight > corps.clientHeight + 1 && taille > plancher) {
+      taille = Math.max(plancher, taille * 0.92);
+      corps.style.fontSize = `${Math.round(taille)}px`;
+    }
+
+    const lignes = [...corps.querySelectorAll<HTMLElement>(".mx-ligne")];
+    pages = [lignes];
+    if (corps.scrollHeight > corps.clientHeight + 1 && lignes.length > 1) {
+      // Trop de cours pour une seule page lisible : on découpe selon la
+      // place que prend réellement chaque ligne, titres compris.
+      const hauteurLigne = Math.max(...lignes.map((li) => li.offsetHeight));
+      const titre = corps.querySelector<HTMLElement>(".mx-titre")?.offsetHeight ?? 0;
+      const parPage = Math.max(1, Math.floor((corps.clientHeight - 2 * titre) / hauteurLigne));
+      pages = [];
+      for (let i = 0; i < lignes.length; i += parPage) pages.push(lignes.slice(i, i + parPage));
+    }
+    page = Math.min(page, pages.length - 1);
+    montrerPage();
+  };
+
+  const remplir = (): void => {
+    const maintenant = Date.now();
+    const minutes = minutesLocales(maintenant, timezone);
+    minuteAffichee = minutes;
+    racine.replaceChildren();
+
+    const tete = el(doc, "header", "mx-tete");
+    tete.appendChild(el(doc, "p", "mx-lieu", lieuLisible(day.classLabel)));
+    const horloge = el(doc, "p", "mx-horloge");
+    horloge.appendChild(
+      el(doc, "span", "mx-heure", heureLisible(`${Math.floor(minutes / 60)}:${minutes % 60}`)),
+    );
+    horloge.appendChild(
+      el(
+        doc,
+        "span",
+        "mx-date",
+        new Intl.DateTimeFormat("fr-FR", {
+          timeZone: timezone,
+          weekday: "long",
+          day: "numeric",
+          month: "long",
+        }).format(new Date(maintenant)),
+      ),
+    );
+    tete.appendChild(horloge);
+    racine.appendChild(tete);
+
+    const corps = el(doc, "div", "mx-corps");
+    racine.appendChild(corps);
+    racine.appendChild(el(doc, "p", "mx-pages"));
+
+    if (day.notice) {
+      corps.appendChild(el(doc, "p", "mx-vide", day.notice));
+      return;
+    }
+
+    const r = repartirAutourDeMaintenant(day.entries, minutes);
+    if (r.enCours.length > 0) corps.appendChild(bloc("En ce moment", r.enCours, true));
+    if (r.aSuivre.length > 0) corps.appendChild(bloc("À suivre", r.aSuivre, false));
+    if (r.enCours.length === 0 && r.aSuivre.length === 0) {
+      // Une dalle vide ressemble à une panne : on dit pourquoi elle l'est.
+      const message =
+        r.journeeTerminee || !r.prochain
+          ? "Les cours sont terminés pour aujourd'hui."
+          : "Pas de cours dans les deux prochaines heures. " +
+            `Reprise à ${heureLisible(r.prochain.time)}.`;
+      corps.appendChild(el(doc, "p", "mx-vide", message));
+      return;
+    }
+    dimensionner(corps);
+  };
+
+  /*
+   * Une horloge de deux secondes, qui fait tout le travail.
+   *
+   * Elle remplit la vue dès que celle-ci est réellement posée dans la page —
+   * on ne mesure rien hors de la page — puis à chaque nouvelle minute, et
+   * tourne les pages quand il y en a plusieurs. Elle s'arrête d'elle-même
+   * quand la diapositive est retirée : rien à désinscrire.
+   */
+  const PAS_MS = 2000;
+  const BASCULE_MS = 10_000;
+  const tic = (): void => {
+    // Retirée de la page, ou remplacée avant même d'y entrer — deux mises à
+    // jour coup sur coup : dans les deux cas, plus personne ne la verra.
+    if (!racine.isConnected) {
+      if (connue || ++absences > 5) clearInterval(minuterie);
+      return;
+    }
+    connue = true;
+    if (minutesLocales(Date.now(), timezone) !== minuteAffichee) {
+      remplir();
+      depuisBascule = 0;
+      return;
+    }
+    if (pages.length > 1) {
+      depuisBascule += PAS_MS;
+      if (depuisBascule >= BASCULE_MS) {
+        depuisBascule = 0;
+        page = (page + 1) % pages.length;
+        montrerPage();
+      }
+    }
+  };
+  const minuterie = setInterval(tic, PAS_MS);
+  // Premier remplissage sans attendre deux secondes, dès que la page a posé
+  // la diapositive ; puis à nouveau quand les polices sont là, car elles
+  // changent la place que prend le texte.
+  setTimeout(tic, 0);
+  doc.fonts?.ready
+    ?.then(() => {
+      if (racine.isConnected) remplir();
+    })
+    .catch(() => {});
+}
+
 function renderDataView(
   doc: Document,
   wrapper: HTMLElement,
@@ -573,6 +802,21 @@ function renderDataView(
   if (slide.view.startsWith("timetable")) {
     const day = pickDay(slide.payload, slide.params["classId"]);
     if (!day) return;
+
+    /*
+     * « Maintenant et ensuite » par défaut.
+     *
+     * La journée complète faisait dix à quinze lignes sur une dalle : du
+     * texte qu'on ne lit pas en passant à quatre mètres. Elle reste
+     * disponible sur demande explicite, comme la demi-journée.
+     */
+    const affichage =
+      slide.params["affichage"] ??
+      (slide.params["demiJournee"] === "1" ? "demi-journee" : "maintenant");
+    if (affichage === "maintenant") {
+      renderMaintenant(doc, wrapper, day, slide.params["champs"], timezone);
+      return;
+    }
 
     const montre = champsAffichés(slide.params["champs"]);
 
